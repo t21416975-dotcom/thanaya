@@ -1,0 +1,15 @@
+import { e as createAstro, f as createComponent, m as maybeRenderHead, h as addAttribute, r as renderTemplate } from './astro/server_Cs2yQakW.mjs';
+import 'piccolore';
+import 'clsx';
+
+const $$Astro = createAstro("https://thanaya.com");
+const $$ResourceCard = createComponent(($$result, $$props, $$slots) => {
+  const Astro2 = $$result.createAstro($$Astro, $$props, $$slots);
+  Astro2.self = $$ResourceCard;
+  const { resource } = Astro2.props;
+  return renderTemplate`${maybeRenderHead()}<a${addAttribute(`/resources/${resource.slug}`, "href")} class="group block bg-white rounded-xl border border-slate-200 p-4 hover:border-emerald-500 hover:shadow-sm transition"> <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"> <div class="space-y-1"> <div class="flex items-center gap-2 flex-wrap"> ${resource.week && renderTemplate`<span class="bg-emerald-50 text-emerald-800 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border border-emerald-100"> ${resource.week.title} </span>`} ${resource.content_type && renderTemplate`<span class="bg-slate-100 text-slate-700 text-[11px] font-medium px-2.5 py-0.5 rounded-full"> ${resource.content_type.name} </span>`} ${resource.subject && renderTemplate`<span class="text-xs text-slate-500 font-medium"> ${resource.subject.name} </span>`} </div> <h4 class="font-bold text-slate-900 group-hover:text-emerald-700 transition text-sm sm:text-base pt-1"> ${resource.title} </h4> ${resource.description && renderTemplate`<p class="text-xs text-slate-500 line-clamp-1"> ${resource.description} </p>`} </div> <div class="flex items-center gap-2 shrink-0 self-end sm:self-center"> ${resource.youtube_url && renderTemplate`<span class="bg-red-50 text-red-600 text-[10px] font-medium px-2 py-1 rounded flex items-center gap-1"> <span>شرح فيديو</span> </span>`} <span class="bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1.5 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition">
+عرض الملف ←
+</span> </div> </div> </a>`;
+}, "/home/omsa/Projects/thanaya/apps/web/src/components/ResourceCard.astro", void 0);
+
+export { $$ResourceCard as $ };

@@ -1,0 +1,1 @@
+import"./supabase.gDVC3dZ-.js";document.querySelectorAll("[data-direct-ad-id]").forEach(e=>{const t=e.getAttribute("data-direct-ad-id");if(!t)return;const d=`thanaya_ad_imp_${t}`;typeof window<"u"&&!sessionStorage.getItem(d)&&sessionStorage.setItem(d,"1"),e.addEventListener("click",()=>{})});
