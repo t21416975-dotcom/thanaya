@@ -1,0 +1,32 @@
+---
+export interface BreadcrumbItem {
+  label: string;
+  href?: string;
+}
+
+interface Props {
+  items: BreadcrumbItem[];
+}
+
+const { items } = Astro.props;
+---
+
+<nav aria-label="مسار التنقل" class="flex items-center text-xs text-slate-500 mb-6 flex-wrap gap-1.5 font-medium">
+  <a href="/" class="hover:text-emerald-700 transition flex items-center gap-1">
+    <span>الرئيسية</span>
+  </a>
+  {
+    items.map((item, index) => (
+      <div class="flex items-center gap-1.5">
+        <span class="text-slate-300">/</span>
+        {item.href && index < items.length - 1 ? (
+          <a href={item.href} class="hover:text-emerald-700 transition">
+            {item.label}
+          </a>
+        ) : (
+          <span class="text-slate-800 font-semibold">{item.label}</span>
+        )}
+      </div>
+    ))
+  }
+</nav>

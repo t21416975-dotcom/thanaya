@@ -1,0 +1,147 @@
+---
+interface Props {
+  resourceId: string;
+  resourceTitle: string;
+}
+
+const { resourceId, resourceTitle } = Astro.props;
+---
+
+<!-- Trigger Button -->
+<button
+  type="button"
+  id="open-report-dialog"
+  class="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-rose-600 transition font-medium px-3 py-1.5 rounded-lg hover:bg-rose-50 border border-slate-200"
+>
+  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+    <line x1="4" y1="22" x2="4" y2="15"></line>
+  </svg>
+  <span>الإبلاغ عن مشكلة في الملف</span>
+</button>
+
+<!-- Native Accessible Dialog -->
+<dialog
+  id="report-dialog"
+  class="backdrop:bg-slate-900/60 backdrop:backdrop-blur-sm rounded-2xl p-0 border border-slate-200 shadow-2xl max-w-md w-full text-right"
+>
+  <div class="bg-white p-6 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h3 class="font-bold text-base text-slate-900">الإبلاغ عن مشكلة</h3>
+      <button
+        type="button"
+        id="close-report-dialog"
+        class="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
+      >
+        ✕
+      </button>
+    </div>
+
+    <p class="text-xs text-slate-500">
+      المورد: <strong class="text-slate-800">{resourceTitle}</strong>
+    </p>
+
+    <form id="report-form" class="space-y-4" data-resource-id={resourceId}>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">نوع المشكلة *</label>
+        <select
+          name="issue_type"
+          required
+          class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        >
+          <option value="broken_file">الملف تالف أو لا يفتح</option>
+          <option value="broken_link">رابط التحميل لا يعمل</option>
+          <option value="incorrect_content">المحتوى خاطئ علميًا أو به نقص</option>
+          <option value="outdated">المحتوى قديم / لا يطابق منهج العام الحالي</option>
+          <option value="other">مشكلة أخرى</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">تفاصيل إضافية (اختياري)</label>
+        <textarea
+          name="details"
+          rows={3}
+          placeholder="وضح المشكلة لمساعدتنا في إصلاحها بأسرع وقت..."
+          class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        ></textarea>
+      </div>
+
+      <div id="report-status" class="hidden text-xs p-2 rounded-lg"></div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+        <button
+          type="button"
+          id="cancel-report"
+          class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
+        >
+          إلغاء
+        </button>
+        <button
+          type="submit"
+          id="submit-report"
+          class="px-5 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition"
+        >
+          إرسال البلاغ
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<script>
+  import { supabase } from '../lib/supabase';
+
+  const dialog = document.getElementById('report-dialog') as HTMLDialogElement | null;
+  const openBtn = document.getElementById('open-report-dialog');
+  const closeBtn = document.getElementById('close-report-dialog');
+  const cancelBtn = document.getElementById('cancel-report');
+  const form = document.getElementById('report-form') as HTMLFormElement | null;
+  const statusEl = document.getElementById('report-status');
+  const submitBtn = document.getElementById('submit-report') as HTMLButtonElement | null;
+
+  if (dialog && openBtn) {
+    openBtn.addEventListener('click', () => dialog.showModal());
+    closeBtn?.addEventListener('click', () => dialog.close());
+    cancelBtn?.addEventListener('click', () => dialog.close());
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!form || !submitBtn || !statusEl) return;
+
+      const formData = new FormData(form);
+      const resourceId = form.getAttribute('data-resource-id');
+      const issueType = formData.get('issue_type') as string;
+      const details = formData.get('details') as string;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'جاري الإرسال...';
+
+      try {
+        if (import.meta.env.PUBLIC_SUPABASE_URL && import.meta.env.PUBLIC_SUPABASE_URL !== 'https://your-project.supabase.co') {
+          await (supabase.from('reports') as any).insert({
+            resource_id: resourceId!,
+            issue_type: issueType as any,
+            details: details.trim() || null,
+          });
+        }
+
+        statusEl.className = 'text-xs p-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 block';
+        statusEl.textContent = 'شكرًا لك! تم استلام بلاغك وسيقوم فريق العمل بمراجعته فورًا.';
+        form.reset();
+
+        setTimeout(() => {
+          dialog.close();
+          statusEl.className = 'hidden';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'إرسال البلاغ';
+        }, 1800);
+      } catch (err) {
+        statusEl.className = 'text-xs p-2 rounded-lg bg-red-50 text-red-700 border border-red-200 block';
+        statusEl.textContent = 'حدث خطأ أثناء إرسال البلاغ. يرجى المحاولة لاحقًا.';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'إرسال البلاغ';
+      }
+    });
+  }
+</script>

@@ -1,0 +1,69 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SubjectCard from '../components/SubjectCard.astro';
+import ResourceCard from '../components/ResourceCard.astro';
+import AdSlot from '../components/AdSlot.astro';
+import { publicApi } from '../lib/api';
+
+const subjects = await publicApi.getActiveSubjects();
+const latestAssessments = await publicApi.getPublishedResources({ limit: 6 });
+---
+
+<Layout title="منصة ثنايا | التقييمات والحلول والمذكرات للبكالوريا المصرية">
+  <div class="space-y-10">
+    {/* Hero Section */}
+    <section class="text-center py-10 bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+      <div class="inline-flex items-center gap-2 bg-emerald-50 text-emerald-800 text-xs px-3 py-1 rounded-full font-bold mb-4 border border-emerald-100">
+        <span>دفعة الثانوية العامة والبكالوريا</span>
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+        التقييمات كلها في مكان واحد
+      </h1>
+      <p class="mt-3 text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
+        تصفح وتحميل مباشر وسريع للتقييمات الأسبوعية، نماذج الإجابة، الامتحانات التجريبية، والمذكرات
+        بدون إعلانات مزعجة وبأعلى سرعة ممكنة.
+      </p>
+    </section>
+
+    {/* Top Ad Slot */}
+    <AdSlot position="homepage_top" />
+
+    {/* Subjects Section */}
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">المواد الدراسية</h2>
+          <p class="text-xs text-slate-500">اختر المادة لتصفح تقييماتها ومذكراتها مرتبة بالأسابيع</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {subjects.map((subj) => (
+          <SubjectCard subject={subj} />
+        ))}
+      </div>
+    </section>
+
+    {/* Middle Ad Slot */}
+    <AdSlot position="homepage_middle" />
+
+    {/* Latest Resources Section */}
+    <section class="space-y-4">
+      <div>
+        <h2 class="text-xl font-bold text-slate-900">أحدث التقييمات والموارد المضافة</h2>
+        <p class="text-xs text-slate-500">وصول مباشر لأحدث الملفات المرفوعة على المنصة</p>
+      </div>
+
+      <div class="space-y-3">
+        {latestAssessments.map((res) => (
+          <ResourceCard resource={res} />
+        ))}
+        {latestAssessments.length === 0 && (
+          <div class="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400">
+            جاري إضافة الموارد والتقييمات قريبًا.
+          </div>
+        )}
+      </div>
+    </section>
+  </div>
+</Layout>

@@ -1,0 +1,316 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import LazyYouTube from '../../components/LazyYouTube.astro';
+import ReportProblemDialog from '../../components/ReportProblemDialog.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import ResourceCard from '../../components/ResourceCard.astro';
+import { publicApi } from '../../lib/api';
+
+export async function getStaticPaths() {
+  const resources = await publicApi.getPublishedResources();
+  return resources.map((res) => ({
+    params: { slug: res.slug },
+    props: { resource: res },
+  }));
+}
+
+const { resource } = Astro.props;
+
+// Fetch related resources
+const relatedResources = await publicApi.getPublishedResources({
+  subjectId: resource.subject_id,
+  contentTypeId: resource.content_type_id,
+  limit: 4,
+});
+const filteredRelated = relatedResources.filter((r) => r.id !== resource.id).slice(0, 3);
+
+// Dynamic SEO Title & Description with Egyptian search keywords
+const pageTitle = `${resource.title} | ${resource.subject?.name || ''} ثانوية عامة وبكالوريا`;
+const pageDescription =
+  resource.description ||
+  `تحميل ومعاينة ${resource.title} في مادة ${resource.subject?.name || ''} (${resource.content_type?.name || 'مورد تعليمي'}) بصيغة PDF مباشرة مع حلول وشرح الفيديو لطلاب البكالوريا المصرية.`;
+
+const currentUrl = `https://thanaya.com/resources/${resource.slug}`;
+
+// JSON-LD Structured Data (LearningResource & Breadcrumbs)
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'الرئيسية',
+      item: 'https://thanaya.com',
+    },
+    ...(resource.subject
+      ? [
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: resource.subject.name,
+            item: `https://thanaya.com/subjects/${resource.subject.slug}`,
+          },
+        ]
+      : []),
+    ...(resource.subject && resource.content_type
+      ? [
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: resource.content_type.name,
+            item: `https://thanaya.com/subjects/${resource.subject.slug}/${resource.content_type.slug}`,
+          },
+        ]
+      : []),
+    {
+      '@type': 'ListItem',
+      position: resource.subject && resource.content_type ? 4 : 2,
+      name: resource.title,
+      item: currentUrl,
+    },
+  ],
+};
+
+const learningResourceSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'LearningResource',
+  name: resource.title,
+  description: pageDescription,
+  educationalLevel: 'الثانوية العامة / البكالوريا المصرية',
+  learningResourceType: resource.content_type?.name || 'تقييم أسبوعي',
+  inLanguage: 'ar-EG',
+  url: currentUrl,
+  datePublished: resource.published_at || resource.created_at,
+  dateModified: resource.updated_at || resource.created_at,
+  isAccessibleForFree: true,
+  provider: {
+    '@type': 'Organization',
+    name: 'منصة ثنايا التعليمية',
+    url: 'https://thanaya.com',
+  },
+};
+
+const jsonLd = [breadcrumbSchema, learningResourceSchema];
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  canonicalUrl={currentUrl}
+  ogType="article"
+  jsonLd={jsonLd}
+>
+  <div class="space-y-8 max-w-4xl mx-auto">
+    <Breadcrumb
+      items={[
+        ...(resource.subject ? [{ label: resource.subject.name, href: `/subjects/${resource.subject.slug}` }] : []),
+        ...(resource.subject && resource.content_type
+          ? [{ label: resource.content_type.name, href: `/subjects/${resource.subject.slug}/${resource.content_type.slug}` }]
+          : []),
+        { label: resource.title },
+      ]}
+    />
+
+    {/* Header Article Info */}
+    <article class="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+      <div class="space-y-3">
+        {/* Badges */}
+        <div class="flex items-center gap-2 flex-wrap text-xs">
+          {resource.subject && (
+            <a
+              href={`/subjects/${resource.subject.slug}`}
+              class="bg-emerald-50 text-emerald-800 font-bold px-3 py-1 rounded-full hover:bg-emerald-100 transition border border-emerald-100"
+            >
+              {resource.subject.name}
+            </a>
+          )}
+          {resource.content_type && (
+            <span class="bg-slate-100 text-slate-700 font-semibold px-3 py-1 rounded-full">
+              {resource.content_type.name}
+            </span>
+          )}
+          {resource.week && (
+            <span class="bg-slate-100 text-slate-700 font-semibold px-3 py-1 rounded-full">
+              {resource.week.title}
+            </span>
+          )}
+        </div>
+
+        {/* Title */}
+        <h1 class="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">
+          {resource.title}
+        </h1>
+
+        {/* Description */}
+        {resource.description && (
+          <p class="text-sm sm:text-base text-slate-600 leading-relaxed pt-1">
+            {resource.description}
+          </p>
+        )}
+      </div>
+
+      {/* Prominent Action Bar */}
+      <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        {/* Direct Download Button */}
+        <a
+          href={resource.pdf_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3.5 rounded-xl text-sm transition shadow-sm hover:shadow active:scale-[0.99]"
+          id="direct-download-btn"
+          data-resource-id={resource.id}
+        >
+          <svg class="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>تحميل ملف الـ PDF المباشر</span>
+        </a>
+
+        {/* Secondary Action Utilities */}
+        <div class="flex items-center gap-2 self-center sm:self-auto flex-wrap">
+          {/* Copy Link */}
+          <button
+            type="button"
+            id="copy-link-btn"
+            class="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 font-medium px-3.5 py-2.5 rounded-lg transition cursor-pointer"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+            </svg>
+            <span id="copy-btn-text">نسخ الرابط</span>
+          </button>
+
+          {/* WhatsApp Share */}
+          <a
+            href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${resource.title}\n${currentUrl}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-1.5 text-xs text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 font-semibold px-3.5 py-2.5 rounded-lg transition"
+            title="مشاركة عبر واتساب"
+          >
+            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
+            </svg>
+            <span>مشاركة</span>
+          </a>
+
+          {/* Report Problem */}
+          <ReportProblemDialog resourceId={resource.id} resourceTitle={resource.title} />
+        </div>
+      </div>
+    </article>
+
+    {/* Post-Meta Ad Slot */}
+    <AdSlot position="resource_after_meta" />
+
+    {/* Native Browser PDF Viewer Section */}
+    <section class="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-sm">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+          <svg class="w-5 h-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <span>معاينة ملف الـ PDF</span>
+        </h3>
+
+        <a
+          href={resource.pdf_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-xs font-semibold text-emerald-700 hover:underline flex items-center gap-1"
+        >
+          <span>فتح في نافذة كاملة</span>
+          <span>↗</span>
+        </a>
+      </div>
+
+      <!-- Native Browser PDF Embed Frame -->
+      <div class="w-full h-[650px] rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex flex-col items-center justify-center">
+        <object
+          data={resource.pdf_url}
+          type="application/pdf"
+          class="w-full h-full"
+        >
+          <div class="p-8 text-center space-y-3">
+            <p class="text-sm text-slate-600">
+              متصفحك لا يدعم معاينة ملف الـ PDF مباشرة داخل الصفحة.
+            </p>
+            <a
+              href={resource.pdf_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-block px-5 py-2.5 bg-emerald-600 text-white rounded-lg text-xs font-bold"
+            >
+              انقر هنا لتحميل أو فتح الملف مباشرة
+            </a>
+          </div>
+        </object>
+      </div>
+    </section>
+
+    {/* YouTube Solution Video Section (Lazy) */}
+    {resource.youtube_url && (
+      <section class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <LazyYouTube url={resource.youtube_url} title={`فيديو شرح: ${resource.title}`} />
+      </section>
+    )}
+
+    {/* Related Resources */}
+    {filteredRelated.length > 0 && (
+      <section class="space-y-4 pt-4">
+        <h3 class="font-bold text-slate-900 text-lg">تقييمات وملفات ذات صلة</h3>
+        <div class="space-y-3">
+          {filteredRelated.map((rel) => (
+            <ResourceCard resource={rel} />
+          ))}
+        </div>
+      </section>
+    )}
+  </div>
+</Layout>
+
+<script>
+  import { recordResourceView, recordResourceDownload } from '../../lib/analytics';
+
+  // Copy Link button logic
+  const copyBtn = document.getElementById('copy-link-btn');
+  const copyBtnText = document.getElementById('copy-btn-text');
+
+  copyBtn?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      if (copyBtnText) {
+        copyBtnText.textContent = '✓ تم النسخ!';
+        setTimeout(() => {
+          copyBtnText.textContent = 'نسخ الرابط';
+        }, 2000);
+      }
+    } catch {
+      // Fallback
+    }
+  });
+
+  // Analytics: Record page view with deduplication
+  const downloadBtn = document.getElementById('direct-download-btn');
+  const resourceId = downloadBtn?.getAttribute('data-resource-id');
+
+  if (resourceId) {
+    recordResourceView(resourceId);
+  }
+
+  // Analytics: Record download click
+  downloadBtn?.addEventListener('click', () => {
+    if (resourceId) {
+      recordResourceDownload(resourceId);
+    }
+  });
+</script>

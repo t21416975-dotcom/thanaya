@@ -1,0 +1,74 @@
+---
+import { extractYouTubeVideoId, getYouTubeEmbedUrl } from '../lib/youtube';
+
+interface Props {
+  url: string;
+  title?: string;
+}
+
+const { url, title = 'فيديو شرح وحل التقييم' } = Astro.props;
+const videoId = extractYouTubeVideoId(url);
+const embedUrl = getYouTubeEmbedUrl(url);
+const thumbnailUrl = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
+---
+
+{
+  embedUrl && (
+    <div class="space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-red-600 inline-block"></span>
+          <span>{title}</span>
+        </h3>
+        <span class="text-xs text-slate-400">مشاهدة مباشرة بدون إعلانات خارج المنصة</span>
+      </div>
+
+      <div
+        class="relative aspect-video w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 shadow-sm group"
+        data-youtube-facade
+        data-embed-url={embedUrl}
+      >
+        {thumbnailUrl && (
+          <img
+            src={thumbnailUrl}
+            alt={title}
+            loading="lazy"
+            class="w-full h-full object-cover group-hover:scale-105 transition duration-300 opacity-90"
+          />
+        )}
+
+        <button
+          type="button"
+          class="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition cursor-pointer"
+          aria-label={`تشغيل ${title}`}
+        >
+          <div class="w-16 h-16 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition">
+            <svg class="w-7 h-7 fill-current translate-x-[-2px]" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </div>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+<script>
+  // High-performance facade: only insert iframe when clicked
+  document.querySelectorAll('[data-youtube-facade]').forEach((container) => {
+    container.addEventListener('click', () => {
+      const embedUrl = container.getAttribute('data-embed-url');
+      if (!embedUrl) return;
+
+      const iframe = document.createElement('iframe');
+      iframe.src = `${embedUrl}?autoplay=1`;
+      iframe.title = 'فيديو شرح المورد';
+      iframe.className = 'w-full h-full';
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+      iframe.allowFullscreen = true;
+
+      container.innerHTML = '';
+      container.appendChild(iframe);
+    }, { once: true });
+  });
+</script>

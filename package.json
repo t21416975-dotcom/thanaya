@@ -1,0 +1,22 @@
+{
+  "name": "thanaya-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace=apps/web run dev",
+    "dev:admin": "npm --workspace=apps/admin run dev",
+    "build": "npm run build --workspaces --if-present",
+    "build:web": "npm --workspace=apps/web run build",
+    "build:admin": "npm --workspace=apps/admin run build",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,astro,json,md}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.5.2",
+    "typescript": "^5.7.3"
+  }
+}

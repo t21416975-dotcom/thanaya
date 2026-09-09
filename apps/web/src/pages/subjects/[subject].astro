@@ -1,0 +1,100 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import ResourceCard from '../../components/ResourceCard.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import { publicApi } from '../../lib/api';
+
+export async function getStaticPaths() {
+  const subjects = await publicApi.getActiveSubjects();
+  return subjects.map((subj) => ({
+    params: { subject: subj.slug },
+    props: { subject: subj },
+  }));
+}
+
+const { subject } = Astro.props;
+const contentTypes = await publicApi.getActiveContentTypes();
+const resources = await publicApi.getPublishedResources({ subjectId: subject.id });
+---
+
+<Layout
+  title={`${subject.name} | منصة ثنايا`}
+  description={`تقييمات وحلول وامتحانات مادة ${subject.name} لطلاب الثانوية العامة والبكالوريا المصرية.`}
+>
+  <div class="space-y-8">
+    <Breadcrumb items={[{ label: subject.name }]} />
+
+    {/* Subject Header */}
+    <header class="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
+      <div class="space-y-2">
+        <span class="text-xs bg-emerald-50 text-emerald-800 font-bold px-3 py-1 rounded-full border border-emerald-100">
+          مادة دراسية
+        </span>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">{subject.name}</h1>
+        {subject.description && (
+          <p class="text-sm text-slate-600 max-w-2xl">{subject.description}</p>
+        )}
+      </div>
+    </header>
+
+    <AdSlot position="subject_page" />
+
+    {/* Content Types Categories Section */}
+    <section class="space-y-4">
+      <div>
+        <h2 class="text-lg font-bold text-slate-900">أقسام المحتوى لـ {subject.name}</h2>
+        <p class="text-xs text-slate-500">اختر نوع المحتوى المطلوب لتصفح الملفات المتاحة</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {contentTypes.map((type) => {
+          const typeCount = resources.filter((r) => r.content_type_id === type.id).length;
+          return (
+            <a
+              href={`/subjects/${subject.slug}/${type.slug}`}
+              class="group bg-white rounded-xl border border-slate-200 p-5 hover:border-emerald-500 hover:shadow-sm transition flex flex-col justify-between"
+            >
+              <div class="space-y-1">
+                <h3 class="font-bold text-slate-900 group-hover:text-emerald-700 transition text-base">
+                  {type.name}
+                </h3>
+                {type.description && (
+                  <p class="text-xs text-slate-500 line-clamp-2">{type.description}</p>
+                )}
+              </div>
+              <div class="pt-4 mt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-slate-400 font-medium">{typeCount} ملف</span>
+                <span class="text-emerald-600 font-bold group-hover:translate-x-[-4px] transition">
+                  تصفح القسم ←
+                </span>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+
+    {/* All Subject Resources List */}
+    <section class="space-y-4 pt-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">جميع تقييمات وملفات {subject.name}</h2>
+          <p class="text-xs text-slate-500">مرتبة من الأحدث إلى الأقدم</p>
+        </div>
+        <span class="text-xs text-slate-400">إجمالي: {resources.length} مورد</span>
+      </div>
+
+      <div class="space-y-3">
+        {resources.map((res) => (
+          <ResourceCard resource={res} />
+        ))}
+        {resources.length === 0 && (
+          <div class="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400 text-sm">
+            لا توجد ملفات منشورة لهذه المادة حاليًا.
+          </div>
+        )}
+      </div>
+    </section>
+  </div>
+</Layout>

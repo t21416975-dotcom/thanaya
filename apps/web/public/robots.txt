@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Disallow indexing admin pages or internal api if hosted on same domain
+Disallow: /admin/
+Disallow: /api/
+
+# Sitemap Location
+Sitemap: https://thanaya.com/sitemap-index.xml
