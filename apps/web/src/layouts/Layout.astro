@@ -129,12 +129,51 @@ const siteSchema = {
     </div>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-slate-200 py-8 text-center text-xs text-slate-500 mt-auto">
-      <div class="max-w-5xl mx-auto px-4 space-y-2">
-        <p class="font-bold text-slate-700 text-sm">منصة ثنايا التعليمية</p>
-        <p>مكتبة تنظيم وتسهيل وصول تقييمات وحلول ومذكرات البكالوريا المصرية لجميع الطلاب مجانًا وبأعلى سرعة.</p>
-        <p class="text-slate-400 text-[11px] pt-2">جميع حقوق المواد محفوظة لوزارة التربية والتعليم المصرية ومعديها.</p>
+    <footer class="bg-white border-t border-slate-200 mt-auto">
+      <div class="max-w-5xl mx-auto px-4 py-10">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-8">
+          <!-- Brand -->
+          <div class="space-y-3">
+            <a href="/" class="flex items-center gap-2 text-lg font-extrabold text-slate-900 hover:text-emerald-700 transition">
+              <span class="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+                  <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                </svg>
+              </span>
+              <span>ثنايا</span>
+            </a>
+            <p class="text-xs text-slate-500 leading-relaxed">
+              المكتبة التعليمية الأولى للثانوية العامة والبكالوريا المصرية — مجانًا وبأعلى سرعة.
+            </p>
+          </div>
+
+          <!-- Quick links -->
+          <div>
+            <p class="text-xs font-bold text-slate-700 uppercase tracking-widest mb-3">روابط سريعة</p>
+            <ul class="space-y-2">
+              <li><a href="/" class="text-sm text-slate-500 hover:text-emerald-700 transition">الرئيسية</a></li>
+              <li><a href="/about" class="text-sm text-slate-500 hover:text-emerald-700 transition">من نحن</a></li>
+              <li><a href="/contact" class="text-sm text-slate-500 hover:text-emerald-700 transition">اتصل بنا</a></li>
+            </ul>
+          </div>
+
+          <!-- Legal -->
+          <div>
+            <p class="text-xs font-bold text-slate-700 uppercase tracking-widest mb-3">قانوني</p>
+            <ul class="space-y-2">
+              <li><a href="/privacy" class="text-sm text-slate-500 hover:text-emerald-700 transition">سياسة الخصوصية</a></li>
+              <li><a href="/terms" class="text-sm text-slate-500 hover:text-emerald-700 transition">الشروط والأحكام</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-100 pt-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-400">
+          <p>© 2026 منصة ثنايا التعليمية. جميع الحقوق محفوظة.</p>
+          <p>جميع حقوق المواد محفوظة لوزارة التربية والتعليم المصرية ومعديها.</p>
+        </div>
       </div>
     </footer>
   </body>
 </html>
+
