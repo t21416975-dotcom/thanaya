@@ -6,14 +6,22 @@ import './chunks/astro/server_Cs2yQakW.mjs';
 import 'clsx';
 
 const onRequest$1 = defineMiddleware(async (context, next) => {
-  const response = await next();
-  if (context.request.method === "GET") {
-    response.headers.set(
-      "Cache-Control",
-      "public, max-age=30, s-maxage=60, stale-while-revalidate=86400"
-    );
+  try {
+    const response = await next();
+    if (context.request.method === "GET" && response && response.status === 200) {
+      try {
+        response.headers.set(
+          "Cache-Control",
+          "public, max-age=30, s-maxage=60, stale-while-revalidate=86400"
+        );
+      } catch {
+      }
+    }
+    return response;
+  } catch (err) {
+    console.error("Middleware execution caught error:", err);
+    return next();
   }
-  return response;
 });
 
 const onRequest = sequence(

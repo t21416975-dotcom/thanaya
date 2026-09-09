@@ -7,9 +7,7 @@ import vercel from '@astrojs/vercel';
 export default defineConfig({
   site: 'https://thanaya.com',
   output: 'server',
-  adapter: vercel({
-    webAnalytics: { enabled: false },
-  }),
+  adapter: vercel(),
   integrations: [
     tailwind({ applyBaseStyles: true }),
     sitemap({

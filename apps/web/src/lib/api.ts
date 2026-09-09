@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 import { smartCache } from './cache';
 import type { Subject, ContentType, Week, Resource, AdSlot, DirectAd } from '@thanaya/types';
 
@@ -111,49 +111,58 @@ const mockResources: Resource[] = [
   },
 ];
 
-const isLive = !!import.meta.env.PUBLIC_SUPABASE_URL && import.meta.env.PUBLIC_SUPABASE_URL !== 'https://your-project.supabase.co';
-
 export const publicApi = {
   /**
    * Get all active subjects (Cached for 60s)
    */
   async getActiveSubjects(): Promise<Subject[]> {
     return smartCache.wrap('subjects:active', 60, async () => {
-      if (isLive) {
-        const { data, error } = await supabase
-          .from('subjects')
-          .select('*')
-          .eq('is_active', true)
-          .order('order_index');
-        if (error) {
-          console.error('Error fetching subjects from Supabase:', error);
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase
+            .from('subjects')
+            .select('*')
+            .eq('is_active', true)
+            .order('order_index');
+          if (error) {
+            console.error('Error fetching subjects from Supabase:', error);
+            return mockSubjects.filter((s) => s.is_active);
+          }
+          return (data as unknown as Subject[]) || [];
+        } catch (err) {
+          console.error('Supabase exception in getActiveSubjects:', err);
           return mockSubjects.filter((s) => s.is_active);
         }
-        return (data as unknown as Subject[]) || [];
       }
       return mockSubjects.filter((s) => s.is_active).sort((a, b) => a.order_index - b.order_index);
-    });
+    }, mockSubjects.filter((s) => s.is_active));
   },
 
   /**
    * Get single subject by slug (Cached for 60s)
    */
   async getSubjectBySlug(slug: string): Promise<Subject | null> {
+    if (!slug) return null;
     return smartCache.wrap(`subject:${slug}`, 60, async () => {
-      if (isLive) {
-        const { data, error } = await supabase
-          .from('subjects')
-          .select('*')
-          .eq('slug', slug)
-          .eq('is_active', true)
-          .single();
-        if (error) {
-          return null;
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase
+            .from('subjects')
+            .select('*')
+            .eq('slug', slug)
+            .eq('is_active', true)
+            .single();
+          if (error) {
+            return null;
+          }
+          return data as unknown as Subject;
+        } catch (err) {
+          console.error(`Supabase exception in getSubjectBySlug (${slug}):`, err);
+          return mockSubjects.find((s) => s.slug === slug && s.is_active) || null;
         }
-        return data as unknown as Subject;
       }
       return mockSubjects.find((s) => s.slug === slug && s.is_active) || null;
-    });
+    }, null);
   },
 
   /**
@@ -161,41 +170,52 @@ export const publicApi = {
    */
   async getActiveContentTypes(): Promise<ContentType[]> {
     return smartCache.wrap('content_types:active', 60, async () => {
-      if (isLive) {
-        const { data, error } = await supabase
-          .from('content_types')
-          .select('*')
-          .eq('is_active', true)
-          .order('order_index');
-        if (error) {
-          console.error('Error fetching content types:', error);
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase
+            .from('content_types')
+            .select('*')
+            .eq('is_active', true)
+            .order('order_index');
+          if (error) {
+            console.error('Error fetching content types:', error);
+            return mockContentTypes.filter((c) => c.is_active);
+          }
+          return (data as unknown as ContentType[]) || [];
+        } catch (err) {
+          console.error('Supabase exception in getActiveContentTypes:', err);
           return mockContentTypes.filter((c) => c.is_active);
         }
-        return (data as unknown as ContentType[]) || [];
       }
       return mockContentTypes.filter((c) => c.is_active).sort((a, b) => a.order_index - b.order_index);
-    });
+    }, mockContentTypes.filter((c) => c.is_active));
   },
 
   /**
    * Get single content type by slug (Cached for 60s)
    */
   async getContentTypeBySlug(slug: string): Promise<ContentType | null> {
+    if (!slug) return null;
     return smartCache.wrap(`content_type:${slug}`, 60, async () => {
-      if (isLive) {
-        const { data, error } = await supabase
-          .from('content_types')
-          .select('*')
-          .eq('slug', slug)
-          .eq('is_active', true)
-          .single();
-        if (error) {
-          return null;
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase
+            .from('content_types')
+            .select('*')
+            .eq('slug', slug)
+            .eq('is_active', true)
+            .single();
+          if (error) {
+            return null;
+          }
+          return data as unknown as ContentType;
+        } catch (err) {
+          console.error(`Supabase exception in getContentTypeBySlug (${slug}):`, err);
+          return mockContentTypes.find((c) => c.slug === slug && c.is_active) || null;
         }
-        return data as unknown as ContentType;
       }
       return mockContentTypes.find((c) => c.slug === slug && c.is_active) || null;
-    });
+    }, null);
   },
 
   /**
@@ -203,20 +223,25 @@ export const publicApi = {
    */
   async getWeeks(): Promise<Week[]> {
     return smartCache.wrap('weeks:all', 120, async () => {
-      if (isLive) {
-        const { data, error } = await supabase
-          .from('weeks')
-          .select('*')
-          .order('term')
-          .order('week_number');
-        if (error) {
-          console.error('Error fetching weeks:', error);
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase
+            .from('weeks')
+            .select('*')
+            .order('term')
+            .order('week_number');
+          if (error) {
+            console.error('Error fetching weeks:', error);
+            return mockWeeks;
+          }
+          return (data as unknown as Week[]) || [];
+        } catch (err) {
+          console.error('Supabase exception in getWeeks:', err);
           return mockWeeks;
         }
-        return (data as unknown as Week[]) || [];
       }
       return mockWeeks;
-    });
+    }, mockWeeks);
   },
 
   /**
@@ -225,23 +250,28 @@ export const publicApi = {
   async getPublishedResources(filter?: { subjectId?: string; contentTypeId?: string; limit?: number }): Promise<Resource[]> {
     const cacheKey = `resources:${filter?.subjectId || 'all'}:${filter?.contentTypeId || 'all'}:${filter?.limit || 'all'}`;
     return smartCache.wrap(cacheKey, 30, async () => {
-      if (isLive) {
-        let query = supabase
-          .from('resources')
-          .select('*, subject:subjects(*), content_type:content_types(*), week:weeks(*)')
-          .eq('is_published', true)
-          .order('created_at', { ascending: false });
+      if (isSupabaseConfigured) {
+        try {
+          let query = supabase
+            .from('resources')
+            .select('*, subject:subjects(*), content_type:content_types(*), week:weeks(*)')
+            .eq('is_published', true)
+            .order('created_at', { ascending: false });
 
-        if (filter?.subjectId) query = query.eq('subject_id', filter.subjectId);
-        if (filter?.contentTypeId) query = query.eq('content_type_id', filter.contentTypeId);
-        if (filter?.limit) query = query.limit(filter.limit);
+          if (filter?.subjectId) query = query.eq('subject_id', filter.subjectId);
+          if (filter?.contentTypeId) query = query.eq('content_type_id', filter.contentTypeId);
+          if (filter?.limit) query = query.limit(filter.limit);
 
-        const { data, error } = await query;
-        if (error) {
-          console.error('Error fetching resources:', error);
+          const { data, error } = await query;
+          if (error) {
+            console.error('Error fetching resources:', error);
+            return [];
+          }
+          return (data as unknown as Resource[]) || [];
+        } catch (err) {
+          console.error('Supabase exception in getPublishedResources:', err);
           return [];
         }
-        return (data as unknown as Resource[]) || [];
       }
 
       let list = mockResources.filter((r) => r.is_published);
@@ -249,43 +279,55 @@ export const publicApi = {
       if (filter?.contentTypeId) list = list.filter((r) => r.content_type_id === filter.contentTypeId);
       if (filter?.limit) list = list.slice(0, filter.limit);
       return list;
-    });
+    }, []);
   },
 
   /**
    * Get single published resource by slug (Cached for 30s)
    */
   async getResourceBySlug(slug: string): Promise<Resource | null> {
+    if (!slug) return null;
     return smartCache.wrap(`resource:${slug}`, 30, async () => {
-      if (isLive) {
-        const { data, error } = await supabase
-          .from('resources')
-          .select('*, subject:subjects(*), content_type:content_types(*), week:weeks(*)')
-          .eq('slug', slug)
-          .eq('is_published', true)
-          .single();
-        if (error) {
-          return null;
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase
+            .from('resources')
+            .select('*, subject:subjects(*), content_type:content_types(*), week:weeks(*)')
+            .eq('slug', slug)
+            .eq('is_published', true)
+            .single();
+          if (error) {
+            return null;
+          }
+          return data as unknown as Resource;
+        } catch (err) {
+          console.error(`Supabase exception in getResourceBySlug (${slug}):`, err);
+          return mockResources.find((r) => r.slug === slug && r.is_published) || null;
         }
-        return data as unknown as Resource;
       }
       return mockResources.find((r) => r.slug === slug && r.is_published) || null;
-    });
+    }, null);
   },
 
   /**
    * Get ad slot config (Cached for 60s)
    */
   async getAdSlot(position: string): Promise<AdSlot | null> {
+    if (!position) return null;
     return smartCache.wrap(`ad_slot:${position}`, 60, async () => {
-      if (isLive) {
-        const { data } = await supabase
-          .from('ad_slots')
-          .select('*')
-          .eq('position', position as any)
-          .eq('is_active', true)
-          .single();
-        return (data as unknown as AdSlot) || null;
+      if (isSupabaseConfigured) {
+        try {
+          const { data } = await supabase
+            .from('ad_slots')
+            .select('*')
+            .eq('position', position as any)
+            .eq('is_active', true)
+            .single();
+          return (data as unknown as AdSlot) || null;
+        } catch (err) {
+          console.error(`Supabase exception in getAdSlot (${position}):`, err);
+          return null;
+        }
       }
       return {
         id: `slot-${position}`,
@@ -296,30 +338,36 @@ export const publicApi = {
         created_at: '',
         updated_at: '',
       };
-    });
+    }, null);
   },
 
   /**
    * Get direct ad for slot (Cached for 60s)
    */
   async getActiveDirectAdForSlot(position: string): Promise<DirectAd | null> {
+    if (!position) return null;
     return smartCache.wrap(`direct_ad:${position}`, 60, async () => {
-      if (isLive) {
-        const now = new Date().toISOString();
-        const { data } = await supabase
-          .from('direct_ads')
-          .select('*')
-          .eq('slot_position', position as any)
-          .eq('is_active', true)
-          .lte('start_date', now)
-          .gte('end_date', now)
-          .order('priority', { ascending: false })
-          .limit(1)
-          .single();
-        return (data as unknown as DirectAd) || null;
+      if (isSupabaseConfigured) {
+        try {
+          const now = new Date().toISOString();
+          const { data } = await supabase
+            .from('direct_ads')
+            .select('*')
+            .eq('slot_position', position as any)
+            .eq('is_active', true)
+            .lte('start_date', now)
+            .gte('end_date', now)
+            .order('priority', { ascending: false })
+            .limit(1)
+            .single();
+          return (data as unknown as DirectAd) || null;
+        } catch (err) {
+          console.error(`Supabase exception in getActiveDirectAdForSlot (${position}):`, err);
+          return null;
+        }
       }
       return null;
-    });
+    }, null);
   },
 
   /**

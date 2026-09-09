@@ -4,12 +4,42 @@ import 'clsx';
 import { createClient } from '@supabase/supabase-js';
 /* empty css                         */
 
-const supabaseUrl = "https://placeholder.supabase.co";
-const supabaseAnonKey = "placeholder-anon-key";
-createClient(supabaseUrl, supabaseAnonKey, {
+const __vite_import_meta_env__ = {"ASSETS_PREFIX": undefined, "BASE_URL": "/", "DEV": false, "MODE": "production", "PROD": true, "SITE": "https://thanaya.com", "SSR": true};
+function getEnv(key) {
+  try {
+    if (typeof import.meta !== "undefined" && Object.assign(__vite_import_meta_env__, { _: process.env._ }) && Object.assign(__vite_import_meta_env__, { _: process.env._ })[key]) {
+      return String(Object.assign(__vite_import_meta_env__, { _: process.env._ })[key]).trim();
+    }
+  } catch {
+  }
+  try {
+    if (typeof process !== "undefined" && process.env && process.env[key]) {
+      return String(process.env[key]).trim();
+    }
+  } catch {
+  }
+  return "";
+}
+const rawUrl = getEnv("PUBLIC_SUPABASE_URL");
+const rawKey = getEnv("PUBLIC_SUPABASE_ANON_KEY");
+function isValidHttpUrl(str) {
+  try {
+    const parsed = new URL(str);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+const isSupabaseConfigured = Boolean(
+  rawUrl && isValidHttpUrl(rawUrl) && !rawUrl.includes("your-project.supabase.co") && !rawUrl.includes("placeholder.supabase.co") && rawKey && rawKey !== "placeholder-anon-key" && rawKey !== "your-anon-key-here"
+);
+const effectiveUrl = isSupabaseConfigured ? rawUrl : "https://placeholder.supabase.co";
+const effectiveKey = isSupabaseConfigured ? rawKey : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder";
+const supabase = createClient(effectiveUrl, effectiveKey, {
   auth: {
     persistSession: false,
-    autoRefreshToken: false
+    autoRefreshToken: false,
+    detectSessionInUrl: false
   }
 });
 
@@ -37,9 +67,9 @@ class SmartMemoryCache {
     });
   }
   /**
-   * Wrap an async fetcher with smart caching
+   * Wrap an async fetcher with smart caching and crash-proof fallback
    */
-  async wrap(key, ttlSeconds, fetcher) {
+  async wrap(key, ttlSeconds, fetcher, fallback) {
     const cached = this.get(key);
     if (cached !== null) {
       return cached;
@@ -49,6 +79,10 @@ class SmartMemoryCache {
       this.set(key, fresh, ttlSeconds);
       return fresh;
     } catch (err) {
+      console.error(`[SmartCache Error] Fetch failed for key "${key}":`, err);
+      if (fallback !== void 0) {
+        return fallback;
+      }
       throw err;
     }
   }
@@ -179,40 +213,105 @@ const publicApi = {
    */
   async getActiveSubjects() {
     return smartCache.wrap("subjects:active", 60, async () => {
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase.from("subjects").select("*").eq("is_active", true).order("order_index");
+          if (error) {
+            console.error("Error fetching subjects from Supabase:", error);
+            return mockSubjects.filter((s) => s.is_active);
+          }
+          return data || [];
+        } catch (err) {
+          console.error("Supabase exception in getActiveSubjects:", err);
+          return mockSubjects.filter((s) => s.is_active);
+        }
+      }
       return mockSubjects.filter((s) => s.is_active).sort((a, b) => a.order_index - b.order_index);
-    });
+    }, mockSubjects.filter((s) => s.is_active));
   },
   /**
    * Get single subject by slug (Cached for 60s)
    */
   async getSubjectBySlug(slug) {
+    if (!slug) return null;
     return smartCache.wrap(`subject:${slug}`, 60, async () => {
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase.from("subjects").select("*").eq("slug", slug).eq("is_active", true).single();
+          if (error) {
+            return null;
+          }
+          return data;
+        } catch (err) {
+          console.error(`Supabase exception in getSubjectBySlug (${slug}):`, err);
+          return mockSubjects.find((s) => s.slug === slug && s.is_active) || null;
+        }
+      }
       return mockSubjects.find((s) => s.slug === slug && s.is_active) || null;
-    });
+    }, null);
   },
   /**
    * Get all active content types (Cached for 60s)
    */
   async getActiveContentTypes() {
     return smartCache.wrap("content_types:active", 60, async () => {
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase.from("content_types").select("*").eq("is_active", true).order("order_index");
+          if (error) {
+            console.error("Error fetching content types:", error);
+            return mockContentTypes.filter((c) => c.is_active);
+          }
+          return data || [];
+        } catch (err) {
+          console.error("Supabase exception in getActiveContentTypes:", err);
+          return mockContentTypes.filter((c) => c.is_active);
+        }
+      }
       return mockContentTypes.filter((c) => c.is_active).sort((a, b) => a.order_index - b.order_index);
-    });
+    }, mockContentTypes.filter((c) => c.is_active));
   },
   /**
    * Get single content type by slug (Cached for 60s)
    */
   async getContentTypeBySlug(slug) {
+    if (!slug) return null;
     return smartCache.wrap(`content_type:${slug}`, 60, async () => {
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase.from("content_types").select("*").eq("slug", slug).eq("is_active", true).single();
+          if (error) {
+            return null;
+          }
+          return data;
+        } catch (err) {
+          console.error(`Supabase exception in getContentTypeBySlug (${slug}):`, err);
+          return mockContentTypes.find((c) => c.slug === slug && c.is_active) || null;
+        }
+      }
       return mockContentTypes.find((c) => c.slug === slug && c.is_active) || null;
-    });
+    }, null);
   },
   /**
    * Get weeks (Cached for 120s)
    */
   async getWeeks() {
     return smartCache.wrap("weeks:all", 120, async () => {
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase.from("weeks").select("*").order("term").order("week_number");
+          if (error) {
+            console.error("Error fetching weeks:", error);
+            return mockWeeks;
+          }
+          return data || [];
+        } catch (err) {
+          console.error("Supabase exception in getWeeks:", err);
+          return mockWeeks;
+        }
+      }
       return mockWeeks;
-    });
+    }, mockWeeks);
   },
   /**
    * Get published resources with optional filtering (Cached for 30s)
@@ -220,26 +319,66 @@ const publicApi = {
   async getPublishedResources(filter) {
     const cacheKey = `resources:${filter?.subjectId || "all"}:${filter?.contentTypeId || "all"}:${filter?.limit || "all"}`;
     return smartCache.wrap(cacheKey, 30, async () => {
+      if (isSupabaseConfigured) {
+        try {
+          let query = supabase.from("resources").select("*, subject:subjects(*), content_type:content_types(*), week:weeks(*)").eq("is_published", true).order("created_at", { ascending: false });
+          if (filter?.subjectId) query = query.eq("subject_id", filter.subjectId);
+          if (filter?.contentTypeId) query = query.eq("content_type_id", filter.contentTypeId);
+          if (filter?.limit) query = query.limit(filter.limit);
+          const { data, error } = await query;
+          if (error) {
+            console.error("Error fetching resources:", error);
+            return [];
+          }
+          return data || [];
+        } catch (err) {
+          console.error("Supabase exception in getPublishedResources:", err);
+          return [];
+        }
+      }
       let list = mockResources.filter((r) => r.is_published);
       if (filter?.subjectId) list = list.filter((r) => r.subject_id === filter.subjectId);
       if (filter?.contentTypeId) list = list.filter((r) => r.content_type_id === filter.contentTypeId);
       if (filter?.limit) list = list.slice(0, filter.limit);
       return list;
-    });
+    }, []);
   },
   /**
    * Get single published resource by slug (Cached for 30s)
    */
   async getResourceBySlug(slug) {
+    if (!slug) return null;
     return smartCache.wrap(`resource:${slug}`, 30, async () => {
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase.from("resources").select("*, subject:subjects(*), content_type:content_types(*), week:weeks(*)").eq("slug", slug).eq("is_published", true).single();
+          if (error) {
+            return null;
+          }
+          return data;
+        } catch (err) {
+          console.error(`Supabase exception in getResourceBySlug (${slug}):`, err);
+          return mockResources.find((r) => r.slug === slug && r.is_published) || null;
+        }
+      }
       return mockResources.find((r) => r.slug === slug && r.is_published) || null;
-    });
+    }, null);
   },
   /**
    * Get ad slot config (Cached for 60s)
    */
   async getAdSlot(position) {
+    if (!position) return null;
     return smartCache.wrap(`ad_slot:${position}`, 60, async () => {
+      if (isSupabaseConfigured) {
+        try {
+          const { data } = await supabase.from("ad_slots").select("*").eq("position", position).eq("is_active", true).single();
+          return data || null;
+        } catch (err) {
+          console.error(`Supabase exception in getAdSlot (${position}):`, err);
+          return null;
+        }
+      }
       return {
         id: `slot-${position}`,
         name: position,
@@ -249,15 +388,26 @@ const publicApi = {
         created_at: "",
         updated_at: ""
       };
-    });
+    }, null);
   },
   /**
    * Get direct ad for slot (Cached for 60s)
    */
   async getActiveDirectAdForSlot(position) {
+    if (!position) return null;
     return smartCache.wrap(`direct_ad:${position}`, 60, async () => {
+      if (isSupabaseConfigured) {
+        try {
+          const now = (/* @__PURE__ */ new Date()).toISOString();
+          const { data } = await supabase.from("direct_ads").select("*").eq("slot_position", position).eq("is_active", true).lte("start_date", now).gte("end_date", now).order("priority", { ascending: false }).limit(1).single();
+          return data || null;
+        } catch (err) {
+          console.error(`Supabase exception in getActiveDirectAdForSlot (${position}):`, err);
+          return null;
+        }
+      }
       return null;
-    });
+    }, null);
   },
   /**
    * Manual cache purge helper

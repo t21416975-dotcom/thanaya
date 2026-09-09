@@ -1,7 +1,7 @@
 /**
  * Smart In-Memory TTL Cache Layer
  * Provides sub-millisecond access to repeated queries
- * Automatically revalidates expired data
+ * Automatically revalidates expired data with crash-proof fallbacks
  */
 
 interface CacheEntry<T> {
@@ -38,9 +38,9 @@ class SmartMemoryCache {
   }
 
   /**
-   * Wrap an async fetcher with smart caching
+   * Wrap an async fetcher with smart caching and crash-proof fallback
    */
-  async wrap<T>(key: string, ttlSeconds: number, fetcher: () => Promise<T>): Promise<T> {
+  async wrap<T>(key: string, ttlSeconds: number, fetcher: () => Promise<T>, fallback?: T): Promise<T> {
     const cached = this.get<T>(key);
     if (cached !== null) {
       return cached;
@@ -51,7 +51,10 @@ class SmartMemoryCache {
       this.set(key, fresh, ttlSeconds);
       return fresh;
     } catch (err) {
-      // If fetcher fails and we had stale cache, or rethrow
+      console.error(`[SmartCache Error] Fetch failed for key "${key}":`, err);
+      if (fallback !== undefined) {
+        return fallback;
+      }
       throw err;
     }
   }

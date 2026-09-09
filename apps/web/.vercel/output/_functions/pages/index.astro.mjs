@@ -1,7 +1,7 @@
 /* empty css                                 */
 import { f as createComponent, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_Cs2yQakW.mjs';
 import 'piccolore';
-import { p as publicApi, $ as $$Layout, a as $$AdSlot } from '../chunks/Layout_DTFe-pFG.mjs';
+import { p as publicApi, $ as $$Layout, a as $$AdSlot } from '../chunks/Layout_B9en39FS.mjs';
 import { $ as $$SubjectCard } from '../chunks/SubjectCard_CIjTUpp-.mjs';
 import { $ as $$ResourceCard } from '../chunks/ResourceCard_D1XGUdhT.mjs';
 export { renderers } from '../renderers.mjs';
