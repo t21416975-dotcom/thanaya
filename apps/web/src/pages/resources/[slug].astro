@@ -278,36 +278,45 @@ const jsonLd = [breadcrumbSchema, learningResourceSchema];
 <script>
   import { recordResourceView, recordResourceDownload } from '../../lib/analytics';
 
-  // Copy Link button logic
-  const copyBtn = document.getElementById('copy-link-btn');
-  const copyBtnText = document.getElementById('copy-btn-text');
+  function setupResourceActions() {
+    // Copy Link button logic
+    const copyBtn = document.getElementById('copy-link-btn');
+    const copyBtnText = document.getElementById('copy-btn-text');
 
-  copyBtn?.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      if (copyBtnText) {
-        copyBtnText.textContent = '✓ تم النسخ!';
-        setTimeout(() => {
-          copyBtnText.textContent = 'نسخ الرابط';
-        }, 2000);
-      }
-    } catch {
-      // Fallback
+    if (copyBtn) {
+      copyBtn.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          if (copyBtnText) {
+            copyBtnText.textContent = '✓ تم النسخ!';
+            setTimeout(() => {
+              copyBtnText.textContent = 'نسخ الرابط';
+            }, 2000);
+          }
+        } catch {
+          // Fallback
+        }
+      };
     }
-  });
 
-  // Analytics: Record page view with deduplication
-  const downloadBtn = document.getElementById('direct-download-btn');
-  const resourceId = downloadBtn?.getAttribute('data-resource-id');
+    // Analytics: Record page view with deduplication
+    const downloadBtn = document.getElementById('direct-download-btn');
+    const resourceId = downloadBtn?.getAttribute('data-resource-id');
 
-  if (resourceId) {
-    recordResourceView(resourceId);
+    if (resourceId) {
+      recordResourceView(resourceId);
+    }
+
+    // Analytics: Record download click
+    if (downloadBtn) {
+      downloadBtn.onclick = () => {
+        if (resourceId) {
+          recordResourceDownload(resourceId);
+        }
+      };
+    }
   }
 
-  // Analytics: Record download click
-  downloadBtn?.addEventListener('click', () => {
-    if (resourceId) {
-      recordResourceDownload(resourceId);
-    }
-  });
+  document.addEventListener('astro:page-load', setupResourceActions);
+  setupResourceActions();
 </script>

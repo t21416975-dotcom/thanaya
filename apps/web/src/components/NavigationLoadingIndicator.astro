@@ -1,0 +1,134 @@
+---
+---
+
+<!-- Top Slim Progress Bar -->
+<div
+  id="nav-progress-bar"
+  class="fixed top-0 left-0 h-1 bg-gradient-to-r from-emerald-600 via-emerald-400 to-teal-500 z-[9999] transition-all duration-300 ease-out opacity-0 pointer-events-none"
+  style="width: 0%;"
+></div>
+
+<!-- Floating Emerald Loading Pill / Spinner -->
+<div
+  id="nav-loading-spinner"
+  class="fixed top-6 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none transition-all duration-200 ease-out opacity-0 translate-y-[-10px] scale-95"
+>
+  <div class="flex items-center gap-3 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-full shadow-lg border border-emerald-100 text-slate-800">
+    <svg class="w-4 h-4 text-emerald-600 animate-spin flex-shrink-0" viewBox="0 0 24 24" fill="none">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+    <span class="text-xs font-bold text-slate-700 select-none">جاري تحميل الصفحة...</span>
+  </div>
+</div>
+
+<script>
+  let progressBar: HTMLElement | null = null;
+  let spinner: HTMLElement | null = null;
+  let progressTimer: number | null = null;
+  let spinnerTimer: number | null = null;
+  let isNavigating = false;
+
+  function initElements() {
+    progressBar = document.getElementById('nav-progress-bar');
+    spinner = document.getElementById('nav-loading-spinner');
+  }
+
+  function startLoading() {
+    if (isNavigating) return;
+    isNavigating = true;
+    initElements();
+
+    if (progressBar) {
+      progressBar.style.transition = 'width 0.3s ease-out, opacity 0.2s ease-in';
+      progressBar.style.opacity = '1';
+      progressBar.style.width = '25%';
+
+      if (progressTimer) clearInterval(progressTimer);
+      progressTimer = window.setInterval(() => {
+        if (!progressBar) return;
+        const currentWidth = parseFloat(progressBar.style.width) || 0;
+        if (currentWidth < 85) {
+          const increment = Math.max(1, (85 - currentWidth) * 0.15);
+          progressBar.style.width = `${currentWidth + increment}%`;
+        }
+      }, 150);
+    }
+
+    // Debounced spinner: shows if loading takes more than 75ms (prevents flicker on instant cache hits)
+    if (spinnerTimer) clearTimeout(spinnerTimer);
+    spinnerTimer = window.setTimeout(() => {
+      if (isNavigating && spinner) {
+        spinner.classList.remove('opacity-0', 'translate-y-[-10px]', 'scale-95');
+        spinner.classList.add('opacity-100', 'translate-y-0', 'scale-100');
+      }
+    }, 75);
+  }
+
+  function stopLoading() {
+    isNavigating = false;
+    if (progressTimer) {
+      clearInterval(progressTimer);
+      progressTimer = null;
+    }
+    if (spinnerTimer) {
+      clearTimeout(spinnerTimer);
+      spinnerTimer = null;
+    }
+
+    initElements();
+
+    if (progressBar) {
+      progressBar.style.transition = 'width 0.15s ease-out, opacity 0.2s ease-out 0.15s';
+      progressBar.style.width = '100%';
+      progressBar.style.opacity = '0';
+      setTimeout(() => {
+        if (progressBar && !isNavigating) {
+          progressBar.style.width = '0%';
+        }
+      }, 350);
+    }
+
+    if (spinner) {
+      spinner.classList.remove('opacity-100', 'translate-y-0', 'scale-100');
+      spinner.classList.add('opacity-0', 'translate-y-[-10px]', 'scale-95');
+    }
+  }
+
+  // Astro View Transitions Lifecycle Hooks
+  document.addEventListener('astro:before-preparation', () => {
+    startLoading();
+  });
+
+  document.addEventListener('astro:after-preparation', () => {
+    // Page is prepared, transitioning DOM
+  });
+
+  document.addEventListener('astro:page-load', () => {
+    stopLoading();
+  });
+
+  document.addEventListener('astro:after-swap', () => {
+    stopLoading();
+  });
+
+  // Fallback for native clicks / navigation
+  document.addEventListener('click', (e) => {
+    const target = (e.target as HTMLElement)?.closest('a');
+    if (!target) return;
+
+    const href = target.getAttribute('href');
+    const isExternal = target.getAttribute('target') === '_blank' || target.getAttribute('rel')?.includes('external');
+    const isDownload = target.hasAttribute('download') || href?.includes('.pdf');
+    const isHash = href?.startsWith('#');
+
+    if (href && !isExternal && !isDownload && !isHash && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+      startLoading();
+    }
+  });
+
+  // Reset if navigated via browser Back/Forward (BFCache)
+  window.addEventListener('pageshow', () => {
+    stopLoading();
+  });
+</script>

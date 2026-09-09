@@ -92,56 +92,63 @@ const { resourceId, resourceTitle } = Astro.props;
 <script>
   import { supabase } from '../lib/supabase';
 
-  const dialog = document.getElementById('report-dialog') as HTMLDialogElement | null;
-  const openBtn = document.getElementById('open-report-dialog');
-  const closeBtn = document.getElementById('close-report-dialog');
-  const cancelBtn = document.getElementById('cancel-report');
-  const form = document.getElementById('report-form') as HTMLFormElement | null;
-  const statusEl = document.getElementById('report-status');
-  const submitBtn = document.getElementById('submit-report') as HTMLButtonElement | null;
+  function setupReportDialog() {
+    const dialog = document.getElementById('report-dialog') as HTMLDialogElement | null;
+    const openBtn = document.getElementById('open-report-dialog');
+    const closeBtn = document.getElementById('close-report-dialog');
+    const cancelBtn = document.getElementById('cancel-report');
+    const form = document.getElementById('report-form') as HTMLFormElement | null;
+    const statusEl = document.getElementById('report-status');
+    const submitBtn = document.getElementById('submit-report') as HTMLButtonElement | null;
 
-  if (dialog && openBtn) {
-    openBtn.addEventListener('click', () => dialog.showModal());
-    closeBtn?.addEventListener('click', () => dialog.close());
-    cancelBtn?.addEventListener('click', () => dialog.close());
+    if (dialog && openBtn) {
+      openBtn.onclick = () => dialog.showModal();
+      if (closeBtn) closeBtn.onclick = () => dialog.close();
+      if (cancelBtn) cancelBtn.onclick = () => dialog.close();
 
-    form?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!form || !submitBtn || !statusEl) return;
+      if (form) {
+        form.onsubmit = async (e) => {
+          e.preventDefault();
+          if (!submitBtn || !statusEl) return;
 
-      const formData = new FormData(form);
-      const resourceId = form.getAttribute('data-resource-id');
-      const issueType = formData.get('issue_type') as string;
-      const details = formData.get('details') as string;
+          const formData = new FormData(form);
+          const resourceId = form.getAttribute('data-resource-id');
+          const issueType = formData.get('issue_type') as string;
+          const details = formData.get('details') as string;
 
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'جاري الإرسال...';
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'جاري الإرسال...';
 
-      try {
-        if (import.meta.env.PUBLIC_SUPABASE_URL && import.meta.env.PUBLIC_SUPABASE_URL !== 'https://your-project.supabase.co') {
-          await (supabase.from('reports') as any).insert({
-            resource_id: resourceId!,
-            issue_type: issueType as any,
-            details: details.trim() || null,
-          });
-        }
+          try {
+            if (import.meta.env.PUBLIC_SUPABASE_URL && import.meta.env.PUBLIC_SUPABASE_URL !== 'https://your-project.supabase.co') {
+              await (supabase.from('reports') as any).insert({
+                resource_id: resourceId!,
+                issue_type: issueType as any,
+                details: details?.trim() || null,
+              });
+            }
 
-        statusEl.className = 'text-xs p-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 block';
-        statusEl.textContent = 'شكرًا لك! تم استلام بلاغك وسيقوم فريق العمل بمراجعته فورًا.';
-        form.reset();
+            statusEl.className = 'text-xs p-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 block';
+            statusEl.textContent = 'شكرًا لك! تم استلام بلاغك وسيقوم فريق العمل بمراجعته فورًا.';
+            form.reset();
 
-        setTimeout(() => {
-          dialog.close();
-          statusEl.className = 'hidden';
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'إرسال البلاغ';
-        }, 1800);
-      } catch (err) {
-        statusEl.className = 'text-xs p-2 rounded-lg bg-red-50 text-red-700 border border-red-200 block';
-        statusEl.textContent = 'حدث خطأ أثناء إرسال البلاغ. يرجى المحاولة لاحقًا.';
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'إرسال البلاغ';
+            setTimeout(() => {
+              dialog.close();
+              statusEl.className = 'hidden';
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'إرسال البلاغ';
+            }, 1800);
+          } catch (err) {
+            statusEl.className = 'text-xs p-2 rounded-lg bg-red-50 text-red-700 border border-red-200 block';
+            statusEl.textContent = 'حدث خطأ أثناء إرسال البلاغ. يرجى المحاولة لاحقًا.';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'إرسال البلاغ';
+          }
+        };
       }
-    });
+    }
   }
+
+  document.addEventListener('astro:page-load', setupReportDialog);
+  setupReportDialog();
 </script>

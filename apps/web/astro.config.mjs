@@ -8,6 +8,10 @@ export default defineConfig({
   site: 'https://thanaya.com',
   output: 'server',
   adapter: vercel(),
+  prefetch: {
+    prefetchAll: true,
+    defaultStrategy: 'hover',
+  },
   integrations: [
     tailwind({ applyBaseStyles: true }),
     sitemap({

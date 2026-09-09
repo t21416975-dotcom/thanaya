@@ -54,21 +54,25 @@ const thumbnailUrl = videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.
 }
 
 <script>
-  // High-performance facade: only insert iframe when clicked
-  document.querySelectorAll('[data-youtube-facade]').forEach((container) => {
-    container.addEventListener('click', () => {
-      const embedUrl = container.getAttribute('data-embed-url');
-      if (!embedUrl) return;
+  function setupYouTubeFacades() {
+    document.querySelectorAll('[data-youtube-facade]').forEach((container) => {
+      container.addEventListener('click', () => {
+        const embedUrl = container.getAttribute('data-embed-url');
+        if (!embedUrl) return;
 
-      const iframe = document.createElement('iframe');
-      iframe.src = `${embedUrl}?autoplay=1`;
-      iframe.title = 'فيديو شرح المورد';
-      iframe.className = 'w-full h-full';
-      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-      iframe.allowFullscreen = true;
+        const iframe = document.createElement('iframe');
+        iframe.src = `${embedUrl}?autoplay=1`;
+        iframe.title = 'فيديو شرح المورد';
+        iframe.className = 'w-full h-full';
+        iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+        iframe.allowFullscreen = true;
 
-      container.innerHTML = '';
-      container.appendChild(iframe);
-    }, { once: true });
-  });
+        container.innerHTML = '';
+        container.appendChild(iframe);
+      }, { once: true });
+    });
+  }
+
+  document.addEventListener('astro:page-load', setupYouTubeFacades);
+  setupYouTubeFacades();
 </script>
