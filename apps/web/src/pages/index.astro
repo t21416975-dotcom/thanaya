@@ -13,7 +13,11 @@ const latestAssessments = await publicApi.getPublishedResources({ limit: 6 });
   <div class="space-y-10">
     {/* Hero Section */}
     <section class="text-center py-10 bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
-      <div class="inline-flex items-center gap-2 bg-emerald-50 text-emerald-800 text-xs px-3 py-1 rounded-full font-bold mb-4 border border-emerald-100">
+      <div class="inline-flex items-center gap-2 bg-emerald-50 text-emerald-800 text-xs px-3.5 py-1.5 rounded-full font-bold mb-4 border border-emerald-100 shadow-sm">
+        <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+          <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+        </svg>
         <span>دفعة الثانوية العامة والبكالوريا</span>
       </div>
       <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
