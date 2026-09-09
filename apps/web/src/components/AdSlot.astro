@@ -51,20 +51,10 @@ const directAd = slot?.slot_type === 'direct' ? await publicApi.getActiveDirectA
           </div>
         </a>
       ) : slot.slot_type === 'google' ? (
-        <!-- Google AdSense Container (Zero CLS Reserved Box) -->
-        <div class="p-4 flex flex-col items-center justify-center min-h-[90px] text-center">
-          <div class="text-xs text-slate-400">
-            <!-- Google AdSense tag placeholder -->
-            <ins
-              class="adsbygoogle"
-              style="display:block"
-              data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-              data-ad-slot={slot.id}
-              data-ad-format="auto"
-              data-full-width-responsive="true"
-            ></ins>
-            <span class="text-[11px] text-slate-400 font-mono">Google Ads Area</span>
-          </div>
+        <!-- Adsterra Native Banner Container (Zero CLS Reserved Box) -->
+        <div class="p-2 sm:p-4 flex flex-col items-center justify-center min-h-[90px] w-full text-center overflow-hidden">
+          <script is:inline async="async" data-cfasync="false" src="https://pl31266860.profitableratecpmnetwork.com/ccae9d506cf77407ce62d684b21d33c5/invoke.js"></script>
+          <div id="container-ccae9d506cf77407ce62d684b21d33c5" class="w-full flex justify-center"></div>
         </div>
       ) : (
         <!-- Platform Support Fallback Message -->
@@ -84,29 +74,34 @@ const directAd = slot?.slot_type === 'direct' ? await publicApi.getActiveDirectA
 <script>
   import { supabase } from '../lib/supabase';
 
-  const isLive =
-    !!import.meta.env.PUBLIC_SUPABASE_URL &&
-    import.meta.env.PUBLIC_SUPABASE_URL !== 'https://your-project.supabase.co';
+  function initAdTracking() {
+    const isLive =
+      !!import.meta.env.PUBLIC_SUPABASE_URL &&
+      import.meta.env.PUBLIC_SUPABASE_URL !== 'https://your-project.supabase.co';
 
-  // Direct Ad Impression & Click Tracking
-  document.querySelectorAll('[data-direct-ad-id]').forEach((adEl) => {
-    const adId = adEl.getAttribute('data-direct-ad-id');
-    if (!adId) return;
+    // Direct Ad Impression & Click Tracking
+    document.querySelectorAll('[data-direct-ad-id]').forEach((adEl) => {
+      const adId = adEl.getAttribute('data-direct-ad-id');
+      if (!adId) return;
 
-    // Track Impression once per session
-    const impKey = `thanaya_ad_imp_${adId}`;
-    if (typeof window !== 'undefined' && !sessionStorage.getItem(impKey)) {
-      sessionStorage.setItem(impKey, '1');
-      if (isLive) {
-        (supabase.rpc as any)('increment_ad_impressions', { p_ad_id: adId }).catch(() => {});
+      // Track Impression once per session
+      const impKey = `thanaya_ad_imp_${adId}`;
+      if (typeof window !== 'undefined' && !sessionStorage.getItem(impKey)) {
+        sessionStorage.setItem(impKey, '1');
+        if (isLive) {
+          (supabase.rpc as any)('increment_ad_impressions', { p_ad_id: adId }).catch(() => {});
+        }
       }
-    }
 
-    // Track Click
-    adEl.addEventListener('click', () => {
-      if (isLive) {
-        (supabase.rpc as any)('increment_ad_clicks', { p_ad_id: adId }).catch(() => {});
-      }
+      // Track Click
+      adEl.addEventListener('click', () => {
+        if (isLive) {
+          (supabase.rpc as any)('increment_ad_clicks', { p_ad_id: adId }).catch(() => {});
+        }
+      });
     });
-  });
+  }
+
+  document.addEventListener('astro:page-load', initAdTracking);
 </script>
+
