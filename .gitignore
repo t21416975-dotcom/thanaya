@@ -10,6 +10,7 @@ coverage/
 dist/
 build/
 .astro/
+.vercel/
 
 # Environment variables
 .env
