@@ -168,32 +168,32 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-fadeIn">
       {/* Header bar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:px-6 sm:py-4 border-b border-slate-200 bg-slate-50">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition shrink-0 cursor-pointer"
             title="رجوع"
           >
             <ArrowRight className="w-5 h-5" />
           </button>
           <div>
-            <h2 className="text-base font-bold text-slate-900">
+            <h2 className="text-sm sm:text-base font-bold text-slate-900">
               {initialResource ? `تعديل: ${initialResource.title}` : 'إضافة مورد تعليمي جديد'}
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-[11px] sm:text-xs text-slate-500">
               تعبئة بيانات المورد وربط ملف الـ PDF وشرح الفيديو
             </p>
           </div>
         </div>
 
         {/* Tab Switcher (Editor vs Live Preview) */}
-        <div className="flex items-center gap-1 bg-slate-200 p-1 rounded-lg text-xs font-semibold">
+        <div className="flex items-center gap-1 bg-slate-200 p-1 rounded-lg text-xs font-semibold self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setPreviewTab('editor')}
-            className={`px-3 py-1.5 rounded-md transition ${
+            className={`px-3 py-1.5 rounded-md transition cursor-pointer ${
               previewTab === 'editor' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -202,7 +202,7 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
           <button
             type="button"
             onClick={() => setPreviewTab('preview')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition cursor-pointer ${
               previewTab === 'preview' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -213,7 +213,7 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
       </div>
 
       {error && (
-        <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center gap-2">
+        <div className="mx-4 sm:mx-6 mt-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
@@ -221,7 +221,7 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
 
       {/* Editor Content */}
       {previewTab === 'editor' ? (
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-6">
           {/* Top Classification Controls */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <div>

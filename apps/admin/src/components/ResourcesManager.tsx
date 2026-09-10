@@ -160,8 +160,8 @@ export function ResourcesManager() {
       {isLoading ? (
         <div className="text-center py-12 text-slate-400">جاري تحميل الموارد...</div>
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-          <table className="w-full text-right border-collapse">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-sm">
+          <table className="w-full text-right border-collapse min-w-[700px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                 <th className="px-6 py-3">عنوان المورد</th>

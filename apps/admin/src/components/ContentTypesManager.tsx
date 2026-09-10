@@ -120,7 +120,7 @@ export function ContentTypesManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900">أنواع المحتوى (Content Types)</h2>
           <p className="text-sm text-slate-500">
@@ -129,7 +129,7 @@ export function ContentTypesManager() {
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm"
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm self-start sm:self-auto cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>إضافة نوع محتوى جديد</span>
@@ -139,8 +139,8 @@ export function ContentTypesManager() {
       {isLoading ? (
         <div className="text-center py-12 text-slate-400">جاري تحميل أنواع المحتوى...</div>
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-          <table className="w-full text-right border-collapse">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-sm">
+          <table className="w-full text-right border-collapse min-w-[550px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                 <th className="px-6 py-3">الترتيب</th>

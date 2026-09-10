@@ -229,8 +229,8 @@ export function AdsManager() {
             </button>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-            <table className="w-full text-right border-collapse text-xs">
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-sm">
+            <table className="w-full text-right border-collapse text-xs min-w-[650px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-600">
                   <th className="py-3 px-4">المعلن والعنوان</th>

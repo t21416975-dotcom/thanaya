@@ -111,14 +111,14 @@ export function WeeksManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900">الأسابيع الدراسية</h2>
           <p className="text-sm text-slate-500">إدارة وتعديل وحذف أسابيع الفصل الدراسي الأول والثاني</p>
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm"
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm self-start sm:self-auto cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>إضافة أسبوع</span>
@@ -126,10 +126,10 @@ export function WeeksManager() {
       </div>
 
       {/* Term Selector */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
         <button
           onClick={() => setSelectedTerm(1)}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer ${
             selectedTerm === 1
               ? 'bg-slate-900 text-white'
               : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'

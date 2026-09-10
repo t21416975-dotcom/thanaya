@@ -42,12 +42,12 @@ export function ReportsManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900">بلاغات المشاكل (Reports)</h2>
           <p className="text-sm text-slate-500">متابعة وحل المشاكل المبلغ عنها من الطلاب في ملفات الموارد</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}

@@ -42,20 +42,15 @@ export function AuthLogin({ onSuccess }: AuthLoginProps) {
     }
   };
 
-  const handleQuickDemoLogin = () => {
-    localStorage.setItem('thanaya_admin_session', 'mock_token');
-    onSuccess();
-  };
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4 py-12">
-      <div className="max-w-md w-full bg-white rounded-2xl p-8 shadow-2xl border border-slate-800 space-y-6">
+    <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4 py-8 sm:py-12">
+      <div className="max-w-md w-full bg-white rounded-2xl p-6 sm:p-8 shadow-2xl border border-slate-800 space-y-6">
         <div className="text-center">
           <div className="inline-flex p-3 bg-emerald-50 text-emerald-600 rounded-xl mb-3">
             <ShieldCheck className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">تسجيل دخول الأدمن</h1>
-          <p className="text-sm text-slate-500 mt-1">لوحة إدارة منصة ثنايا للبكالوريا</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">تسجيل دخول الأدمن</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">لوحة إدارة منصة ثنايا للبكالوريا</p>
         </div>
 
         {error && (
@@ -101,20 +96,11 @@ export function AuthLogin({ onSuccess }: AuthLoginProps) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition shadow-sm disabled:opacity-50"
+            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition shadow-sm disabled:opacity-50 cursor-pointer"
           >
             {loading ? 'جاري التحقق...' : 'دخول لوحة التحكم'}
           </button>
         </form>
-
-        <div className="pt-4 border-t border-slate-100 text-center">
-          <button
-            onClick={handleQuickDemoLogin}
-            className="text-xs text-slate-500 hover:text-emerald-700 font-medium underline"
-          >
-            الدخول المباشر السريع (Quick Admin Access)
-          </button>
-        </div>
       </div>
     </div>
   );
