@@ -1,0 +1,165 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import { publicApi } from '../../lib/api';
+
+const subjects = await publicApi.getActiveSubjects();
+const exams = await publicApi.getPublishedExams();
+
+const url = new URL(Astro.request.url);
+const currentSubjectSlug = url.searchParams.get('subject');
+
+const currentSubject = currentSubjectSlug ? subjects.find((s) => s.slug === currentSubjectSlug) : null;
+const filteredExams = currentSubject
+  ? exams.filter((e) => e.subject_id === currentSubject.id)
+  : exams;
+
+const pageTitle = currentSubject
+  ? `امتحانات تفاعلية في ${currentSubject.name} | منصة ثنايا`
+  : 'الامتحانات التجريبية التفاعلية (MCQs) للبكالوريا | منصة ثنايا';
+
+const pageDescription = 'امتحانات تجريبية تفاعلية بنظام الاختيار من متعدد (MCQs) مع تصحيح فوري ومؤقت زمني وتفسير تفصيلي لكل سؤال.';
+---
+
+<Layout title={pageTitle} description={pageDescription}>
+  <div class="space-y-8">
+    <Breadcrumb
+      items={[
+        { label: 'الرئيسية', href: '/' },
+        { label: 'الامتحانات التفاعلية' },
+      ]}
+    />
+
+    <!-- Header Banner -->
+    <div class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-10 shadow-lg relative overflow-hidden">
+      <div class="relative z-10 max-w-2xl space-y-3">
+        <div class="inline-flex items-center gap-2 bg-purple-500/20 text-purple-300 border border-purple-400/30 px-3 py-1 rounded-full text-xs font-bold">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+          </svg>
+          <span>نظام التقييم الذاتي والتصحيح الفوري</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          الامتحانات التجريبية التفاعلية (MCQs)
+        </h1>
+        <p class="text-sm text-slate-300 leading-relaxed">
+          اختبر مستواك مع نماذج امتحانات مطابقة لمواصفات البكالوريا مع مؤقت زمني وتصحيح فوري وشرح تفسيري شامل لكل سؤال.
+        </p>
+      </div>
+      <div class="absolute -left-10 -bottom-10 w-60 h-60 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
+    </div>
+
+    <!-- Ad Slot -->
+    <AdSlot position="homepage_top" />
+
+    <!-- Subject Filters -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+      <a
+        href="/exams"
+        class={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition ${
+          !currentSubjectSlug
+            ? 'bg-slate-900 text-white shadow-sm'
+            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+        }`}
+      >
+        جميع المواد ({exams.length})
+      </a>
+      {
+        subjects.map((sub) => {
+          const count = exams.filter((e) => e.subject_id === sub.id).length;
+          const isActive = currentSubjectSlug === sub.slug;
+          return (
+            <a
+              href={`/exams?subject=${sub.slug}`}
+              class={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${
+                isActive
+                  ? 'bg-purple-600 text-white shadow-sm'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              <span>{sub.name}</span>
+              {count > 0 && (
+                <span class={`text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-purple-700 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                  {count}
+                </span>
+              )}
+            </a>
+          );
+        })
+      }
+    </div>
+
+    <!-- Exams Grid -->
+    {
+      filteredExams.length > 0 ? (
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredExams.map((exam) => {
+            const questionCount = exam.questions?.length || 0;
+            return (
+              <div class="bg-white rounded-2xl border border-slate-200 hover:border-purple-300 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between gap-5 group">
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-100">
+                      {exam.subject?.name || 'مادة دراسية'}
+                    </span>
+                    <div class="flex items-center gap-1 text-xs text-slate-500 font-medium">
+                      <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                      </svg>
+                      <span>{exam.time_limit_minutes} دقيقة</span>
+                    </div>
+                  </div>
+
+                  <h3 class="text-base font-bold text-slate-900 group-hover:text-purple-700 transition leading-snug">
+                    {exam.title}
+                  </h3>
+
+                  <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500 pt-1">
+                    <span class="flex items-center gap-1">
+                      <svg class="w-3.5 h-3.5 text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 11l3 3L22 4"></path>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                      </svg>
+                      <span>{questionCount} سؤال تفاعلي</span>
+                    </span>
+                    <span>•</span>
+                    <span class="text-emerald-700 font-semibold">تصحيح وتفسير فوري</span>
+                  </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <span class="text-xs text-slate-400">امتحان تدريبي مجاني</span>
+                  <a
+                    href={`/exams/${exam.id}`}
+                    class="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-xl text-xs font-bold transition shadow-sm"
+                  >
+                    <span>بدء الامتحان الآن</span>
+                    <svg class="w-3.5 h-3.5 rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M5 12h14M12 5l7 7-7 7"></path>
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
+          <div class="w-12 h-12 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <h4 class="font-bold text-slate-800 text-sm">لا توجد امتحانات منشورة في هذا القسم حالياً</h4>
+          <p class="text-xs text-slate-500 max-w-sm mx-auto">
+            يتم إضافة وتحديث نماذج الامتحانات بانتظام من قِبل الفريق التعليمي.
+          </p>
+        </div>
+      )
+    }
+  </div>
+</Layout>

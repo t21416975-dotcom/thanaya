@@ -1,0 +1,617 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import { publicApi } from '../../lib/api';
+
+const { id } = Astro.params;
+const exam = id ? await publicApi.getExamById(id) : null;
+
+if (!exam) {
+  return Astro.redirect('/404');
+}
+
+const pageTitle = `${exam.title} - امتحان تجريبي تفاعلي | منصة ثنايا`;
+const pageDescription = `امتحان تفاعلي في ${exam.subject?.name || 'البكالوريا'} يحتوي على ${exam.questions.length} سؤال MCQ مع مؤقت زمني وتصحيح وشرح فوري.`;
+
+const questionsJson = JSON.stringify(exam.questions);
+---
+
+<Layout title={pageTitle} description={pageDescription}>
+  <div class="space-y-6 max-w-4xl mx-auto">
+    <Breadcrumb
+      items={[
+        { label: 'الرئيسية', href: '/' },
+        { label: 'الامتحانات التفاعلية', href: '/exams' },
+        { label: exam.title },
+      ]}
+    />
+
+    <!-- PHASE 1: Welcome & Setup Screen -->
+    <section id="exam-welcome" data-time-limit={exam.time_limit_minutes} class="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 shadow-sm text-center space-y-8 animate-fadeIn">
+      <div class="max-w-xl mx-auto space-y-4">
+        <span class="inline-flex items-center px-3.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-100">
+          {exam.subject?.name || 'مادة دراسية'}
+        </span>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-tight">
+          {exam.title}
+        </h1>
+        <p class="text-sm text-slate-500 leading-relaxed">
+          امتحان تجريبي تفاعلي بنظام البكالوريا الحديثة (MCQ). يتم احتساب الوقت وتصحيح الإجابات فوريًا بعد التسليم مع تقديم شرح مفصل لكل سؤال.
+        </p>
+      </div>
+
+      <!-- Exam Key Stats Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-lg mx-auto">
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center">
+          <div class="text-2xl font-black text-slate-900">{exam.questions.length}</div>
+          <div class="text-xs font-bold text-slate-500 mt-1">عدد الأسئلة</div>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center">
+          <div class="text-2xl font-black text-purple-600">{exam.time_limit_minutes}</div>
+          <div class="text-xs font-bold text-slate-500 mt-1">المدة (بالدقائق)</div>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center">
+          <div class="text-2xl font-black text-emerald-600">فوري</div>
+          <div class="text-xs font-bold text-slate-500 mt-1">التصحيح والتفسير</div>
+        </div>
+      </div>
+
+      <!-- Exam Rules & Instructions -->
+      <div class="max-w-md mx-auto text-right bg-purple-50/60 border border-purple-100 rounded-2xl p-5 text-xs text-slate-700 space-y-2">
+        <p class="font-bold text-purple-900 text-sm mb-1 flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-purple-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span>تعليمات الامتحان:</span>
+        </p>
+        <ul class="list-disc list-inside space-y-1 text-slate-600">
+          <li>سيبدأ المؤقت التنازلي فور النقر على زر "بدء الامتحان".</li>
+          <li>يمكنك التنقل بحرية بين الأسئلة وتعديل إجاباتك قبل التسليم.</li>
+          <li>سيتم تسليم الامتحان تلقائيًا عند انتهاء الوقت المحدد.</li>
+          <li>ستظهر النتيجة الإجمالية والتفسير النموذجي لكل سؤال مباشرة فور التسليم.</li>
+        </ul>
+      </div>
+
+      <div class="pt-2">
+        <button
+          id="start-exam-btn"
+          type="button"
+          class="inline-flex items-center justify-center gap-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-10 py-4 rounded-2xl text-base font-extrabold transition shadow-md hover:shadow-lg transform active:scale-95 cursor-pointer"
+        >
+          <span>بدء الامتحان الآن</span>
+          <svg class="w-5 h-5 rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M5 12h14M12 5l7 7-7 7"></path>
+          </svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- PHASE 2: Live Test Interface -->
+    <section id="exam-live" class="hidden space-y-6 animate-fadeIn">
+      <!-- Sticky Live Header with Timer & Progress -->
+      <div class="sticky top-16 z-30 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-4 shadow-md flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <span class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 font-black text-sm flex items-center justify-center">
+            <span id="current-q-index-badge">1</span>
+          </span>
+          <div>
+            <div class="text-xs text-slate-400 font-semibold">سؤال من إجمالي {exam.questions.length}</div>
+            <div class="text-sm font-bold text-slate-800 line-clamp-1">{exam.title}</div>
+          </div>
+        </div>
+
+        <!-- Countdown Timer -->
+        <div class="flex items-center gap-4">
+          <div id="timer-box" class="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-mono font-bold shadow-inner">
+            <svg class="w-4 h-4 text-purple-400 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span id="timer-display">--:--</span>
+          </div>
+
+          <button
+            id="submit-exam-top-btn"
+            type="button"
+            class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm"
+          >
+            تسليم الامتحان
+          </button>
+        </div>
+      </div>
+
+      <!-- Question Navigation Grid -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <div class="text-xs font-bold text-slate-500 mb-2.5 flex items-center justify-between">
+          <span>خريطة الأسئلة:</span>
+          <span id="answered-count-text" class="text-emerald-700">0 من {exam.questions.length} تمت إجابتها</span>
+        </div>
+        <div id="questions-nav-grid" class="flex flex-wrap gap-2">
+          {
+            exam.questions.map((_, idx) => (
+              <button
+                type="button"
+                data-nav-index={idx}
+                class="q-nav-btn w-9 h-9 rounded-xl text-xs font-bold transition border border-slate-200 bg-slate-50 text-slate-700 hover:border-purple-400 flex items-center justify-center cursor-pointer"
+              >
+                {idx + 1}
+              </button>
+            ))
+          }
+        </div>
+      </div>
+
+      <!-- Question Active Card -->
+      <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-100">
+              السؤال رقم <span id="q-number-text">1</span>
+            </span>
+            <span id="q-status-badge" class="text-xs font-medium text-slate-400">لم تتم الإجابة</span>
+          </div>
+          <h2 id="q-text-display" class="text-lg sm:text-xl font-bold text-slate-900 leading-relaxed pt-2">
+            <!-- Question text inserted by JS -->
+          </h2>
+        </div>
+
+        <!-- Options Container -->
+        <div id="q-options-container" class="space-y-3 pt-2">
+          <!-- Options cards rendered by JS -->
+        </div>
+
+        <!-- Previous / Next / Submit Controls -->
+        <div class="pt-6 border-t border-slate-100 flex items-center justify-between gap-3">
+          <button
+            id="prev-q-btn"
+            type="button"
+            class="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition disabled:opacity-40"
+          >
+            السؤال السابق
+          </button>
+
+          <div class="flex items-center gap-2">
+            <button
+              id="next-q-btn"
+              type="button"
+              class="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition shadow-sm"
+            >
+              السؤال التالي
+            </button>
+
+            <button
+              id="submit-exam-bottom-btn"
+              type="button"
+              class="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm"
+            >
+              إنهاء وتسليم الامتحان
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PHASE 3: Results & Comprehensive Review Screen -->
+    <section id="exam-results" class="hidden space-y-8 animate-fadeIn">
+      <!-- Score Summary Card -->
+      <div class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-8 sm:p-10 shadow-xl text-center space-y-6 relative overflow-hidden">
+        <div class="relative z-10 space-y-2">
+          <span id="result-badge" class="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+            تم إنهاء الامتحان بنجاح
+          </span>
+          <h2 class="text-2xl sm:text-3xl font-black">نتيجة الامتحان</h2>
+          <p class="text-xs text-slate-300">{exam.title}</p>
+        </div>
+
+        <!-- Big Score Display -->
+        <div class="relative z-10 inline-flex flex-col items-center justify-center p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-sm min-w-[220px]">
+          <div class="text-5xl sm:text-6xl font-black tracking-tight text-white flex items-baseline justify-center gap-1">
+            <span id="score-earned">0</span>
+            <span class="text-2xl text-slate-400 font-bold">/ {exam.questions.length}</span>
+          </div>
+          <div id="score-percentage" class="text-lg font-extrabold text-emerald-400 mt-1">0%</div>
+          <div id="score-assessment" class="text-xs text-slate-300 mt-1 font-medium">--</div>
+        </div>
+
+        <!-- Stats Breakdown -->
+        <div class="relative z-10 grid grid-cols-3 gap-3 max-w-md mx-auto text-xs">
+          <div class="bg-white/5 border border-white/10 rounded-2xl p-3">
+            <div id="correct-count" class="text-xl font-bold text-emerald-400">0</div>
+            <div class="text-slate-400 mt-0.5">إجابات صحيحة</div>
+          </div>
+          <div class="bg-white/5 border border-white/10 rounded-2xl p-3">
+            <div id="wrong-count" class="text-xl font-bold text-rose-400">0</div>
+            <div class="text-slate-400 mt-0.5">إجابات خاطئة</div>
+          </div>
+          <div class="bg-white/5 border border-white/10 rounded-2xl p-3">
+            <div id="time-spent" class="text-xl font-bold text-purple-300">00:00</div>
+            <div class="text-slate-400 mt-0.5">الوقت المستغرق</div>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="relative z-10 flex flex-wrap items-center justify-center gap-3 pt-2">
+          <button
+            id="retake-exam-btn"
+            type="button"
+            class="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition shadow-sm cursor-pointer"
+          >
+            إعادة محاولة الامتحان
+          </button>
+          <a
+            href="/exams"
+            class="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition border border-white/20"
+          >
+            العودة لكل الامتحانات
+          </a>
+        </div>
+      </div>
+
+      <!-- Detailed Review List -->
+      <div class="space-y-6">
+        <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">مراجعة الأسئلة والشرح التفصيلي</h3>
+            <p class="text-xs text-slate-500">تحليل دقيق لإجابتك مقارنة بالإجابة الصحيحة والتفسير العلمي</p>
+          </div>
+          <span class="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+            {exam.questions.length} أسئلة
+          </span>
+        </div>
+
+        <div id="review-questions-list" class="space-y-6">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer Ad Slot -->
+    <AdSlot position="resource_after_meta" />
+  </div>
+
+  <!-- JSON Data for client-side interactivity -->
+  <script is:inline type="application/json" id="exam-data" set:html={questionsJson}></script>
+
+  <!-- Client-side Interactive Logic -->
+  <script is:inline>
+    (function () {
+      const dataEl = document.getElementById('exam-data');
+      const questions = JSON.parse(dataEl ? dataEl.textContent || '[]' : '[]');
+      const timeLimitMinutes = Number(document.getElementById('exam-welcome')?.getAttribute('data-time-limit') || '30');
+      const timeLimitSeconds = (timeLimitMinutes || 30) * 60;
+
+      // State
+      let currentQuestionIndex = 0;
+      let userAnswers = {}; // { [qIndex]: selectedOptionIndex }
+      let remainingSeconds = timeLimitSeconds;
+      let timerInterval = null;
+      let isSubmitted = false;
+      let timeSpentSeconds = 0;
+
+      // DOM Elements
+      const welcomeSection = document.getElementById('exam-welcome');
+      const liveSection = document.getElementById('exam-live');
+      const resultsSection = document.getElementById('exam-results');
+
+      const startExamBtn = document.getElementById('start-exam-btn');
+      const timerDisplay = document.getElementById('timer-display');
+      const timerBox = document.getElementById('timer-box');
+
+      const currentQBadge = document.getElementById('current-q-index-badge');
+      const qNumberText = document.getElementById('q-number-text');
+      const qStatusBadge = document.getElementById('q-status-badge');
+      const qTextDisplay = document.getElementById('q-text-display');
+      const qOptionsContainer = document.getElementById('q-options-container');
+
+      const prevQBtn = document.getElementById('prev-q-btn');
+      const nextQBtn = document.getElementById('next-q-btn');
+      const submitTopBtn = document.getElementById('submit-exam-top-btn');
+      const submitBottomBtn = document.getElementById('submit-exam-bottom-btn');
+      const retakeBtn = document.getElementById('retake-exam-btn');
+
+      const answeredCountText = document.getElementById('answered-count-text');
+      const navButtons = document.querySelectorAll('.q-nav-btn');
+
+      const optionLetters = ['أ', 'ب', 'ج', 'د'];
+
+      // Start Exam
+      function startExam() {
+        welcomeSection.classList.add('hidden');
+        resultsSection.classList.add('hidden');
+        liveSection.classList.remove('hidden');
+
+        currentQuestionIndex = 0;
+        userAnswers = {};
+        remainingSeconds = timeLimitSeconds;
+        isSubmitted = false;
+
+        renderQuestion(0);
+        updateNavGrid();
+        startTimer();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      // Timer Logic
+      function startTimer() {
+        clearInterval(timerInterval);
+        updateTimerDisplay();
+
+        timerInterval = setInterval(() => {
+          remainingSeconds--;
+          timeSpentSeconds++;
+          updateTimerDisplay();
+
+          if (remainingSeconds <= 0) {
+            clearInterval(timerInterval);
+            alert('انتهى الوقت المحدد للامتحان! سيتم تسليم إجاباتك الآن.');
+            submitExam();
+          }
+        }, 1000);
+      }
+
+      function updateTimerDisplay() {
+        const mins = Math.floor(remainingSeconds / 60);
+        const secs = remainingSeconds % 60;
+        timerDisplay.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+        if (remainingSeconds <= 120) {
+          timerBox.className = 'flex items-center gap-2 bg-rose-600 text-white px-4 py-2 rounded-xl text-sm font-mono font-bold shadow-inner animate-pulse';
+        } else if (remainingSeconds <= 300) {
+          timerBox.className = 'flex items-center gap-2 bg-amber-600 text-white px-4 py-2 rounded-xl text-sm font-mono font-bold shadow-inner';
+        } else {
+          timerBox.className = 'flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-mono font-bold shadow-inner';
+        }
+      }
+
+      // Render Active Question
+      function renderQuestion(index) {
+        if (!questions[index]) return;
+        currentQuestionIndex = index;
+        const q = questions[index];
+
+        currentQBadge.textContent = String(index + 1);
+        qNumberText.textContent = String(index + 1);
+        qTextDisplay.textContent = q.question_text;
+
+        const isAnswered = userAnswers[index] !== undefined;
+        if (isAnswered) {
+          qStatusBadge.textContent = 'تمت الإجابة';
+          qStatusBadge.className = 'text-xs font-bold text-emerald-600';
+        } else {
+          qStatusBadge.textContent = 'لم تتم الإجابة';
+          qStatusBadge.className = 'text-xs font-medium text-slate-400';
+        }
+
+        // Render Options
+        qOptionsContainer.innerHTML = '';
+        q.options.forEach((optText, optIdx) => {
+          const isSelected = userAnswers[index] === optIdx;
+          const optCard = document.createElement('div');
+          optCard.className = `flex items-center gap-3.5 p-4 rounded-2xl border transition cursor-pointer select-none ${
+            isSelected
+              ? 'border-purple-600 bg-purple-50/80 ring-2 ring-purple-600/30'
+              : 'border-slate-200 bg-slate-50/70 hover:bg-slate-100 hover:border-slate-300'
+          }`;
+
+          optCard.innerHTML = `
+            <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+              isSelected ? 'border-purple-600 bg-purple-600 text-white' : 'border-slate-400 bg-white'
+            }">
+              ${isSelected ? '<div class="w-2 h-2 rounded-full bg-white"></div>' : ''}
+            </div>
+            <span class="w-7 h-7 rounded-lg bg-white border border-slate-200 text-xs font-extrabold text-slate-700 flex items-center justify-center shrink-0 shadow-sm">
+              ${optionLetters[optIdx] || optIdx + 1}
+            </span>
+            <span class="text-sm font-semibold text-slate-800 flex-1 leading-relaxed">${optText}</span>
+          `;
+
+          optCard.onclick = () => {
+            userAnswers[index] = optIdx;
+            renderQuestion(index);
+            updateNavGrid();
+          };
+
+          qOptionsContainer.appendChild(optCard);
+        });
+
+        // Prev/Next button states
+        prevQBtn.disabled = index === 0;
+        if (index === questions.length - 1) {
+          nextQBtn.classList.add('hidden');
+        } else {
+          nextQBtn.classList.remove('hidden');
+        }
+
+        updateNavGrid();
+      }
+
+      function updateNavGrid() {
+        let answeredCount = 0;
+        navButtons.forEach((btn, idx) => {
+          const isCurrent = idx === currentQuestionIndex;
+          const isAnswered = userAnswers[idx] !== undefined;
+          if (isAnswered) answeredCount++;
+
+          let btnClass = 'q-nav-btn w-9 h-9 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer ';
+          if (isCurrent) {
+            btnClass += 'border-2 border-purple-600 bg-purple-600 text-white shadow-sm ring-2 ring-purple-400/30';
+          } else if (isAnswered) {
+            btnClass += 'border border-emerald-500 bg-emerald-50 text-emerald-800';
+          } else {
+            btnClass += 'border border-slate-200 bg-slate-50 text-slate-700 hover:border-purple-300';
+          }
+          btn.className = btnClass;
+        });
+
+        answeredCountText.textContent = `${answeredCount} من ${questions.length} تمت إجابتها`;
+      }
+
+      // Submit Exam & Show Comprehensive Results
+      function submitExam() {
+        if (!isSubmitted) {
+          const unanswered = questions.length - Object.keys(userAnswers).length;
+          if (unanswered > 0 && remainingSeconds > 0) {
+            const confirmed = confirm(`لديك ${unanswered} أسئلة لم تقم بالإجابة عليها بعد. هل أنت متأكد من تسليم الامتحان الآن؟`);
+            if (!confirmed) return;
+          }
+        }
+
+        clearInterval(timerInterval);
+        isSubmitted = true;
+
+        // Calculate score
+        let correctCount = 0;
+        let wrongCount = 0;
+
+        questions.forEach((q, idx) => {
+          const ans = userAnswers[idx];
+          if (ans === q.correct_option_index) {
+            correctCount++;
+          } else if (ans !== undefined) {
+            wrongCount++;
+          }
+        });
+
+        const total = questions.length;
+        const percentage = Math.round((correctCount / total) * 100);
+
+        // Update Results UI
+        document.getElementById('score-earned').textContent = String(correctCount);
+        document.getElementById('score-percentage').textContent = `${percentage}%`;
+        document.getElementById('correct-count').textContent = String(correctCount);
+        document.getElementById('wrong-count').textContent = String(wrongCount);
+
+        const spentMins = Math.floor(timeSpentSeconds / 60);
+        const spentSecs = timeSpentSeconds % 60;
+        document.getElementById('time-spent').textContent = `${String(spentMins).padStart(2, '0')}:${String(spentSecs).padStart(2, '0')}`;
+
+        // Assessment text
+        const assessmentEl = document.getElementById('score-assessment');
+        const badgeEl = document.getElementById('result-badge');
+        if (percentage >= 85) {
+          assessmentEl.textContent = '🌟 ممتاز! أداء استثنائي وفهم عميق للمنهج';
+          badgeEl.textContent = 'ممتاز - أحسنت!';
+          badgeEl.className = 'inline-flex items-center px-4 py-1.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30';
+        } else if (percentage >= 70) {
+          assessmentEl.textContent = '👍 جيد جداً! مستوى قوي مع فرصة لمراجعة النقاط غير المكتملة';
+          badgeEl.textContent = 'جيد جداً';
+          badgeEl.className = 'inline-flex items-center px-4 py-1.5 rounded-full text-xs font-extrabold bg-blue-500/20 text-blue-300 border border-blue-400/30';
+        } else if (percentage >= 50) {
+          assessmentEl.textContent = '📖 مقبول. نوصي بمراجعة التفسير والشروحات الموضحة أدناه';
+          badgeEl.textContent = 'ناجح - يحتاج لمراجعة';
+          badgeEl.className = 'inline-flex items-center px-4 py-1.5 rounded-full text-xs font-extrabold bg-amber-500/20 text-amber-300 border border-amber-400/30';
+        } else {
+          assessmentEl.textContent = '⚠️ دون المستوى المطلوب. راجع الشروحات النموذجية وأعد المحاولة';
+          badgeEl.textContent = 'بحاجة لمزيد من التدريب';
+          badgeEl.className = 'inline-flex items-center px-4 py-1.5 rounded-full text-xs font-extrabold bg-rose-500/20 text-rose-300 border border-rose-400/30';
+        }
+
+        // Render Comprehensive Review List
+        const reviewContainer = document.getElementById('review-questions-list');
+        reviewContainer.innerHTML = '';
+
+        questions.forEach((q, idx) => {
+          const userAns = userAnswers[idx];
+          const isCorrect = userAns === q.correct_option_index;
+          const isUnanswered = userAns === undefined;
+
+          const card = document.createElement('div');
+          card.className = `bg-white rounded-3xl border p-6 sm:p-8 shadow-sm space-y-5 ${
+            isCorrect ? 'border-emerald-200' : isUnanswered ? 'border-slate-200' : 'border-rose-200'
+          }`;
+
+          let statusTag = '';
+          if (isCorrect) {
+            statusTag = '<span class="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">✓ إجابة صحيحة</span>';
+          } else if (isUnanswered) {
+            statusTag = '<span class="inline-flex items-center gap-1 text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">لم تتم الإجابة</span>';
+          } else {
+            statusTag = '<span class="inline-flex items-center gap-1 text-xs font-bold text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">✗ إجابة خاطئة</span>';
+          }
+
+          let optionsHtml = '';
+          q.options.forEach((opt, optIdx) => {
+            const isThisCorrect = optIdx === q.correct_option_index;
+            const isThisUserChoice = optIdx === userAns;
+
+            let optStyle = 'border-slate-200 bg-slate-50 text-slate-700';
+            let badge = '';
+
+            if (isThisCorrect) {
+              optStyle = 'border-emerald-500 bg-emerald-50/80 text-emerald-950 font-bold ring-1 ring-emerald-500';
+              badge = '<span class="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md shrink-0">الإجابة الصحيحة ✓</span>';
+            } else if (isThisUserChoice && !isThisCorrect) {
+              optStyle = 'border-rose-400 bg-rose-50/80 text-rose-950 font-bold';
+              badge = '<span class="text-[11px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md shrink-0">إجابتك ✗</span>';
+            }
+
+            optionsHtml += `
+              <div class="flex items-center justify-between gap-3 p-3.5 rounded-xl border ${optStyle}">
+                <div class="flex items-center gap-3">
+                  <span class="w-6 h-6 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-700 flex items-center justify-center shrink-0">
+                    ${optionLetters[optIdx] || optIdx + 1}
+                  </span>
+                  <span class="text-xs sm:text-sm leading-relaxed">${opt}</span>
+                </div>
+                ${badge}
+              </div>
+            `;
+          });
+
+          const explanationHtml = q.explanation
+            ? `
+            <div class="mt-4 bg-purple-50/70 border border-purple-200/80 rounded-2xl p-4 text-xs text-purple-950 space-y-1.5">
+              <div class="font-bold flex items-center gap-1.5 text-purple-900">
+                <svg class="w-4 h-4 text-purple-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+                </svg>
+                <span>التفسير والشرح النموذجي:</span>
+              </div>
+              <p class="leading-relaxed text-slate-800 font-medium">${q.explanation}</p>
+            </div>
+          `
+            : '';
+
+          card.innerHTML = `
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <span class="text-xs font-extrabold text-slate-900 bg-slate-100 px-3 py-1 rounded-full">
+                السؤال رقم ${idx + 1}
+              </span>
+              ${statusTag}
+            </div>
+            <h4 class="text-base font-bold text-slate-900 leading-relaxed">${q.question_text}</h4>
+            <div class="space-y-2.5 pt-1">
+              ${optionsHtml}
+            </div>
+            ${explanationHtml}
+          `;
+
+          reviewContainer.appendChild(card);
+        });
+
+        // Switch to results view
+        liveSection.classList.add('hidden');
+        resultsSection.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      // Event Listeners
+      if (startExamBtn) startExamBtn.addEventListener('click', startExam);
+      if (prevQBtn) prevQBtn.addEventListener('click', () => renderQuestion(Math.max(0, currentQuestionIndex - 1)));
+      if (nextQBtn) nextQBtn.addEventListener('click', () => renderQuestion(Math.min(questions.length - 1, currentQuestionIndex + 1)));
+      if (submitTopBtn) submitTopBtn.addEventListener('click', submitExam);
+      if (submitBottomBtn) submitBottomBtn.addEventListener('click', submitExam);
+      if (retakeBtn) retakeBtn.addEventListener('click', startExam);
+
+      navButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const index = parseInt(btn.getAttribute('data-nav-index') || '0', 10);
+          renderQuestion(index);
+        });
+      });
+    })();
+  </script>
+</Layout>

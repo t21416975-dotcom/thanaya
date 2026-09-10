@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Layers, Calendar, FileText, Megaphone, Flag, BarChart3, LogOut, CheckCircle } from 'lucide-react';
+import { BookOpen, Layers, Calendar, FileText, Megaphone, Flag, BarChart3, LogOut, CheckCircle, HelpCircle, Sparkles } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { SubjectsManager } from './components/SubjectsManager';
 import { ContentTypesManager } from './components/ContentTypesManager';
 import { WeeksManager } from './components/WeeksManager';
 import { ResourcesManager } from './components/ResourcesManager';
+import { ExamsManager } from './components/ExamsManager';
+import { AISettingsManager } from './components/AISettingsManager';
 import { ReportsManager } from './components/ReportsManager';
 import { AdsManager } from './components/AdsManager';
 import { AnalyticsView } from './components/AnalyticsView';
@@ -12,7 +14,7 @@ import { AuthLogin } from './components/AuthLogin';
 
 export function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [activeTab, setActiveTab] = useState<'resources' | 'subjects' | 'content_types' | 'weeks' | 'ads' | 'reports' | 'analytics'>('resources');
+  const [activeTab, setActiveTab] = useState<'resources' | 'exams' | 'ai_settings' | 'subjects' | 'content_types' | 'weeks' | 'ads' | 'reports' | 'analytics'>('resources');
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -49,6 +51,8 @@ export function App() {
 
   const navigation = [
     { id: 'resources' as const, name: 'الموارد والمحتوى', icon: FileText },
+    { id: 'exams' as const, name: 'الامتحانات التجريبية (MCQ)', icon: HelpCircle },
+    { id: 'ai_settings' as const, name: 'إعدادات الذكاء الاصطناعي (AI)', icon: Sparkles },
     { id: 'subjects' as const, name: 'المواد الدراسية', icon: BookOpen },
     { id: 'content_types' as const, name: 'أنواع المحتوى', icon: Layers },
     { id: 'weeks' as const, name: 'الأسابيع', icon: Calendar },
@@ -114,6 +118,8 @@ export function App() {
 
         <div className="p-8 max-w-7xl w-full">
           {activeTab === 'resources' && <ResourcesManager />}
+          {activeTab === 'exams' && <ExamsManager />}
+          {activeTab === 'ai_settings' && <AISettingsManager />}
           {activeTab === 'subjects' && <SubjectsManager />}
           {activeTab === 'content_types' && <ContentTypesManager />}
           {activeTab === 'weeks' && <WeeksManager />}

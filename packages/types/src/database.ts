@@ -115,6 +115,41 @@ export type DirectAd = {
   updated_at: string;
 };
 
+export type Exam = {
+  id: string;
+  title: string;
+  subject_id: string;
+  time_limit_minutes: number;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+  // Joined relation fields
+  subject?: Subject;
+  questions?: ExamQuestion[];
+};
+
+export type ExamQuestion = {
+  id: string;
+  exam_id: string;
+  question_number: number;
+  question_text: string;
+  options: string[];
+  correct_option_index: number; // 0 | 1 | 2 | 3
+  explanation: string;
+  created_at: string;
+};
+
+export type SystemSetting = {
+  key: string;
+  value: string;
+  description?: string | null;
+  updated_at: string;
+};
+
+export type ExamWithQuestions = Exam & {
+  questions: ExamQuestion[];
+};
+
 // Database Schema Representation
 export interface Database {
   public: {
@@ -169,6 +204,21 @@ export interface Database {
           clicks_count?: number;
         };
         Update: Partial<Omit<DirectAd, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      exams: {
+        Row: Exam;
+        Insert: Omit<Exam, 'id' | 'created_at' | 'updated_at' | 'subject' | 'questions'> & { id?: string };
+        Update: Partial<Omit<Exam, 'id' | 'created_at' | 'updated_at' | 'subject' | 'questions'>>;
+      };
+      exam_questions: {
+        Row: ExamQuestion;
+        Insert: Omit<ExamQuestion, 'id' | 'created_at'> & { id?: string };
+        Update: Partial<Omit<ExamQuestion, 'id' | 'created_at'>>;
+      };
+      system_settings: {
+        Row: SystemSetting;
+        Insert: Omit<SystemSetting, 'updated_at'>;
+        Update: Partial<Omit<SystemSetting, 'key'>>;
       };
     };
     Functions: {

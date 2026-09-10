@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { smartCache } from './cache';
-import type { Subject, ContentType, Week, Resource, AdSlot, DirectAd } from '@thanaya/types';
+import type { Subject, ContentType, Week, Resource, AdSlot, DirectAd, Exam, ExamQuestion, ExamWithQuestions } from '@thanaya/types';
 
 // Mock seed data for development fallback when Supabase is not connected
 const mockSubjects: Subject[] = [
@@ -108,6 +108,51 @@ const mockResources: Resource[] = [
     updated_at: new Date().toISOString(),
     subject: mockSubjects[3],
     content_type: mockContentTypes[2],
+  },
+];
+
+const mockExams: ExamWithQuestions[] = [
+  {
+    id: 'exam-1',
+    title: 'امتحان تجريبي شامل في الفيزياء - التيار الكهربي وقوانين كيرشوف',
+    subject_id: '2',
+    time_limit_minutes: 30,
+    is_published: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    subject: mockSubjects[1],
+    questions: [
+      {
+        id: 'q-1',
+        exam_id: 'exam-1',
+        question_number: 1,
+        question_text: 'في الدائرة الكهربية الموضحة، إذا كانت قراءة الفولتميتر 12 فولت والمقاومة الداخلية للمصدر مهملة، والمقاومة الخارجية 6 أوم، فإن شدة التيار المار تساوي:',
+        options: ['2 أمبير', '4 أمبير', '6 أمبير', '8 أمبير'],
+        correct_option_index: 0,
+        explanation: 'بتطبيق قانون أوم: I = V / R = 12 / 6 = 2 A. فرق الجهد عبر المقاومة مقسوماً على قيمتها يعطي شدة التيار مباشرة.',
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'q-2',
+        exam_id: 'exam-1',
+        question_number: 2,
+        question_text: 'أي من المواد التالية تقل مقاومتها النوعية وتزداد توصيليتها الكهربية عند رفع درجة حرارتها؟',
+        options: ['أشباه الموصلات (مثل السيليكون والجرمانيوم)', 'الموصلات الفلزية (مثل النحاس)', 'الألومنيوم', 'الفضة'],
+        correct_option_index: 0,
+        explanation: 'في أشباه الموصلات، تعمل الطاقة الحرارية على كسر بعض الروابط التساهمية، مما يحرر إلكترونات حرة وفجوات تساهم في التوصيل الكهربي.',
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'q-3',
+        exam_id: 'exam-1',
+        question_number: 3,
+        question_text: 'قانون كيرشوف الأول (قانون حفظ الشحنة) ينص على أن المجموع الجبري للتيارات الكهربية عند أي نقطة تفرع في دائرة مغلقة يساوي:',
+        options: ['صفراً', 'القوة الدافعة الكهربية للبطارية', 'مجموع فروق الجهد', 'اللانهاية'],
+        correct_option_index: 0,
+        explanation: 'قانون كيرشوف الأول (KCL): Σ I_in = Σ I_out أي أن المجموع الجبري للتيارات الداخلة والخارجة عند أي نقطة تفرع يساوي صفراً (Σ I = 0).',
+        created_at: new Date().toISOString(),
+      },
+    ],
   },
 ];
 
@@ -367,6 +412,66 @@ export const publicApi = {
         }
       }
       return null;
+    }, null);
+  },
+
+  /**
+   * Get all published exams with optional subject filter (Cached for 30s)
+   */
+  async getPublishedExams(subjectId?: string): Promise<ExamWithQuestions[]> {
+    const cacheKey = `exams:published:${subjectId || 'all'}`;
+    return smartCache.wrap(cacheKey, 30, async () => {
+      if (isSupabaseConfigured) {
+        try {
+          let query = supabase
+            .from('exams')
+            .select('*, subject:subjects(*), questions:exam_questions(*)')
+            .eq('is_published', true)
+            .order('created_at', { ascending: false });
+
+          if (subjectId) query = query.eq('subject_id', subjectId);
+
+          const { data, error } = await query;
+          if (error) {
+            console.error('Error fetching exams:', error);
+            return mockExams.filter((e) => !subjectId || e.subject_id === subjectId);
+          }
+          return (data as unknown as ExamWithQuestions[]) || [];
+        } catch (err) {
+          console.error('Supabase exception in getPublishedExams:', err);
+          return mockExams.filter((e) => !subjectId || e.subject_id === subjectId);
+        }
+      }
+      return mockExams.filter((e) => e.is_published && (!subjectId || e.subject_id === subjectId));
+    }, mockExams);
+  },
+
+  /**
+   * Get single exam by ID with full questions (Cached for 30s)
+   */
+  async getExamById(id: string): Promise<ExamWithQuestions | null> {
+    if (!id) return null;
+    return smartCache.wrap(`exam:${id}`, 30, async () => {
+      if (isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase
+            .from('exams')
+            .select('*, subject:subjects(*), questions:exam_questions(*)')
+            .eq('id', id)
+            .eq('is_published', true)
+            .single();
+
+          if (error) return null;
+          const exam = data as unknown as Exam;
+          const questions = ((data as any).questions as ExamQuestion[]) || [];
+          questions.sort((a, b) => a.question_number - b.question_number);
+          return { ...exam, questions };
+        } catch (err) {
+          console.error(`Supabase exception in getExamById (${id}):`, err);
+          return mockExams.find((e) => e.id === id) || null;
+        }
+      }
+      return mockExams.find((e) => e.id === id) || null;
     }, null);
   },
 

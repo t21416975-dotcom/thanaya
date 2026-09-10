@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Subject, ContentType, Week, Resource, ReportProblem, ReportStatus, AdSlot, DirectAd } from '@thanaya/types';
+import type { Subject, ContentType, Week, Resource, ReportProblem, ReportStatus, AdSlot, DirectAd, Exam, ExamQuestion, SystemSetting, ExamWithQuestions } from '@thanaya/types';
 
 // Mock initial data used when Supabase is not connected in development
 const initialSubjects: Subject[] = [
@@ -22,6 +22,56 @@ const initialWeeks: Week[] = Array.from({ length: 16 }, (_, i) => ({
   term: 1 as const,
   created_at: new Date().toISOString(),
 }));
+
+const initialExams: Exam[] = [
+  {
+    id: 'exam-1',
+    title: 'امتحان تجريبي شامل في الفيزياء - الفصل الأول (التيار الكهربي وقانون كيرشوف)',
+    subject_id: '2',
+    time_limit_minutes: 30,
+    is_published: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+const initialExamQuestions: ExamQuestion[] = [
+  {
+    id: 'q-1',
+    exam_id: 'exam-1',
+    question_number: 1,
+    question_text: 'في الدائرة الكهربية الموضحة، إذا كانت قراءة الفولتميتر 12 فولت والمقاومة الداخلية للمصدر مهملة، فإن شدة التيار المار في المقاومة R تساوي:',
+    options: ['2 أمبير', '4 أمبير', '6 أمبير', '8 أمبير'],
+    correct_option_index: 0,
+    explanation: 'بتطبيق قانون أوم للدوائر المغلقة: I = V / R = 12 / 6 = 2 A. المقاومة الكلية للفرع تساوي 6 أوم وفرق الجهد 12V.',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'q-2',
+    exam_id: 'exam-1',
+    question_number: 2,
+    question_text: 'أي من المواد التالية تقل مقاومتها النوعية بزيادة درجة الحرارة؟',
+    options: ['أشباه الموصلات (مثل السيليكون)', 'الموصلات الفلزية (مثل النحاس)', 'الألومنيوم', 'الحديد'],
+    correct_option_index: 0,
+    explanation: 'في أشباه الموصلات، يؤدي رفع درجة الحرارة إلى كسر بعض الروابط التساهمية وتحرير إلكترونات وفجوات، مما يزيد التوصيلية ويقلل المقاومة النوعية.',
+    created_at: new Date().toISOString(),
+  },
+];
+
+const initialSystemSettings: SystemSetting[] = [
+  {
+    key: 'gemini_model_name',
+    value: 'gemini-2.5-flash',
+    description: 'اسم موديل Google Gemini المعتمد لاستخراج الأسئلة من ملفات الـ PDF',
+    updated_at: new Date().toISOString(),
+  },
+  {
+    key: 'gemini_exam_prompt',
+    value: `أنت خبير تربوي ومعلم أول في وزارة التربية والتعليم للثانوية العامة والبكالوريا المصرية. مهمتك هي استخراج جميع أسئلة الاختيار من متعدد (MCQs) الموجودة داخل ملف الـ PDF المرفق بدقة متناهية وحرفياً كما هي مكتوبة، مع استنباط الخيارات الصحيحة وتوليد شرح وتفسير نموذجي تفصيلي لكل سؤال.\n\nالقواعد الصارمة:\n1. استخرج الأسئلة الموجودة في الملف حرفياً دون تأليف أو ابتكار أي أسئلة خارجية.\n2. لكل سؤال، يجب استخراج نص السؤال كاملاً مع جميع الخيارات (4 خيارات).\n3. حدد مؤشر الخيار الصحيح بدقة من 0 إلى 3 (حيث 0 هو الخيار الأول، 1 هو الثاني، 2 هو الثالث، 3 هو الرابع).\n4. اكتب شرحاً وتفسيراً علمياً مفصلاً وواضحاً ومقنعاً في حقل explanation يوضح للطالب سبب صحة هذا الخيار وخطأ الخيارات الأخرى أو خطوات الحل الرياضي/العلمي بالتفصيل.\n5. حافظ على الترتيب الأصلي للأسئلة في الملف.`,
+    description: 'الـ System Prompt الافتراضي الموجه لـ Gemini لاستخراج وتفسير أسئلة الـ MCQs',
+    updated_at: new Date().toISOString(),
+  },
+];
 
 const initialResources: Resource[] = [
   {
@@ -87,6 +137,9 @@ let memoryReports: ReportProblem[] = [
     created_at: new Date().toISOString(),
   },
 ];
+let memoryExams: Exam[] = [...initialExams];
+let memoryExamQuestions: ExamQuestion[] = [...initialExamQuestions];
+let memorySystemSettings: SystemSetting[] = [...initialSystemSettings];
 
 const isConfigured = !!import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL !== 'https://your-project.supabase.co';
 
@@ -406,5 +459,240 @@ export const api = {
       return;
     }
     memoryDirectAds = memoryDirectAds.filter((a) => a.id !== id);
+  },
+
+  // --- EXAMS ---
+  async getExams(): Promise<Exam[]> {
+    if (isConfigured) {
+      const { data, error } = await supabase
+        .from('exams')
+        .select('*, subject:subjects(*), questions:exam_questions(*)')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data as unknown as Exam[]) || [];
+    }
+    return memoryExams.map((exam) => ({
+      ...exam,
+      subject: memorySubjects.find((s) => s.id === exam.subject_id),
+      questions: memoryExamQuestions
+        .filter((q) => q.exam_id === exam.id)
+        .sort((a, b) => a.question_number - b.question_number),
+    }));
+  },
+
+  async getExamById(id: string): Promise<ExamWithQuestions | null> {
+    if (isConfigured) {
+      const { data, error } = await supabase
+        .from('exams')
+        .select('*, subject:subjects(*), questions:exam_questions(*)')
+        .eq('id', id)
+        .single();
+      if (error) return null;
+      const exam = data as unknown as Exam;
+      const questions = ((data as any).questions as ExamQuestion[]) || [];
+      questions.sort((a, b) => a.question_number - b.question_number);
+      return { ...exam, questions };
+    }
+    const exam = memoryExams.find((e) => e.id === id);
+    if (!exam) return null;
+    const questions = memoryExamQuestions
+      .filter((q) => q.exam_id === id)
+      .sort((a, b) => a.question_number - b.question_number);
+    return {
+      ...exam,
+      subject: memorySubjects.find((s) => s.id === exam.subject_id),
+      questions,
+    };
+  },
+
+  async createExam(
+    examData: Omit<Exam, 'id' | 'created_at' | 'updated_at' | 'subject' | 'questions'>,
+    questionsData: Omit<ExamQuestion, 'id' | 'exam_id' | 'created_at'>[]
+  ): Promise<ExamWithQuestions> {
+    if (isConfigured) {
+      const { data: newExam, error: examError } = await (supabase.from('exams') as any)
+        .insert({
+          title: examData.title,
+          subject_id: examData.subject_id,
+          time_limit_minutes: examData.time_limit_minutes,
+          is_published: examData.is_published,
+        })
+        .select('*, subject:subjects(*)')
+        .single();
+      if (examError) throw examError;
+
+      const questionsToInsert = questionsData.map((q, idx) => ({
+        exam_id: newExam.id,
+        question_number: q.question_number || idx + 1,
+        question_text: q.question_text,
+        options: q.options,
+        correct_option_index: q.correct_option_index,
+        explanation: q.explanation || '',
+      }));
+
+      const { data: insertedQuestions, error: qError } = await (supabase.from('exam_questions') as any)
+        .insert(questionsToInsert)
+        .select();
+      if (qError) throw qError;
+
+      return {
+        ...(newExam as unknown as Exam),
+        questions: (insertedQuestions as unknown as ExamQuestion[]) || [],
+      };
+    }
+
+    const examId = `exam-${Date.now()}`;
+    const newExam: Exam = {
+      id: examId,
+      title: examData.title,
+      subject_id: examData.subject_id,
+      time_limit_minutes: examData.time_limit_minutes,
+      is_published: examData.is_published,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      subject: memorySubjects.find((s) => s.id === examData.subject_id),
+    };
+
+    const newQuestions: ExamQuestion[] = questionsData.map((q, idx) => ({
+      id: `q-${Date.now()}-${idx + 1}`,
+      exam_id: examId,
+      question_number: q.question_number || idx + 1,
+      question_text: q.question_text,
+      options: q.options,
+      correct_option_index: q.correct_option_index,
+      explanation: q.explanation || '',
+      created_at: new Date().toISOString(),
+    }));
+
+    memoryExams.unshift(newExam);
+    memoryExamQuestions.push(...newQuestions);
+
+    return {
+      ...newExam,
+      questions: newQuestions,
+    };
+  },
+
+  async updateExam(
+    id: string,
+    examUpdates: Partial<Omit<Exam, 'id' | 'created_at' | 'updated_at' | 'subject' | 'questions'>>,
+    questionsData?: Omit<ExamQuestion, 'id' | 'exam_id' | 'created_at'>[]
+  ): Promise<ExamWithQuestions> {
+    if (isConfigured) {
+      const { data: updatedExam, error: examError } = await (supabase.from('exams') as any)
+        .update(examUpdates)
+        .eq('id', id)
+        .select('*, subject:subjects(*)')
+        .single();
+      if (examError) throw examError;
+
+      let currentQuestions: ExamQuestion[] = [];
+      if (questionsData) {
+        // Delete old questions and re-insert new
+        await supabase.from('exam_questions').delete().eq('exam_id', id);
+        const questionsToInsert = questionsData.map((q, idx) => ({
+          exam_id: id,
+          question_number: q.question_number || idx + 1,
+          question_text: q.question_text,
+          options: q.options,
+          correct_option_index: q.correct_option_index,
+          explanation: q.explanation || '',
+        }));
+        const { data: insQ, error: insErr } = await (supabase.from('exam_questions') as any)
+          .insert(questionsToInsert)
+          .select();
+        if (insErr) throw insErr;
+        currentQuestions = (insQ as unknown as ExamQuestion[]) || [];
+      } else {
+        const { data: existingQ } = await supabase.from('exam_questions').select('*').eq('exam_id', id);
+        currentQuestions = (existingQ as unknown as ExamQuestion[]) || [];
+      }
+
+      currentQuestions.sort((a, b) => a.question_number - b.question_number);
+      return {
+        ...(updatedExam as unknown as Exam),
+        questions: currentQuestions,
+      };
+    }
+
+    const examIdx = memoryExams.findIndex((e) => e.id === id);
+    if (examIdx === -1) throw new Error('Exam not found');
+
+    memoryExams[examIdx] = {
+      ...memoryExams[examIdx],
+      ...examUpdates,
+      updated_at: new Date().toISOString(),
+      subject: examUpdates.subject_id
+        ? memorySubjects.find((s) => s.id === examUpdates.subject_id)
+        : memoryExams[examIdx].subject,
+    };
+
+    if (questionsData) {
+      memoryExamQuestions = memoryExamQuestions.filter((q) => q.exam_id !== id);
+      const newQ: ExamQuestion[] = questionsData.map((q, idx) => ({
+        id: `q-${Date.now()}-${idx + 1}`,
+        exam_id: id,
+        question_number: q.question_number || idx + 1,
+        question_text: q.question_text,
+        options: q.options,
+        correct_option_index: q.correct_option_index,
+        explanation: q.explanation || '',
+        created_at: new Date().toISOString(),
+      }));
+      memoryExamQuestions.push(...newQ);
+    }
+
+    const questions = memoryExamQuestions
+      .filter((q) => q.exam_id === id)
+      .sort((a, b) => a.question_number - b.question_number);
+
+    return {
+      ...memoryExams[examIdx],
+      questions,
+    };
+  },
+
+  async deleteExam(id: string): Promise<void> {
+    if (isConfigured) {
+      const { error } = await supabase.from('exams').delete().eq('id', id);
+      if (error) throw error;
+      return;
+    }
+    memoryExams = memoryExams.filter((e) => e.id !== id);
+    memoryExamQuestions = memoryExamQuestions.filter((q) => q.exam_id !== id);
+  },
+
+  // --- SYSTEM SETTINGS (AI) ---
+  async getSystemSettings(): Promise<SystemSetting[]> {
+    if (isConfigured) {
+      const { data, error } = await supabase.from('system_settings').select('*');
+      if (error) throw error;
+      return (data as unknown as SystemSetting[]) || [];
+    }
+    return [...memorySystemSettings];
+  },
+
+  async updateSystemSetting(key: string, value: string, description?: string): Promise<SystemSetting> {
+    if (isConfigured) {
+      const { data, error } = await (supabase.from('system_settings') as any)
+        .upsert({ key, value, description, updated_at: new Date().toISOString() })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as unknown as SystemSetting;
+    }
+    const idx = memorySystemSettings.findIndex((s) => s.key === key);
+    const updated: SystemSetting = {
+      key,
+      value,
+      description: description !== undefined ? description : (idx !== -1 ? memorySystemSettings[idx].description : null),
+      updated_at: new Date().toISOString(),
+    };
+    if (idx !== -1) {
+      memorySystemSettings[idx] = updated;
+    } else {
+      memorySystemSettings.push(updated);
+    }
+    return updated;
   },
 };
