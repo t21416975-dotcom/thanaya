@@ -113,6 +113,9 @@ export async function extractExamQuestionsFromPdf({
   try {
     const formData = new FormData();
     formData.append('file', file);
+    if (systemPrompt) formData.append('system_prompt', systemPrompt);
+    if (modelName) formData.append('model_name', modelName);
+    if (apiKey) formData.append('api_key', apiKey);
 
     const apiBaseUrl = (import.meta as any).env?.VITE_PUBLIC_API_URL || '';
     const res = await fetch(`${apiBaseUrl}/api/ai/extract-exam`, {

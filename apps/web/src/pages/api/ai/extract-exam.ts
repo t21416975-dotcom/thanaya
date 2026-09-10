@@ -29,6 +29,10 @@ export const POST: APIRoute = async ({ request }) => {
 
     const contentType = request.headers.get('content-type') || '';
 
+    let reqModelName: string | null = null;
+    let reqSystemPrompt: string | null = null;
+    let reqApiKey: string | null = null;
+
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
       const file = formData.get('file');
@@ -40,6 +44,13 @@ export const POST: APIRoute = async ({ request }) => {
         );
       }
 
+      const promptField = formData.get('system_prompt');
+      const modelField = formData.get('model_name');
+      const keyField = formData.get('api_key');
+      if (typeof promptField === 'string' && promptField.trim()) reqSystemPrompt = promptField.trim();
+      if (typeof modelField === 'string' && modelField.trim()) reqModelName = modelField.trim();
+      if (typeof keyField === 'string' && keyField.trim()) reqApiKey = keyField.trim();
+
       mimeType = file.type || 'application/pdf';
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
@@ -48,6 +59,9 @@ export const POST: APIRoute = async ({ request }) => {
       const body = await request.json();
       base64Data = body.base64_data || '';
       mimeType = body.mime_type || 'application/pdf';
+      if (body.system_prompt) reqSystemPrompt = String(body.system_prompt).trim();
+      if (body.model_name) reqModelName = String(body.model_name).trim();
+      if (body.api_key) reqApiKey = String(body.api_key).trim();
 
       if (!base64Data) {
         return new Response(
@@ -62,12 +76,12 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Fetch dynamic AI settings from Supabase
-    let modelName = DEFAULT_MODEL;
-    let systemPrompt = DEFAULT_PROMPT;
-    let geminiApiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.GEMINI_API_KEY || '';
+    // Dynamic AI settings priority: 1. Request payload -> 2. Supabase system_settings -> 3. Defaults / Env
+    let modelName = reqModelName || DEFAULT_MODEL;
+    let systemPrompt = reqSystemPrompt || DEFAULT_PROMPT;
+    let geminiApiKey = reqApiKey || process.env.GEMINI_API_KEY || (import.meta as any).env?.GEMINI_API_KEY || '';
 
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && (!reqSystemPrompt || !reqModelName || !geminiApiKey)) {
       try {
         const { data } = await (supabase.from('system_settings') as any).select('*');
         const settings = data as Array<{ key: string; value: string; description?: string }> | null;
@@ -76,9 +90,9 @@ export const POST: APIRoute = async ({ request }) => {
           const promptRow = settings.find((s) => s.key === 'gemini_exam_prompt');
           const apiKeyRow = settings.find((s) => s.key === 'gemini_api_key');
 
-          if (modelRow?.value) modelName = modelRow.value.trim();
-          if (promptRow?.value) systemPrompt = promptRow.value.trim();
-          if (apiKeyRow?.value && !geminiApiKey) geminiApiKey = apiKeyRow.value.trim();
+          if (!reqModelName && modelRow?.value) modelName = modelRow.value.trim();
+          if (!reqSystemPrompt && promptRow?.value) systemPrompt = promptRow.value.trim();
+          if (!geminiApiKey && apiKeyRow?.value) geminiApiKey = apiKeyRow.value.trim();
         }
       } catch (err) {
         console.warn('Could not load system_settings from Supabase, using defaults:', err);
