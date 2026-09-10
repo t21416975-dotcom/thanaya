@@ -212,6 +212,31 @@ export const api = {
     return newWeek;
   },
 
+  async updateWeek(id: string, week: Partial<Omit<Week, 'id' | 'created_at'>>): Promise<Week> {
+    if (isConfigured) {
+      const { data, error } = await (supabase.from('weeks') as any)
+        .update(week)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as unknown as Week;
+    }
+    const idx = memoryWeeks.findIndex((w) => w.id === id);
+    if (idx === -1) throw new Error('Week not found');
+    memoryWeeks[idx] = { ...memoryWeeks[idx], ...week };
+    return memoryWeeks[idx];
+  },
+
+  async deleteWeek(id: string): Promise<void> {
+    if (isConfigured) {
+      const { error } = await supabase.from('weeks').delete().eq('id', id);
+      if (error) throw error;
+      return;
+    }
+    memoryWeeks = memoryWeeks.filter((w) => w.id !== id);
+  },
+
   // --- RESOURCES ---
   async getResources(): Promise<Resource[]> {
     if (isConfigured) {
