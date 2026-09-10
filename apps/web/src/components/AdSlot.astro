@@ -98,10 +98,42 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
       display: block;
       margin: 0 auto;
     }
-    a {
-      text-decoration: none;
-      color: inherit;
-      cursor: pointer;
+    /* Mobile: Show only 1 ad card, hide all subsequent cards (:nth-child(n+2)) */
+    @media (max-width: 640px) {
+      #container-ccae9d506cf77407ce62d684b21d33c5 > *:nth-child(n+2),
+      #container-ccae9d506cf77407ce62d684b21d33c5 .item:nth-child(n+2),
+      #container-ccae9d506cf77407ce62d684b21d33c5 .ad-item:nth-child(n+2),
+      #container-ccae9d506cf77407ce62d684b21d33c5 > div > *:nth-child(n+2) {
+        display: none !important;
+      }
+      #container-ccae9d506cf77407ce62d684b21d33c5 > *:first-child,
+      #container-ccae9d506cf77407ce62d684b21d33c5 .item:first-child,
+      #container-ccae9d506cf77407ce62d684b21d33c5 > div > *:first-child {
+        width: 100% !important;
+        max-width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+      }
+    }
+
+    /* Desktop: 4 Cards horizontal row */
+    @media (min-width: 641px) {
+      #container-ccae9d506cf77407ce62d684b21d33c5 {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        justify-content: space-between !important;
+        gap: 12px !important;
+      }
+      #container-ccae9d506cf77407ce62d684b21d33c5 > *,
+      #container-ccae9d506cf77407ce62d684b21d33c5 .item,
+      #container-ccae9d506cf77407ce62d684b21d33c5 > div > * {
+        display: flex !important;
+        flex: 1 1 25% !important;
+        max-width: 25% !important;
+        flex-direction: column !important;
+      }
     }
   </style>
 </head>
@@ -109,7 +141,30 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
   <div id="container-ccae9d506cf77407ce62d684b21d33c5"></div>
   <script async="async" data-cfasync="false" src="https://pl31266860.profitableratecpmnetwork.com/ccae9d506cf77407ce62d684b21d33c5/invoke.js"></script>
   <script>
+    var blockedKeywords = ['casino', 'betting', '1xbet', 'gambling', 'bet365', 'melbet', 'mostbet', 'كازينو', 'مراهنات', 'بوكر', 'روليت', 'قمار'];
+    function filterBadAds() {
+      try {
+        var ads = document.querySelectorAll('#container-ccae9d506cf77407ce62d684b21d33c5 *');
+        ads.forEach(function(el) {
+          var text = (el.innerText || el.textContent || '').toLowerCase();
+          var href = (el.getAttribute('href') || '').toLowerCase();
+          for (var i = 0; i < blockedKeywords.length; i++) {
+            var kw = blockedKeywords[i];
+            if (text.indexOf(kw) !== -1 || href.indexOf(kw) !== -1) {
+              var card = el.closest('.item, .ad-item, [class*="card"], [class*="item"]') || el;
+              if (card && card.style) {
+                card.style.display = 'none';
+                card.remove();
+              }
+              break;
+            }
+          }
+        });
+      } catch(e) {}
+    }
+
     function notifyHeight() {
+      filterBadAds();
       var container = document.getElementById('container-ccae9d506cf77407ce62d684b21d33c5');
       var h = container && container.offsetHeight > 40 ? container.offsetHeight : document.body.scrollHeight;
       if (h > 40) {
