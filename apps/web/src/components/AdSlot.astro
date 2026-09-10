@@ -42,7 +42,7 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
         <a
           href={directAd.target_url}
           target="_blank"
-          rel="noopener sponsored"
+          rel="noopener noreferrer sponsored"
           class="block p-4 group text-center hover:bg-slate-100/50 transition"
           data-direct-ad-id={directAd.id}
         >
@@ -51,6 +51,8 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
               src={directAd.image_url}
               alt={directAd.title}
               loading="lazy"
+              width="300"
+              height="96"
               class="max-h-24 w-auto mx-auto rounded-md object-contain"
             />
           )}
@@ -125,7 +127,7 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
   </style>
 </head>
 <body>
-  <script async="async" data-cfasync="false" src="https://pl31266860.profitableratecpmnetwork.com/ccae9d506cf77407ce62d684b21d33c5/invoke.js"></script>
+  <script async="async" data-cfasync="false" crossorigin="anonymous" referrerpolicy="no-referrer-when-downgrade" src="https://pl31266860.profitableratecpmnetwork.com/ccae9d506cf77407ce62d684b21d33c5/invoke.js"></script>
   <div id="container-ccae9d506cf77407ce62d684b21d33c5"></div>
 </body>
 </html>`}

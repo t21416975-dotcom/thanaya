@@ -190,7 +190,7 @@ export function ResourcesManager() {
                       <a
                         href={res.pdf_url}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         className="p-1 bg-red-50 text-red-700 hover:bg-red-100 rounded text-xs flex items-center gap-1 transition"
                         title="فتح ملف الـ PDF"
                       >
@@ -201,7 +201,7 @@ export function ResourcesManager() {
                         <a
                           href={res.youtube_url}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                           className="p-1 bg-red-50 text-red-600 hover:bg-red-100 rounded text-xs flex items-center gap-1 transition"
                           title="فتح فيديو الشرح"
                         >

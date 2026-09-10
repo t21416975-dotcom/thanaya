@@ -211,7 +211,7 @@ export function ExamsManager() {
                         <a
                           href={`/exams/${exam.id}`}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                           className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition flex items-center gap-1 text-xs"
                           title="معاينة واجهة الطالب وتجربة الامتحان"
                         >

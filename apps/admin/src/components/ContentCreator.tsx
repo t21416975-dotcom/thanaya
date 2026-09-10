@@ -459,7 +459,7 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
                   <a
                     href={pdfUrl}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-lg text-xs font-semibold hover:bg-emerald-700 transition"
                   >
                     <span>تحميل ملف الـ PDF المباشر</span>
