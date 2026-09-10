@@ -73,6 +73,7 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [extractionStatus, setExtractionStatus] = useState<string | null>(null);
   const [requestedQuestionsCount, setRequestedQuestionsCount] = useState<number | ''>('');
+  const [extractionNotice, setExtractionNotice] = useState<{ type: 'success' | 'warning'; message: string } | null>(null);
 
   // Errors & UI
   const [error, setError] = useState<string | null>(null);
@@ -235,6 +236,18 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
       // Estimate time limit (e.g. ~1.5 - 2 minutes per question)
       const estimatedMinutes = Math.max(15, Math.ceil(result.questions.length * 2));
       setTimeLimitMinutes(estimatedMinutes);
+
+      if (result.model_used?.includes('معاينة تجريبية')) {
+        setExtractionNotice({
+          type: 'warning',
+          message: `⚠️ تم توليد ${result.questions.length} سؤالاً في (بيئة المعاينة التجريبية) لعدم توفر مفتاح Google Gemini API. لربط الذكاء الاصطناعي الفعلي بملفاتك، يرجى إضافة مفتاحك في تبويب "إعدادات الذكاء الاصطناعي".`,
+        });
+      } else {
+        setExtractionNotice({
+          type: 'success',
+          message: `✨ تم بنجاح استخراج وتوليد ${result.questions.length} سؤالاً بواسطة الذكاء الاصطناعي (${result.model_used}).`,
+        });
+      }
 
       setActiveTab('editor');
       setExtractionStatus(null);
@@ -563,6 +576,28 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
       {/* Editor Mode: Full Review & Edit Interface */}
       {activeTab === 'editor' && (
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {extractionNotice && (
+            <div
+              className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 text-xs animate-fadeIn ${
+                extractionNotice.type === 'warning'
+                  ? 'bg-amber-50 border-amber-200 text-amber-900'
+                  : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className={`w-4 h-4 shrink-0 ${extractionNotice.type === 'warning' ? 'text-amber-600' : 'text-emerald-600'}`} />
+                <span>{extractionNotice.message}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setExtractionNotice(null)}
+                className="text-slate-400 hover:text-slate-600 text-xs font-bold shrink-0 cursor-pointer px-2 py-0.5"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           {/* Top Exam Meta Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200">
             <div className="sm:col-span-6">

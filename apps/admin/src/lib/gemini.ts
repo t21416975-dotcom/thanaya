@@ -28,69 +28,87 @@ export async function fileToBase64(file: File): Promise<string> {
 /**
  * Mock questions for offline preview / development test mode
  */
-export function generateMockQuestions(_examTitle?: string): Omit<ExamQuestion, 'id' | 'exam_id' | 'created_at'>[] {
-  return [
+export function generateMockQuestions(_examTitle?: string, count: number = 5): Omit<ExamQuestion, 'id' | 'exam_id' | 'created_at'>[] {
+  const bank = [
     {
-      question_number: 1,
       question_text: `في الدائرة الكهربية الموضحة، إذا كانت قراءة الفولتميتر 12 فولت والمقاومة الداخلية للمصدر مهملة، فإن شدة التيار المار في المقاومة R تساوي:`,
-      options: [
-        '2 أمبير',
-        '4 أمبير',
-        '6 أمبير',
-        '8 أمبير',
-      ],
+      options: ['2 أمبير', '4 أمبير', '6 أمبير', '8 أمبير'],
       correct_option_index: 0,
       explanation: 'بتطبيق قانون أوم للدوائر المغلقة: I = V / R = 12 / 6 = 2 A. المقاومة الكلية للفرع تساوي 6 أوم وفرق الجهد 12V.',
     },
     {
-      question_number: 2,
       question_text: `أي من المركبات العضوية التالية يتفاعل بالاستبدال في ضوء الشمس المباشر أو غير المباشر؟`,
-      options: [
-        'الإيثان (Alkane)',
-        'الإيثين (Alkene)',
-        'الإيثاين (Alkyne)',
-        'البروبين (Alkene)',
-      ],
+      options: ['الإيثان (Alkane)', 'الإيثين (Alkene)', 'الإيثاين (Alkyne)', 'البروبين (Alkene)'],
       correct_option_index: 0,
       explanation: 'الألكانات مركبات مشبعة بروابط سيجما القوية، لذا تتفاعل بالاستبدال (الهلجنة) في وجود الأشعة فوق البنفسجية UV.',
     },
     {
-      question_number: 3,
       question_text: `إذا كانت د(س) = س³ + 3س² - 9س + 5، فإن النقطة الحرجة التي تمثل نهاية عظمى محلية هي:`,
-      options: [
-        '(-3, 32)',
-        '(1, 0)',
-        '(0, 5)',
-        '(3, 32)',
-      ],
+      options: ['(-3, 32)', '(1, 0)', '(0, 5)', '(3, 32)'],
       correct_option_index: 0,
       explanation: "د'(س) = 3س² + 6س - 9 = 0 => س² + 2س - 3 = 0 => (س+3)(س-1) = 0. باختبار الإشارة حول س = -3 نجد أنها تتغير من موجب لسالب، إذن توجد نهاية عظمى محلية عند س = -3 وقيمتها 32.",
     },
     {
-      question_number: 4,
       question_text: `أي الهرمونات التالية يزداد إفرازه عند انخفاض ضغط الدم أو زيادة تركيز الأملاح في الدم للحفاظ على الاتزان الأسموزي؟`,
-      options: [
-        'الهرمون المضاد لإدرار البول (ADH / الفازوبريسين)',
-        'هرمون الأنسولين',
-        'هرمون الثيروكسين',
-        'هرمون النمو (GH)',
-      ],
+      options: ['الهرمون المضاد لإدرار البول (ADH / الفازوبريسين)', 'هرمون الأنسولين', 'هرمون الثيروكسين', 'هرمون النمو (GH)'],
       correct_option_index: 0,
       explanation: 'يقوم هرمون ADH بإعادة امتصاص الماء من النيفرونات في الكلى إلى الدم، مما يرفع ضغط الدم ويقلل أسموزية البلازما.',
     },
     {
-      question_number: 5,
       question_text: `ما هو الغرض البلاغي من الاستفهام في قول الشاعر: "هل يرجع الماضي إذا ما انقضى؟"`,
-      options: [
-        'النفي والاستبعاد',
-        'التقرير والتأكيد',
-        'التعجب والحيرة',
-        'التحسر والرجاء',
-      ],
+      options: ['النفي والاستبعاد', 'التقرير والتأكيد', 'التعجب والحيرة', 'التحسر والرجاء'],
       correct_option_index: 0,
       explanation: 'الاستفهام هنا غرضه البلاغي النفي، حيث يصح استبدال أداة الاستفهام بأداة نفي (لا يرجع الماضي).',
     },
+    {
+      question_text: `النسبة بين المقاومة المكافئة لعدة مقاومات متماثلة متصلة على التوالي إلى مقاومتها المكافئة عند توصيلها على التوازي (عددها n) تساوي:`,
+      options: ['n²', 'n', '1 / n', '2n'],
+      correct_option_index: 0,
+      explanation: 'في التوالي R_eq1 = n * R، وفي التوازي R_eq2 = R / n. بقسمة المقاومتين: R_eq1 / R_eq2 = (n*R) / (R/n) = n².',
+    },
+    {
+      question_text: `الغاز الناتج من تفاعل فلز الصوديوم مع الإيثانول هو غاز:`,
+      options: ['الهيدروجين (يشتعل بفرقعة)', 'الأكسجين', 'ثاني أكسيد الكربون', 'النيتروجين'],
+      correct_option_index: 0,
+      explanation: 'يتفاعل فلز الصوديوم النشط مع الهيدروجين الحمضي الضعيف في مجموعة الهيدروكسيل بالإيثانول مكوناً إيثوكسيد الصوديوم ويتصاعد غاز الهيدروجين.',
+    },
+    {
+      question_text: `تكامل ∫ (2س + 3)⁴ ءس بالنسبة لـ س يساوي:`,
+      options: ['(1/10) (2س + 3)⁵ + ث', '(1/5) (2س + 3)⁵ + ث', '(2/5) (2س + 3)⁵ + ث', '(2س + 3)⁵ + ث'],
+      correct_option_index: 0,
+      explanation: 'تكامل دالة خطية مرفوعة لأس: نقسم على معامل س ونزيد الأس بمقدار 1 ونقسم على الأس الجديد: (1/2) * (1/5) (2س + 3)⁵ + ث = (1/10) (2س + 3)⁵ + ث.',
+    },
+    {
+      question_text: `تتكون الرابطة الببتيدية بين الأحماض الأمينية عند بناء البروتين بتفاعل نزع جزيء:`,
+      options: ['ماء (H₂O)', 'أمونيا (NH₃)', 'ثاني أكسيد كربون (CO₂)', 'هيدروجين (H₂)'],
+      correct_option_index: 0,
+      explanation: 'تتكون الرابطة الببتيدية بتفاعل نازع للماء بين مجموعة الكربوكسيل لأحد الأحماض الأمينية ومجموعة الأمين للحمض الأميني المجاور.',
+    },
+    {
+      question_text: `نوع "لا" في جملة: "لا طالبَ علمٍ مهملٌ لواجبه" هي:`,
+      options: ['نافية للجنس عاملة', 'نافية للفعل', 'ناهية جازمة', 'عاطفة'],
+      correct_option_index: 0,
+      explanation: 'لا هنا نافية للجنس تعمل عمل إنّ؛ واسمها مضاف (طالب علم) منصوب بالفتحة ومهمل خبرها مرفوع.',
+    },
   ];
+
+  const targetCount = Math.max(1, count);
+  const result: Omit<ExamQuestion, 'id' | 'exam_id' | 'created_at'>[] = [];
+
+  for (let i = 0; i < targetCount; i++) {
+    const base = bank[i % bank.length];
+    const cycle = Math.floor(i / bank.length);
+    const suffix = cycle > 0 ? ` (نموذج مكرر - تدريب ${cycle + 1})` : '';
+    result.push({
+      question_number: i + 1,
+      question_text: `${base.question_text}${suffix}`,
+      options: [...base.options],
+      correct_option_index: (base.correct_option_index + i) % 4, // تنويع موقع الإجابة الصحيحة
+      explanation: base.explanation,
+    });
+  }
+
+  return result;
 }
 
 /**
@@ -123,20 +141,36 @@ export async function extractExamQuestionsFromPdf({
     }
 
     const apiBaseUrl = (import.meta as any).env?.VITE_PUBLIC_API_URL || '';
-    const res = await fetch(`${apiBaseUrl}/api/ai/extract-exam`, {
-      method: 'POST',
-      body: formData,
-    });
+    const endpointsToTry = [
+      `${apiBaseUrl}/api/ai/extract-exam`,
+      ...(apiBaseUrl ? [] : ['https://thanaya-web.vercel.app/api/ai/extract-exam']),
+    ];
 
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success && Array.isArray(data.questions) && data.questions.length > 0) {
-        return {
-          success: true,
-          model_used: data.model_used || modelName,
-          total_questions: data.questions.length,
-          questions: data.questions,
-        };
+    for (const url of endpointsToTry) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          body: formData,
+        });
+
+        const contentType = res.headers.get('content-type') || '';
+        if (res.ok && contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.questions) && data.questions.length > 0) {
+            let finalQs = data.questions;
+            if (questionsCount && questionsCount > 0 && finalQs.length > questionsCount) {
+              finalQs = finalQs.slice(0, questionsCount);
+            }
+            return {
+              success: true,
+              model_used: data.model_used || modelName,
+              total_questions: finalQs.length,
+              questions: finalQs,
+            };
+          }
+        }
+      } catch {
+        // try next endpoint
       }
     }
   } catch (err) {
@@ -160,11 +194,14 @@ export async function extractExamQuestionsFromPdf({
 6. الإخراج الإجباري: يجب أن تكون النتيجة حصراً بصيغة JSON المحددة.`;
 
       if (questionsCount && questionsCount > 0) {
-        prompt += `\n\nتنبيه إلزامي ومحدد: يجب استخراج بالضبط ${questionsCount} أسئلة اختيار من متعدد فقط لا أكثر ولا أقل.`;
+        prompt += `\n\nتنبيه إلزامي ومحدد: العدد الإجمالي للأسئلة في مصفوفة questions يجب أن يكون بالضبط ${questionsCount} سؤالاً. إذا كان عدد الأسئلة المكتوبة بالملف أقل من ${questionsCount}، يجب عليك صياغة وتوليد أسئلة جديدة إضافية بنفس نمط البكالوريا ومبنية بالكامل وبدقة على شرح وقوانين ومعلومات الملف حتى يكتمل العدد المطلوب (${questionsCount} سؤالاً) بدقة متناهية.`;
       }
 
       const promptUserText = questionsCount && questionsCount > 0
-        ? `استخرج بالضبط ${questionsCount} أسئلة اختيار من متعدد من هذا الملف واكتب شرحاً وتفسيراً وافياً للإجابة الصحيحة لكل سؤال بصيغة JSON المحددة. يجب ألا يتجاوز عدد الأسئلة المستخرجة ${questionsCount} سؤالاً.`
+        ? `المهمة: إنشاء وإخراج بالضبط ${questionsCount} سؤال اختيار من متعدد (MCQ) متوافقة مع نظام البكالوريا بناءً على هذا الملف:
+1. استخرج أولاً كافة الأسئلة الموجودة بالفعل في ملف الـ PDF.
+2. إذا كان عدد الأسئلة المكتوبة بالملف أقل من ${questionsCount} سؤال، قم فوراً بتوليد وصياغة أسئلة جديدة إضافية تغطي كافة موضوعات ودروس ومفاهيم الملف حتى يكتمل العدد المطلوب وهو ${questionsCount} سؤالاً بالضبط لا أقل ولا أكثر.
+3. لكل سؤال: 4 خيارات واضحة، تحديد الإجابة الصحيحة، وشرح تفسيري وافٍ.`
         : 'استخرج كافة أسئلة الاختيار من متعدد من هذا الملف واكتب شرحاً وتفسيراً وافياً للإجابة الصحيحة لكل سؤال بصيغة JSON المحددة.';
 
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
@@ -268,13 +305,11 @@ export async function extractExamQuestionsFromPdf({
   }
 
   // 3. Fallback for demo/development when no API key is configured yet
-  let mock = generateMockQuestions(file.name.replace(/\.pdf$/i, ''));
-  if (questionsCount && questionsCount > 0 && mock.length > questionsCount) {
-    mock = mock.slice(0, questionsCount);
-  }
+  const targetMockCount = questionsCount && questionsCount > 0 ? questionsCount : 5;
+  const mock = generateMockQuestions(file.name.replace(/\.pdf$/i, ''), targetMockCount);
   return {
     success: true,
-    model_used: `${modelName} (بيئة معاينة تجريبية)`,
+    model_used: `${modelName} (بيئة معاينة تجريبية - بدون مفتاح API)`,
     total_questions: mock.length,
     questions: mock,
   };

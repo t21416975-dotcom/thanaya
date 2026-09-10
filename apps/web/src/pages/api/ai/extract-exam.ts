@@ -120,12 +120,15 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     if (reqQuestionsCount) {
-      systemPrompt += `\n\nتنبيه إلزامي ومحدد: يجب استخراج بالضبط ${reqQuestionsCount} أسئلة اختيار من متعدد فقط لا أكثر ولا أقل.`;
+      systemPrompt += `\n\nتنبيه إلزامي ومحدد: العدد الإجمالي للأسئلة في مصفوفة questions يجب أن يكون بالضبط ${reqQuestionsCount} سؤالاً. إذا كان عدد الأسئلة المكتوبة في الملف أقل من ${reqQuestionsCount}، يجب عليك صياغة وتوليد أسئلة جديدة إضافية بنفس نمط البكالوريا ومبنية بالكامل وبدقة على شرح وقوانين ومعلومات الملف حتى يكتمل العدد المطلوب (${reqQuestionsCount} سؤالاً) بدقة متناهية.`;
     }
 
     const userPromptText = reqQuestionsCount
-      ? `استخرج بالضبط ${reqQuestionsCount} أسئلة اختيار من متعدد من هذا الملف واكتب شرحاً وتفسيراً وافياً للإجابة الصحيحة لكل سؤال بصيغة JSON المحددة. يجب ألا يتجاوز عدد الأسئلة ${reqQuestionsCount} سؤالاً.`
-      : 'استخرج جميع أسئلة الاختيار من متعدد من هذا الملف واكتب شرحاً وتفسيراً وافياً للإجابة الصحيحة لكل سؤال بصيغة JSON المحددة.';
+      ? `المهمة: إنشاء وإخراج بالضبط ${reqQuestionsCount} سؤال اختيار من متعدد (MCQ) متوافقة مع نظام البكالوريا بناءً على هذا الملف:
+1. استخرج أولاً كافة الأسئلة الموجودة بالفعل في ملف الـ PDF.
+2. إذا كان عدد الأسئلة المكتوبة بالملف أقل من ${reqQuestionsCount} سؤال، قم فوراً بتوليد وصياغة أسئلة جديدة إضافية تغطي كافة موضوعات ودروس ومفاهيم الملف حتى يكتمل العدد المطلوب وهو ${reqQuestionsCount} سؤالاً بالضبط لا أقل ولا أكثر.
+3. لكل سؤال: 4 خيارات واضحة، تحديد الإجابة الصحيحة، وشرح تفسيري وافٍ.`
+      : 'استخرج كافة أسئلة الاختيار من متعدد من هذا الملف واكتب شرحاً وتفسيراً وافياً للإجابة الصحيحة لكل سؤال بصيغة JSON المحددة.';
 
     // Call Google Gemini REST API with Structured JSON Schema
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(geminiApiKey)}`;
