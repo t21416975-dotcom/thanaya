@@ -57,8 +57,8 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
           </div>
         </a>
       ) : slot.slot_type === 'google' ? (
-        <!-- Adsterra 1:1 Single Banner Container (Strict Fixed Height & Overflow Hidden) -->
-        <div class="w-full h-[180px] max-h-[180px] flex justify-center items-center overflow-hidden bg-slate-50/20">
+        <!-- Adsterra 1:1 Single Banner Container (Strict Fixed Height & Top-Aligned) -->
+        <div class="w-full h-[180px] max-h-[180px] flex justify-center items-start overflow-hidden bg-slate-50/20">
           <iframe
             id={`frame-${dynamicContainerId}`}
             srcdoc={`<!DOCTYPE html>
@@ -73,26 +73,31 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
       margin: 0;
       padding: 0;
     }
+    html, body, div {
+      margin-top: 0 !important;
+      padding-top: 0 !important;
+    }
     html, body {
       width: 100%;
       height: 180px;
       max-height: 180px;
       background: transparent;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: flex-start !important;
+      align-items: center !important;
       overflow: hidden !important;
       font-family: system-ui, -apple-system, sans-serif;
     }
     #container-ccae9d506cf77407ce62d684b21d33c5 {
       width: 100%;
       max-width: 100%;
-      height: 180px;
-      max-height: 180px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
       margin: 0 auto !important;
+      padding: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: flex-start !important;
+      align-items: center !important;
       overflow: hidden !important;
     }
     img, picture, svg, video {
@@ -101,12 +106,14 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
       object-fit: contain !important;
       display: block;
       margin: 0 auto !important;
+      margin-top: 0 !important;
     }
     a {
       text-decoration: none;
       color: inherit;
       display: block;
       margin: 0 auto;
+      margin-top: 0 !important;
     }
   </style>
 </head>
