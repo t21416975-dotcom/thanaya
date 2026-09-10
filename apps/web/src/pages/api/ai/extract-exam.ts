@@ -32,6 +32,7 @@ export const POST: APIRoute = async ({ request }) => {
     let reqModelName: string | null = null;
     let reqSystemPrompt: string | null = null;
     let reqApiKey: string | null = null;
+    let reqQuestionsCount: number | null = null;
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
@@ -47,9 +48,14 @@ export const POST: APIRoute = async ({ request }) => {
       const promptField = formData.get('system_prompt');
       const modelField = formData.get('model_name');
       const keyField = formData.get('api_key');
+      const countField = formData.get('questions_count');
       if (typeof promptField === 'string' && promptField.trim()) reqSystemPrompt = promptField.trim();
       if (typeof modelField === 'string' && modelField.trim()) reqModelName = modelField.trim();
       if (typeof keyField === 'string' && keyField.trim()) reqApiKey = keyField.trim();
+      if (countField) {
+        const parsed = parseInt(String(countField), 10);
+        if (!isNaN(parsed) && parsed > 0) reqQuestionsCount = parsed;
+      }
 
       mimeType = file.type || 'application/pdf';
       const arrayBuffer = await file.arrayBuffer();
@@ -62,6 +68,10 @@ export const POST: APIRoute = async ({ request }) => {
       if (body.system_prompt) reqSystemPrompt = String(body.system_prompt).trim();
       if (body.model_name) reqModelName = String(body.model_name).trim();
       if (body.api_key) reqApiKey = String(body.api_key).trim();
+      if (body.questions_count) {
+        const parsed = parseInt(String(body.questions_count), 10);
+        if (!isNaN(parsed) && parsed > 0) reqQuestionsCount = parsed;
+      }
 
       if (!base64Data) {
         return new Response(
@@ -109,6 +119,14 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    if (reqQuestionsCount) {
+      systemPrompt += `\n\nتنبيه إلزامي ومحدد: يجب استخراج بالضبط ${reqQuestionsCount} أسئلة اختيار من متعدد فقط لا أكثر ولا أقل.`;
+    }
+
+    const userPromptText = reqQuestionsCount
+      ? `استخرج بالضبط ${reqQuestionsCount} أسئلة اختيار من متعدد من هذا الملف واكتب شرحاً وتفسيراً وافياً للإجابة الصحيحة لكل سؤال بصيغة JSON المحددة. يجب ألا يتجاوز عدد الأسئلة ${reqQuestionsCount} سؤالاً.`
+      : 'استخرج جميع أسئلة الاختيار من متعدد من هذا الملف واكتب شرحاً وتفسيراً وافياً للإجابة الصحيحة لكل سؤال بصيغة JSON المحددة.';
+
     // Call Google Gemini REST API with Structured JSON Schema
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(geminiApiKey)}`;
 
@@ -126,7 +144,7 @@ export const POST: APIRoute = async ({ request }) => {
               },
             },
             {
-              text: 'استخرج جميع أسئلة الاختيار من متعدد من هذا الملف واكتب شرحاً وتفسيراً وافياً للإجابة الصحيحة لكل سؤال بصيغة JSON المحددة.',
+              text: userPromptText,
             },
           ],
         },
@@ -213,9 +231,14 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
+    let candidateQuestions = parsedResult.questions;
+    if (reqQuestionsCount && candidateQuestions.length > reqQuestionsCount) {
+      candidateQuestions = candidateQuestions.slice(0, reqQuestionsCount);
+    }
+
     // Sanitize and ensure format
-    const sanitizedQuestions = parsedResult.questions.map((q, idx) => ({
-      question_number: typeof q.question_number === 'number' ? q.question_number : idx + 1,
+    const sanitizedQuestions = candidateQuestions.map((q, idx) => ({
+      question_number: idx + 1,
       question_text: String(q.question_text || '').trim(),
       options: Array.isArray(q.options) ? q.options.map((opt) => String(opt).trim()) : [],
       correct_option_index:

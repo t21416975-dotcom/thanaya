@@ -72,6 +72,7 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
   const [isExtracting, setIsExtracting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [extractionStatus, setExtractionStatus] = useState<string | null>(null);
+  const [requestedQuestionsCount, setRequestedQuestionsCount] = useState<number | ''>('');
 
   // Errors & UI
   const [error, setError] = useState<string | null>(null);
@@ -190,8 +191,17 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
       return;
     }
 
+    const count =
+      typeof requestedQuestionsCount === 'number' && requestedQuestionsCount > 0
+        ? requestedQuestionsCount
+        : undefined;
+
     setIsExtracting(true);
-    setExtractionStatus('جاري قراءة ملف الـ PDF واستخراج الأسئلة بدقة عبر Gemini API...');
+    setExtractionStatus(
+      count
+        ? `جاري استخراج ${count} سؤال بالذكاء الاصطناعي عبر Gemini API...`
+        : 'جاري قراءة ملف الـ PDF واستخراج الأسئلة بدقة عبر Gemini API...'
+    );
     setError(null);
 
     try {
@@ -204,6 +214,7 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
         modelName: modelSetting || 'gemini-2.5-flash',
         systemPrompt: promptSetting,
         apiKey: apiKeySetting,
+        questionsCount: count,
       });
 
       if (!result.success || result.questions.length === 0) {
@@ -412,31 +423,102 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
           </div>
 
           {/* Quick subject & title selection */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">المادة الدراسية *</label>
-              <select
-                value={subjectId}
-                onChange={(e) => setSubjectId(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                {subjects.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+          <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">المادة الدراسية *</label>
+                <select
+                  value={subjectId}
+                  onChange={(e) => setSubjectId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  {subjects.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">عنوان مقترح للامتحان</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="مثال: امتحان تجريبي شامل في الفيزياء"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">عنوان مقترح للامتحان</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="مثال: امتحان تجريبي شامل في الفيزياء"
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+            {/* Questions count configuration */}
+            <div className="border-t border-slate-200/80 pt-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="font-semibold text-slate-700 flex items-center gap-1.5">
+                  <span>🎯 عدد الأسئلة المطلوب استخراجها:</span>
+                  <span className="text-[11px] font-normal text-slate-500">
+                    (اختياري - حدد عدداً معيناً أو اتركه فارغاً لاستخراج الكل)
+                  </span>
+                </label>
+                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
+                  {requestedQuestionsCount ? `${requestedQuestionsCount} أسئلة محددة` : 'استخراج كل أسئلة الملف'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={requestedQuestionsCount}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setRequestedQuestionsCount(val === '' ? '' : Math.max(1, parseInt(val) || 1));
+                  }}
+                  placeholder="مثال: 10 (أو اتركه فارغاً لاستخراج كافة الأسئلة)"
+                  className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                />
+                {requestedQuestionsCount !== '' && (
+                  <button
+                    type="button"
+                    onClick={() => setRequestedQuestionsCount('')}
+                    className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold shrink-0 transition cursor-pointer"
+                  >
+                    إعادة ضبط (الكل)
+                  </button>
+                )}
+              </div>
+
+              {/* Quick preset buttons */}
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                <span className="text-[11px] text-slate-500 ml-1">خيارات سريعة:</span>
+                {[
+                  { label: 'الكل (تلقائي)', val: '' },
+                  { label: '5 أسئلة', val: 5 },
+                  { label: '10 أسئلة', val: 10 },
+                  { label: '15 سؤال', val: 15 },
+                  { label: '20 سؤال', val: 20 },
+                  { label: '25 سؤال', val: 25 },
+                  { label: '30 سؤال', val: 30 },
+                ].map((preset) => {
+                  const isSelected = requestedQuestionsCount === preset.val;
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => setRequestedQuestionsCount(preset.val as any)}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-white border border-slate-200 text-slate-600 hover:border-emerald-400 hover:text-emerald-700'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

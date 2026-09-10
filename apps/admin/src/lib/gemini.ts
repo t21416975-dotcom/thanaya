@@ -101,11 +101,13 @@ export async function extractExamQuestionsFromPdf({
   modelName = 'gemini-2.5-flash',
   systemPrompt,
   apiKey,
+  questionsCount,
 }: {
   file: File;
   modelName?: string;
   systemPrompt?: string;
   apiKey?: string;
+  questionsCount?: number;
 }): Promise<ExtractionResult> {
   const base64Data = await fileToBase64(file);
 
@@ -116,6 +118,9 @@ export async function extractExamQuestionsFromPdf({
     if (systemPrompt) formData.append('system_prompt', systemPrompt);
     if (modelName) formData.append('model_name', modelName);
     if (apiKey) formData.append('api_key', apiKey);
+    if (questionsCount && questionsCount > 0) {
+      formData.append('questions_count', String(questionsCount));
+    }
 
     const apiBaseUrl = (import.meta as any).env?.VITE_PUBLIC_API_URL || '';
     const res = await fetch(`${apiBaseUrl}/api/ai/extract-exam`, {
@@ -142,7 +147,7 @@ export async function extractExamQuestionsFromPdf({
   const activeKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY;
   if (activeKey && activeKey.trim()) {
     try {
-      const prompt =
+      let prompt =
         systemPrompt ||
         `أنت خبير تربوي ومعلم أول في وزارة التربية والتعليم للثانوية العامة والبكالوريا المصرية. مهمتك هي إنشاء واستخراج أسئلة الاختيار من متعدد (MCQs) التفاعلية من ملف الـ PDF المرفق بدقة علمية وتربوية عالية، مع توليد إجابات دقيقة وشرح وتفسير نموذجي شامل لكل سؤال.
 
@@ -153,6 +158,14 @@ export async function extractExamQuestionsFromPdf({
 4. الخيارات الأربعة: لكل سؤال، وفر 4 خيارات واضحة ومتمايزة ومكتوبة بدقة.
 5. التفسير والشرح النموذجي: اكتب في حقل explanation شرحاً علمياً تفصيلياً مقنعاً وواضحاً يوضح للطالب خطوات الحل الرياضي أو التعليل العلمي والقاعدة المتبعة وسبب صحة الخيار المختار.
 6. الإخراج الإجباري: يجب أن تكون النتيجة حصراً بصيغة JSON المحددة.`;
+
+      if (questionsCount && questionsCount > 0) {
+        prompt += `\n\nتنبيه إلزامي ومحدد: يجب استخراج بالضبط ${questionsCount} أسئلة اختيار من متعدد فقط لا أكثر ولا أقل.`;
+      }
+
+      const promptUserText = questionsCount && questionsCount > 0
+        ? `استخرج بالضبط ${questionsCount} أسئلة اختيار من متعدد من هذا الملف واكتب شرحاً وتفسيراً وافياً للإجابة الصحيحة لكل سؤال بصيغة JSON المحددة. يجب ألا يتجاوز عدد الأسئلة المستخرجة ${questionsCount} سؤالاً.`
+        : 'استخرج كافة أسئلة الاختيار من متعدد من هذا الملف واكتب شرحاً وتفسيراً وافياً للإجابة الصحيحة لكل سؤال بصيغة JSON المحددة.';
 
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
         modelName.trim() || 'gemini-2.5-flash'
@@ -172,7 +185,7 @@ export async function extractExamQuestionsFromPdf({
                 },
               },
               {
-                text: 'استخرج كافة أسئلة الاختيار من متعدد من هذا الملف واكتب شرحاً وتفسيراً وافياً للإجابة الصحيحة لكل سؤال بصيغة JSON المحددة.',
+                text: promptUserText,
               },
             ],
           },
@@ -229,11 +242,19 @@ export async function extractExamQuestionsFromPdf({
 
       const parsed = JSON.parse(textOutput);
       if (Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+        let qs = parsed.questions;
+        if (questionsCount && questionsCount > 0 && qs.length > questionsCount) {
+          qs = qs.slice(0, questionsCount);
+        }
+        const sanitized = qs.map((q: any, idx: number) => ({
+          ...q,
+          question_number: idx + 1,
+        }));
         return {
           success: true,
           model_used: modelName,
-          total_questions: parsed.questions.length,
-          questions: parsed.questions,
+          total_questions: sanitized.length,
+          questions: sanitized,
         };
       }
     } catch (directErr: any) {
@@ -247,7 +268,10 @@ export async function extractExamQuestionsFromPdf({
   }
 
   // 3. Fallback for demo/development when no API key is configured yet
-  const mock = generateMockQuestions(file.name.replace(/\.pdf$/i, ''));
+  let mock = generateMockQuestions(file.name.replace(/\.pdf$/i, ''));
+  if (questionsCount && questionsCount > 0 && mock.length > questionsCount) {
+    mock = mock.slice(0, questionsCount);
+  }
   return {
     success: true,
     model_used: `${modelName} (بيئة معاينة تجريبية)`,
