@@ -9,17 +9,23 @@ interface Props {
 const { position } = Astro.props;
 const slot = await publicApi.getAdSlot(position);
 const directAd = slot?.slot_type === 'direct' ? await publicApi.getActiveDirectAdForSlot(position) : null;
+
+// Dynamic unique ID for each instance on the page
+const dynamicSuffix = Math.random().toString(36).substring(2, 9);
+const dynamicContainerId = `container-${dynamicSuffix}`;
+const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
 ---
 
 {
   slot && slot.is_active && (
     <aside
+      id={instanceId}
       aria-label="مساحة إعلانية"
-      class="w-full my-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition min-h-[100px] flex flex-col justify-between"
+      class="w-full my-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition min-h-[145px] sm:min-h-[160px] flex flex-col justify-between"
       data-ad-position={position}
     >
       <!-- Clear Disclosing Header -->
-      <div class="flex items-center justify-between px-4 py-1.5 bg-slate-50 border-b border-slate-100 text-[10px] text-slate-400 font-medium">
+      <div class="flex items-center justify-between px-4 py-1.5 bg-slate-50 border-b border-slate-100 text-[10px] text-slate-400 font-medium select-none">
         <span>إعلان معتمد</span>
         <span>مساحة إعلانية</span>
       </div>
@@ -51,10 +57,51 @@ const directAd = slot?.slot_type === 'direct' ? await publicApi.getActiveDirectA
           </div>
         </a>
       ) : slot.slot_type === 'google' ? (
-        <!-- Adsterra Native Banner Container (Zero CLS Reserved Box) -->
-        <div class="p-2 sm:p-4 flex flex-col items-center justify-center min-h-[90px] w-full text-center overflow-hidden">
-          <script is:inline async="async" data-cfasync="false" src="https://pl31266860.profitableratecpmnetwork.com/ccae9d506cf77407ce62d684b21d33c5/invoke.js"></script>
-          <div id="container-ccae9d506cf77407ce62d684b21d33c5" class="w-full flex justify-center"></div>
+        <!-- Adsterra Native Banner (Isolated Sandbox with Zero CLS & Mobile Stacking Prevention) -->
+        <div
+          class="p-2 sm:p-3 flex items-center justify-center w-full min-h-[110px] sm:min-h-[125px] max-h-[140px] sm:max-h-[160px] overflow-hidden bg-slate-50/30"
+          data-container-id={dynamicContainerId}
+        >
+          <iframe
+            id={`frame-${dynamicContainerId}`}
+            srcdoc={`<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base target="_blank">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: transparent;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    #container-ccae9d506cf77407ce62d684b21d33c5 {
+      width: 100%;
+      max-width: 100%;
+      max-height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div id="container-ccae9d506cf77407ce62d684b21d33c5"></div>
+  <script async="async" data-cfasync="false" src="https://pl31266860.profitableratecpmnetwork.com/ccae9d506cf77407ce62d684b21d33c5/invoke.js"></script>
+</body>
+</html>`}
+            class="w-full h-[110px] sm:h-[125px] border-0 overflow-hidden block"
+            loading="lazy"
+            title={`إعلان ${position}`}
+          ></iframe>
         </div>
       ) : (
         <!-- Platform Support Fallback Message -->
