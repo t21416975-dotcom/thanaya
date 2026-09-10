@@ -455,14 +455,7 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
                 <FileText className="w-8 h-8" />
               </div>
               <div>
-                <h4 className="font-semibold text-sm text-slate-900 flex items-center justify-center gap-1.5">
-                  <span>ملف التقييم (PDF)</span>
-                  {isGoogleDriveUrl(pdfUrl) && (
-                    <span className="text-[11px] font-medium text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
-                      Google Drive
-                    </span>
-                  )}
-                </h4>
+                <h4 className="font-semibold text-sm text-slate-900">ملف التقييم (PDF)</h4>
                 <p className="text-xs text-slate-500 font-mono mt-1 break-all">
                   {pdfUrl || 'لم يتم إدخال رابط الـ PDF بعد'}
                 </p>
