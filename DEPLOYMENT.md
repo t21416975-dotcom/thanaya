@@ -93,10 +93,10 @@ flowchart TD
 
 ---
 
-## 4️⃣ إعداد الإعلانات والأرباح (AdSense & Direct Ads)
+## 4️⃣ إعداد الإعلانات والأرباح (Adsterra & Direct Ads)
 
-1. **Google AdSense:**
-   - بعد تفعيل حساب AdSense، ضع كود الناشر والوحدة في مكون الإعلانات [`apps/web/src/components/AdSlot.astro`](apps/web/src/components/AdSlot.astro).
+1. **شبكات الإعلانات الرقمية (Adsterra / Ad Networks):**
+   - تم ضبط ودمج كود الإعلانات المباشر في المكون [`apps/web/src/components/AdSlot.astro`](apps/web/src/components/AdSlot.astro).
 2. **الإعلانات المباشرة والرعاة (Direct Ads):**
    - من لوحة الإدارة `admin.thanaya.com`، ادخل إلى تبويب **الإعلانات**.
    - أضف بنرات الرعاة والمدرسين مع تحديد المواضع والروابط.

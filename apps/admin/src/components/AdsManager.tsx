@@ -176,7 +176,7 @@ export function AdsManager() {
                       }
                       className="border border-slate-300 rounded-lg px-2.5 py-1 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     >
-                      <option value="google">Google AdSense</option>
+                      <option value="google">شبكة إعلانية معتمدة (Ad Network / Adsterra)</option>
                       <option value="direct">إعلان مباشر (Direct Ad)</option>
                       <option value="fallback">رسالة دعم المنصة (Fallback)</option>
                     </select>
