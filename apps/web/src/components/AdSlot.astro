@@ -58,7 +58,7 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
         </a>
       ) : slot.slot_type === 'google' ? (
         <!-- Adsterra 1:1 Native Banner Container -->
-        <div class="w-full flex justify-center items-center min-h-[280px] my-2">
+        <div class="w-full flex justify-center items-center min-h-[280px] my-2 overflow-hidden">
           <iframe
             id={`frame-${dynamicContainerId}`}
             srcdoc={`<!DOCTYPE html>
@@ -68,21 +68,55 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <base target="_blank">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
     html, body {
       width: 100%;
-      min-height: 100%;
+      height: 100%;
       background: transparent;
       display: flex;
       justify-content: center;
       align-items: center;
+      overflow: hidden !important;
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    html::-webkit-scrollbar, body::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
     }
     #container-ccae9d506cf77407ce62d684b21d33c5 {
       width: 100%;
-      min-height: 250px;
+      max-width: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
+      margin: 0 auto !important;
+      overflow: hidden !important;
+      scrollbar-width: none !important;
+    }
+    #container-ccae9d506cf77407ce62d684b21d33c5 > *,
+    .item, .ad-item {
+      margin: 0 auto !important;
+      max-width: 100% !important;
+    }
+    img, picture, svg, video {
+      max-width: 100% !important;
+      height: auto !important;
+      object-fit: contain !important;
+      display: block;
+      margin: 0 auto !important;
+    }
+    a {
+      text-decoration: none;
+      color: inherit;
+      max-width: 100% !important;
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
   </style>
 </head>
@@ -91,7 +125,8 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
   <script async="async" data-cfasync="false" src="https://pl31266860.profitableratecpmnetwork.com/ccae9d506cf77407ce62d684b21d33c5/invoke.js"></script>
 </body>
 </html>`}
-            class="w-full min-h-[280px] h-[300px] border-0 block"
+            class="w-full min-h-[280px] h-[300px] border-0 overflow-hidden block mx-auto"
+            style="scrollbar-width: none; overflow: hidden;"
             loading="lazy"
             title={`إعلان ${position}`}
           ></iframe>
