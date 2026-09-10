@@ -5,7 +5,7 @@ import vercel from '@astrojs/vercel';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://thanaya.com',
+  site: 'https://thanaya-web.vercel.app',
   output: 'server',
   adapter: vercel(),
   prefetch: {
