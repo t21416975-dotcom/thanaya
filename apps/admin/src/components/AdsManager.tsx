@@ -124,7 +124,7 @@ export function AdsManager() {
         <div>
           <h2 className="text-xl font-bold text-slate-900">إدارة الإعلانات (Advertising System)</h2>
           <p className="text-sm text-slate-500">
-            التحكم في أماكن الإعلانات الثابتة (Ad Slots) وإدارة الإعلانات المباشرة (Direct Ads)
+            التحكم في أماكن الإعلانات (Ad Slots)، شبكات الإعلانات الرقمية (Adsterra)، والإعلانات المباشرة (Direct Ads)
           </p>
         </div>
 
