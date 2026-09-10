@@ -133,6 +133,7 @@ export type ExamQuestion = {
   exam_id: string;
   question_number: number;
   question_text: string;
+  image_url?: string | null;
   options: string[];
   correct_option_index: number; // 0 | 1 | 2 | 3
   explanation: string;

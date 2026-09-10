@@ -29,6 +29,7 @@ interface ExamCreatorProps {
 interface QuestionDraft {
   question_number: number;
   question_text: string;
+  image_url?: string;
   options: string[];
   correct_option_index: number;
   explanation: string;
@@ -50,6 +51,7 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
       ? initialExam.questions.map((q) => ({
           question_number: q.question_number,
           question_text: q.question_text,
+          image_url: q.image_url || '',
           options: Array.isArray(q.options) && q.options.length > 0 ? [...q.options] : ['', '', '', ''],
           correct_option_index: q.correct_option_index,
           explanation: q.explanation || '',
@@ -58,6 +60,7 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
           {
             question_number: 1,
             question_text: '',
+            image_url: '',
             options: ['', '', '', ''],
             correct_option_index: 0,
             explanation: '',
@@ -90,6 +93,7 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
       {
         question_number: prev.length + 1,
         question_text: '',
+        image_url: '',
         options: ['', '', '', ''],
         correct_option_index: 0,
         explanation: '',
@@ -152,6 +156,14 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
     setQuestions((prev) => {
       const next = [...prev];
       next[qIndex] = { ...next[qIndex], explanation: val };
+      return next;
+    });
+  };
+
+  const handleImageUrlChange = (qIndex: number, val: string) => {
+    setQuestions((prev) => {
+      const next = [...prev];
+      next[qIndex] = { ...next[qIndex], image_url: val };
       return next;
     });
   };
@@ -270,6 +282,7 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
       const questionsPayload = questions.map((q, idx) => ({
         question_number: idx + 1,
         question_text: q.question_text.trim(),
+        image_url: q.image_url?.trim() || null,
         options: q.options.map((opt) => opt.trim()),
         correct_option_index: q.correct_option_index,
         explanation: q.explanation.trim(),
@@ -615,6 +628,44 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
                     placeholder="اكتب نص السؤال هنا..."
                     className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
                   />
+                </div>
+
+                {/* Optional Image URL */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                    <span>🖼️ صورة السؤال (رابط مباشر — اختياري)</span>
+                    {q.image_url && (
+                      <span className="text-emerald-600 font-bold text-[10px] bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
+                        معاينة متاحة
+                      </span>
+                    )}
+                  </label>
+                  <input
+                    type="url"
+                    value={q.image_url || ''}
+                    onChange={(e) => handleImageUrlChange(qIndex, e.target.value)}
+                    placeholder="https://example.com/image.png (اختياري)"
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium dir-ltr text-left"
+                    dir="ltr"
+                  />
+                  {q.image_url && q.image_url.trim() !== '' && (
+                    <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 max-h-48">
+                      <img
+                        src={q.image_url}
+                        alt="معاينة صورة السؤال"
+                        className="w-full max-h-48 object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                        }}
+                        onLoad={(e) => {
+                          (e.target as HTMLImageElement).style.display = '';
+                          (e.target as HTMLImageElement).nextElementSibling?.classList.add('hidden');
+                        }}
+                      />
+                      <p className="hidden text-[11px] text-rose-500 px-3 py-2">⚠️ تعذّر تحميل الصورة — تأكد من صحة الرابط</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* 4 Options with Radio Button */}

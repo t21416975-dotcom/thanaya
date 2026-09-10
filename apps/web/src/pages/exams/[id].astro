@@ -377,6 +377,17 @@ const questionsJson = JSON.stringify(exam.questions);
         qNumberText.textContent = String(index + 1);
         qTextDisplay.textContent = q.question_text;
 
+        // Render question image if available
+        const existingImg = document.getElementById('q-image-display');
+        if (existingImg) existingImg.remove();
+        if (q.image_url) {
+          const imgWrapper = document.createElement('div');
+          imgWrapper.id = 'q-image-display';
+          imgWrapper.className = 'mt-3 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50';
+          imgWrapper.innerHTML = `<img src="${q.image_url}" alt="صورة السؤال" class="w-full max-h-72 object-contain" onerror="this.parentElement.style.display='none'" />`;
+          qTextDisplay.parentElement.appendChild(imgWrapper);
+        }
+
         const isAnswered = userAnswers[index] !== undefined;
         if (isAnswered) {
           qStatusBadge.textContent = 'تمت الإجابة';
@@ -584,6 +595,7 @@ const questionsJson = JSON.stringify(exam.questions);
               ${statusTag}
             </div>
             <h4 class="text-base font-bold text-slate-900 leading-relaxed">${q.question_text}</h4>
+            ${q.image_url ? `<div class="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50"><img src="${q.image_url}" alt="صورة السؤال" class="w-full max-h-64 object-contain" onerror="this.parentElement.style.display='none'" /></div>` : ''}
             <div class="space-y-2.5 pt-1">
               ${optionsHtml}
             </div>
