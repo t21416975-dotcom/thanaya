@@ -31,24 +31,23 @@ const pageDescription = 'امتحانات تجريبية تفاعلية بنظا
       ]}
     />
 
-    <!-- Header Banner -->
-    <div class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-10 shadow-lg relative overflow-hidden">
-      <div class="relative z-10 max-w-2xl space-y-3">
-        <div class="inline-flex items-center gap-2 bg-purple-500/20 text-purple-300 border border-purple-400/30 px-3 py-1 rounded-full text-xs font-bold">
+    <!-- Header Card -->
+    <header class="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
+      <div class="space-y-2 max-w-2xl">
+        <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-100 px-3 py-1 rounded-full text-xs font-bold">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
           </svg>
-          <span>نظام التقييم الذاتي والتصحيح الفوري</span>
-        </div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          <span>تقييم تفاعلي وتصحيح فوري</span>
+        </span>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
           الامتحانات التجريبية التفاعلية (MCQs)
         </h1>
-        <p class="text-sm text-slate-300 leading-relaxed">
-          اختبر مستواك مع نماذج امتحانات مطابقة لمواصفات البكالوريا مع مؤقت زمني وتصحيح فوري وشرح تفسيري شامل لكل سؤال.
+        <p class="text-sm text-slate-600 leading-relaxed">
+          نماذج تدريبية شاملة مطابقة لمواصفات البكالوريا مع مؤقت زمني وتصحيح فوري وشرح تفسيري شامل لكل سؤال.
         </p>
       </div>
-      <div class="absolute -left-10 -bottom-10 w-60 h-60 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
-    </div>
+    </header>
 
     <!-- Ad Slot -->
     <AdSlot position="homepage_top" />
@@ -59,7 +58,7 @@ const pageDescription = 'امتحانات تجريبية تفاعلية بنظا
         href="/exams"
         class={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition ${
           !currentSubjectSlug
-            ? 'bg-slate-900 text-white shadow-sm'
+            ? 'bg-emerald-600 text-white shadow-sm'
             : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
         }`}
       >
@@ -74,13 +73,13 @@ const pageDescription = 'امتحانات تجريبية تفاعلية بنظا
               href={`/exams?subject=${sub.slug}`}
               class={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 ${
                 isActive
-                  ? 'bg-purple-600 text-white shadow-sm'
+                  ? 'bg-emerald-600 text-white shadow-sm'
                   : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
               }`}
             >
               <span>{sub.name}</span>
               {count > 0 && (
-                <span class={`text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-purple-700 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                <span class={`text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-600'}`}>
                   {count}
                 </span>
               )}
@@ -97,10 +96,10 @@ const pageDescription = 'امتحانات تجريبية تفاعلية بنظا
           {filteredExams.map((exam) => {
             const questionCount = exam.questions?.length || 0;
             return (
-              <div class="bg-white rounded-2xl border border-slate-200 hover:border-purple-300 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between gap-5 group">
+              <div class="bg-white rounded-2xl border border-slate-200 hover:border-emerald-500 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between gap-5 group">
                 <div class="space-y-3">
                   <div class="flex items-center justify-between">
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-100">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
                       {exam.subject?.name || 'مادة دراسية'}
                     </span>
                     <div class="flex items-center gap-1 text-xs text-slate-500 font-medium">
@@ -112,13 +111,13 @@ const pageDescription = 'امتحانات تجريبية تفاعلية بنظا
                     </div>
                   </div>
 
-                  <h3 class="text-base font-bold text-slate-900 group-hover:text-purple-700 transition leading-snug">
+                  <h3 class="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition leading-snug">
                     {exam.title}
                   </h3>
 
                   <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500 pt-1">
                     <span class="flex items-center gap-1">
-                      <svg class="w-3.5 h-3.5 text-purple-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 11l3 3L22 4"></path>
                         <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
                       </svg>
@@ -133,9 +132,9 @@ const pageDescription = 'امتحانات تجريبية تفاعلية بنظا
                   <span class="text-xs text-slate-400">امتحان تدريبي مجاني</span>
                   <a
                     href={`/exams/${exam.id}`}
-                    class="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-xl text-xs font-bold transition shadow-sm"
+                    class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-xs font-bold transition shadow-sm"
                   >
-                    <span>بدء الامتحان الآن</span>
+                    <span>بدء الامتحان</span>
                     <svg class="w-3.5 h-3.5 rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M5 12h14M12 5l7 7-7 7"></path>
                     </svg>

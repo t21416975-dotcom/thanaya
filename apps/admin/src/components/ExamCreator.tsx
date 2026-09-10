@@ -328,7 +328,7 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
               type="button"
               onClick={() => setActiveTab('ai-upload')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
-                activeTab === 'ai-upload' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                activeTab === 'ai-upload' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
@@ -359,7 +359,7 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
       {activeTab === 'ai-upload' && !initialExam && (
         <div className="p-8 max-w-2xl mx-auto space-y-6">
           <div className="text-center space-y-2">
-            <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+            <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
               <Sparkles className="w-7 h-7" />
             </div>
             <h3 className="text-lg font-bold text-slate-900">إنشاء الامتحان بالذكاء الاصطناعي (Gemini PDF)</h3>
@@ -372,8 +372,8 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
             onClick={() => fileInputRef.current?.click()}
             className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition flex flex-col items-center justify-center gap-3 ${
               selectedFile
-                ? 'border-purple-500 bg-purple-50/50'
-                : 'border-slate-300 hover:border-purple-400 bg-slate-50 hover:bg-purple-50/20'
+                ? 'border-emerald-500 bg-emerald-50/50'
+                : 'border-slate-300 hover:border-emerald-400 bg-slate-50 hover:bg-emerald-50/20'
             }`}
           >
             <input
@@ -383,7 +383,7 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
               onChange={handleFileChange}
               className="hidden"
             />
-            <div className="p-3 bg-purple-100 text-purple-700 rounded-xl">
+            <div className="p-3 bg-emerald-100 text-emerald-700 rounded-xl">
               {selectedFile ? <FileText className="w-8 h-8" /> : <Upload className="w-8 h-8" />}
             </div>
             <div>
@@ -405,7 +405,7 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
               <select
                 value={subjectId}
                 onChange={(e) => setSubjectId(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 {subjects.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -422,14 +422,14 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="مثال: امتحان تجريبي شامل في الفيزياء"
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
           </div>
 
           {extractionStatus && (
-            <div className="p-4 bg-purple-50 border border-purple-200 text-purple-800 rounded-xl flex items-center gap-3 text-xs">
-              <Loader2 className="w-4 h-4 animate-spin text-purple-600 shrink-0" />
+            <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-3 text-xs">
+              <Loader2 className="w-4 h-4 animate-spin text-emerald-600 shrink-0" />
               <span>{extractionStatus}</span>
             </div>
           )}
@@ -447,7 +447,7 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
               type="button"
               disabled={!selectedFile || isExtracting}
               onClick={handleExtractFromPdf}
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm disabled:opacity-50"
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm disabled:opacity-50"
             >
               {isExtracting ? (
                 <>

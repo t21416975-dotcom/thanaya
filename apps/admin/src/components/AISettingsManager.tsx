@@ -4,14 +4,15 @@ import { Bot, Sparkles, Save, RotateCcw, CheckCircle2, AlertCircle, Cpu, Key, He
 import { api } from '../api/client';
 
 const DEFAULT_MODEL = 'gemini-2.5-flash';
-const DEFAULT_PROMPT = `أنت خبير تربوي ومعلم أول في وزارة التربية والتعليم للثانوية العامة والبكالوريا المصرية. مهمتك هي استخراج جميع أسئلة الاختيار من متعدد (MCQs) الموجودة داخل ملف الـ PDF المرفق بدقة متناهية وحرفياً كما هي مكتوبة، مع استنباط الخيارات الصحيحة وتوليد شرح وتفسير نموذجي تفصيلي لكل سؤال.
+const DEFAULT_PROMPT = `أنت خبير تربوي ومعلم أول في وزارة التربية والتعليم للثانوية العامة والبكالوريا المصرية. مهمتك هي إنشاء واستخراج أسئلة الاختيار من متعدد (MCQs) التفاعلية من ملف الـ PDF المرفق بدقة علمية وتربوية عالية، مع توليد إجابات دقيقة وشرح وتفسير نموذجي شامل لكل سؤال.
 
-القواعد الصارمة:
-1. استخرج الأسئلة الموجودة في الملف حرفياً دون تأليف أو ابتكار أي أسئلة خارجية.
-2. لكل سؤال، يجب استخراج نص السؤال كاملاً مع جميع الخيارات (4 خيارات عادة).
-3. حدد مؤشر الخيار الصحيح بدقة من 0 إلى 3 (حيث 0 هو الخيار الأول، 1 هو الثاني، 2 هو الثالث، 3 هو الرابع).
-4. اكتب شرحاً وتفسيراً علمياً مفصلاً وواضحاً ومقنعاً في حقل explanation يوضح للطالب سبب صحة هذا الخيار وخطأ الخيارات الأخرى أو خطوات الحل الرياضي/العلمي بالتفصيل.
-5. حافظ على الترتيب الأصلي للأسئلة في الملف.`;
+القواعد والضوابط الصارمة:
+1. الالتزام التام بالمنهج ومنع الخروج عنه: استخرج واعتمد حصراً على المفاهيم والقوانين والدروس الواردة في ملف الـ PDF المرفوع. يُمنع منعاً باتاً إدخال أسئلة أو مواضيع من مناهج أخرى أو معلومات خارجية خارج حدود هذا الملف.
+2. مستوى الأسئلة وجودتها: صغ أسئلة تقيس الفهم والتطبيق والتحليل الشامل للطلاب بناءً على محتوى الملف؛ ابتعد عن البصمجية والنقل الحرفي السطحي، وفي نفس الوقت لا تخرج عن نطاق المادة.
+3. التوزيع العشوائي لموقع الإجابة الصحيحة: قم بتوزيع موقع الإجابة الصحيحة (correct_option_index) بشكل عشوائي ومتوازن بين الخيارات الأربعة (0, 1, 2, 3)، ويُمنع منعاً باتاً جعل الإجابة الصحيحة دائماً في الخيار الأول (0).
+4. الخيارات الأربعة: لكل سؤال، وفر 4 خيارات واضحة ومتمايزة ومكتوبة بدقة.
+5. التفسير والشرح النموذجي: اكتب في حقل explanation شرحاً علمياً تفصيلياً مقنعاً وواضحاً يوضح للطالب خطوات الحل الرياضي أو التعليل العلمي والقاعدة المتبعة وسبب صحة الخيار المختار.
+6. الإخراج الإجباري: يجب أن تكون النتيجة حصراً بصيغة JSON المحددة.`;
 
 export function AISettingsManager() {
   const queryClient = useQueryClient();
@@ -103,7 +104,7 @@ export function AISettingsManager() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2.5">
-            <span className="p-2 bg-gradient-to-tr from-purple-600 to-indigo-600 text-white rounded-xl shadow-sm">
+            <span className="p-2 bg-emerald-600 text-white rounded-xl shadow-sm">
               <Sparkles className="w-5 h-5" />
             </span>
             <span>إعدادات الذكاء الاصطناعي (Gemini AI Engine)</span>
@@ -133,13 +134,13 @@ export function AISettingsManager() {
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="font-bold text-slate-900 flex items-center gap-2 text-sm">
-              <Cpu className="w-4 h-4 text-purple-600" />
+              <Cpu className="w-4 h-4 text-emerald-600" />
               <span>موديل الذكاء الاصطناعي المعتمد (Gemini Model Name)</span>
             </h3>
             <button
               type="button"
               onClick={handleResetModel}
-              className="text-xs text-slate-500 hover:text-purple-600 transition"
+              className="text-xs text-slate-500 hover:text-emerald-700 transition cursor-pointer"
             >
               الافتراضي: {DEFAULT_MODEL}
             </button>
@@ -156,7 +157,7 @@ export function AISettingsManager() {
                 value={modelName}
                 onChange={(e) => setModelName(e.target.value)}
                 placeholder="gemini-2.5-flash"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
                 dir="ltr"
               />
             </div>
@@ -165,21 +166,21 @@ export function AISettingsManager() {
               <button
                 type="button"
                 onClick={() => setModelName('gemini-2.5-flash')}
-                className="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 hover:text-purple-700 rounded-md font-mono border border-slate-200 transition"
+                className="px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 rounded-md font-mono border border-slate-200 transition cursor-pointer"
               >
                 gemini-2.5-flash (موصى به - فائق السرعة)
               </button>
               <button
                 type="button"
                 onClick={() => setModelName('gemini-1.5-pro')}
-                className="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 hover:text-purple-700 rounded-md font-mono border border-slate-200 transition"
+                className="px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 rounded-md font-mono border border-slate-200 transition cursor-pointer"
               >
                 gemini-1.5-pro (استدلال متقدم)
               </button>
               <button
                 type="button"
                 onClick={() => setModelName('gemini-2.0-flash')}
-                className="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 hover:text-purple-700 rounded-md font-mono border border-slate-200 transition"
+                className="px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 rounded-md font-mono border border-slate-200 transition cursor-pointer"
               >
                 gemini-2.0-flash
               </button>
@@ -191,7 +192,7 @@ export function AISettingsManager() {
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="font-bold text-slate-900 flex items-center gap-2 text-sm">
-              <Key className="w-4 h-4 text-purple-600" />
+              <Key className="w-4 h-4 text-emerald-600" />
               <span>مفتاح Google Gemini API Key</span>
             </h3>
             <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">
@@ -208,7 +209,7 @@ export function AISettingsManager() {
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="AIzaSy..."
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
               dir="ltr"
             />
             <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
@@ -221,13 +222,13 @@ export function AISettingsManager() {
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="font-bold text-slate-900 flex items-center gap-2 text-sm">
-              <Bot className="w-4 h-4 text-purple-600" />
+              <Bot className="w-4 h-4 text-emerald-600" />
               <span>توجيه النظام المخصص (System Prompt & Extraction Instructions)</span>
             </h3>
             <button
               type="button"
               onClick={handleResetPrompt}
-              className="flex items-center gap-1 text-xs text-slate-500 hover:text-purple-600 transition"
+              className="flex items-center gap-1 text-xs text-slate-500 hover:text-emerald-700 transition cursor-pointer"
               title="استعادة الـ Prompt الافتراضي"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -244,18 +245,18 @@ export function AISettingsManager() {
               rows={10}
               value={examPrompt}
               onChange={(e) => setExamPrompt(e.target.value)}
-              className="w-full p-4 bg-slate-50 border border-slate-300 rounded-xl text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition font-sans"
+              className="w-full p-4 bg-slate-50 border border-slate-300 rounded-xl text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition font-sans"
               placeholder="أدخل توجيهات الـ System Prompt..."
             />
           </div>
 
-          <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 text-xs text-purple-900 space-y-1.5">
-            <div className="font-bold flex items-center gap-1.5">
-              <HelpCircle className="w-4 h-4 text-purple-700 shrink-0" />
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-800 space-y-1.5">
+            <div className="font-bold flex items-center gap-1.5 text-slate-900">
+              <HelpCircle className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>معايير توليد الأسئلة والشرح:</span>
             </div>
-            <p className="leading-relaxed text-purple-800">
-              السيرفر يفرض إخراج Structured JSON Schema إجبارياً على الموديل. الـ Prompt أعلاه يضمن استخراج الأسئلة والخيارات الأربعة <strong>حرفياً</strong> من الملف دون أي ابتكار خارجي، مع كتابة شرح تفسيري مقنع ودقيق في حقل <code className="font-mono font-bold">explanation</code>.
+            <p className="leading-relaxed text-slate-600">
+              السيرفر يفرض إخراج Structured JSON Schema إجبارياً على الموديل مع توزيع عشوائي للإجابات الصحيحة ومنع الخروج عن محتوى ملف الـ PDF وتوليد شرح وتفسير تفصيلي في حقل <code className="font-mono font-bold text-emerald-700">explanation</code>.
             </p>
           </div>
         </div>
@@ -265,7 +266,7 @@ export function AISettingsManager() {
           <button
             type="submit"
             disabled={saveMutation.isPending}
-            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-7 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm disabled:opacity-50"
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-7 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm disabled:opacity-50 cursor-pointer"
           >
             <Save className="w-4 h-4" />
             <span>{saveMutation.isPending ? 'جاري الحفظ...' : 'حفظ وتطبيق الإعدادات'}</span>

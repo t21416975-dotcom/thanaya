@@ -87,8 +87,8 @@ export function ExamsManager() {
         <div>
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
             <span>الامتحانات التجريبية التفاعلية (MCQs)</span>
-            <span className="p-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-semibold flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" />
+            <span className="p-1 bg-emerald-50 text-emerald-800 border border-emerald-100 rounded-lg text-xs font-semibold flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
               <span>مدعوم بـ Gemini AI</span>
             </span>
           </h2>
@@ -99,7 +99,7 @@ export function ExamsManager() {
 
         <button
           onClick={openCreateView}
-          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition shadow-sm self-start"
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition shadow-sm self-start cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>+ إنشاء امتحان جديد</span>
@@ -173,7 +173,7 @@ export function ExamsManager() {
                     </td>
                     <td className="px-6 py-4 text-xs text-slate-600">
                       <div className="flex items-center gap-1 font-semibold text-slate-800">
-                        <HelpCircle className="w-3.5 h-3.5 text-purple-600" />
+                        <HelpCircle className="w-3.5 h-3.5 text-emerald-600" />
                         <span>{questionCount} سؤال MCQ</span>
                       </div>
                       <div className="flex items-center gap-1 text-slate-500 mt-0.5">

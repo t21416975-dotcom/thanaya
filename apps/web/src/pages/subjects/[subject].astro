@@ -14,6 +14,7 @@ if (!subject) {
 
 const contentTypes = await publicApi.getActiveContentTypes();
 const resources = await publicApi.getPublishedResources({ subjectId: subject.id });
+const subjectExams = await publicApi.getPublishedExams(subject.id);
 ---
 
 <Layout
@@ -72,6 +73,69 @@ const resources = await publicApi.getPublishedResources({ subjectId: subject.id 
         })}
       </div>
     </section>
+
+    {/* Interactive Exams Section for this Subject */}
+    {
+      subjectExams.length > 0 && (
+        <section class="space-y-4 pt-2">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <span>الامتحانات التجريبية التفاعلية (MCQ)</span>
+                <span class="bg-emerald-50 text-emerald-800 text-xs px-2.5 py-0.5 rounded-full font-bold border border-emerald-100">
+                  {subjectExams.length} امتحان
+                </span>
+              </h2>
+              <p class="text-xs text-slate-500">نماذج تدريبية تفاعلية مع مؤقت زمني وتصحيح وتفسير فوري للإجابات</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {subjectExams.map((exam) => (
+              <div class="bg-white rounded-2xl border border-slate-200 hover:border-emerald-500 p-5 shadow-sm transition flex flex-col justify-between gap-4 group">
+                <div class="space-y-2.5">
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="bg-emerald-50 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-100">
+                      اختيار من متعدد
+                    </span>
+                    <span class="text-slate-500 flex items-center gap-1 font-medium">
+                      <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                      </svg>
+                      <span>{exam.time_limit_minutes} دقيقة</span>
+                    </span>
+                  </div>
+
+                  <h3 class="font-bold text-slate-900 group-hover:text-emerald-700 transition text-sm leading-snug">
+                    {exam.title}
+                  </h3>
+
+                  <div class="text-xs text-slate-500 flex items-center gap-2">
+                    <span class="font-semibold text-slate-700">{exam.questions.length} سؤال</span>
+                    <span>•</span>
+                    <span class="text-emerald-700 font-medium">شرح تفصيلي للحل</span>
+                  </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <span class="text-xs text-slate-400">تصحيح فوري</span>
+                  <a
+                    href={`/exams/${exam.id}`}
+                    class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm"
+                  >
+                    <span>بدء الامتحان</span>
+                    <svg class="w-3.5 h-3.5 rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M5 12h14M12 5l7 7-7 7"></path>
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )
+    }
 
     {/* All Subject Resources List */}
     <section class="space-y-4 pt-4">
