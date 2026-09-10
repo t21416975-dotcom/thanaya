@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileText, Youtube, Eye, CheckCircle2, AlertTriangle, ArrowRight, ExternalLink } from 'lucide-react';
 import { api } from '../api/client';
 import { extractYouTubeVideoId, getYouTubeEmbedUrl } from '../lib/youtube';
+import { isGoogleDriveUrl, getPdfPreviewUrl, getPdfDownloadUrl } from '../lib/drive';
 import type { Resource } from '@thanaya/types';
 
 interface ContentCreatorProps {
@@ -317,17 +318,23 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
                 <FileText className="w-4 h-4 text-emerald-600" />
-                <span>رابط ملف الـ PDF المباشر (Direct Storage URL) *</span>
+                <span>رابط ملف الـ PDF (رابط مباشر أو رابط Google Drive) *</span>
               </label>
               <input
                 type="url"
                 required
                 value={pdfUrl}
                 onChange={(e) => setPdfUrl(e.target.value)}
-                placeholder="https://storage.yourdomain.com/files/physics-week-5.pdf"
+                placeholder="https://drive.google.com/file/d/... أو https://.../file.pdf"
                 className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm font-mono text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 dir="ltr"
               />
+              {isGoogleDriveUrl(pdfUrl) && (
+                <div className="mt-2 text-xs text-emerald-700 bg-emerald-50 p-2 rounded-lg flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>تم التعرف على رابط Google Drive بنجاح، سيتم تضمين المعاينة والتحميل المباشر للطلاب تلقائياً.</span>
+                </div>
+              )}
             </div>
 
             <div>
@@ -448,7 +455,14 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
                 <FileText className="w-8 h-8" />
               </div>
               <div>
-                <h4 className="font-semibold text-sm text-slate-900">ملف التقييم (PDF)</h4>
+                <h4 className="font-semibold text-sm text-slate-900 flex items-center justify-center gap-1.5">
+                  <span>ملف التقييم (PDF)</span>
+                  {isGoogleDriveUrl(pdfUrl) && (
+                    <span className="text-[11px] font-medium text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-full">
+                      Google Drive
+                    </span>
+                  )}
+                </h4>
                 <p className="text-xs text-slate-500 font-mono mt-1 break-all">
                   {pdfUrl || 'لم يتم إدخال رابط الـ PDF بعد'}
                 </p>
@@ -457,7 +471,7 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
               <div className="flex items-center justify-center gap-3 pt-2">
                 {pdfUrl ? (
                   <a
-                    href={pdfUrl}
+                    href={getPdfDownloadUrl(pdfUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-lg text-xs font-semibold hover:bg-emerald-700 transition"
@@ -471,6 +485,17 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
                   </button>
                 )}
               </div>
+
+              {pdfUrl && isGoogleDriveUrl(pdfUrl) && (
+                <div className="w-full h-[380px] rounded-xl overflow-hidden border border-slate-200 bg-white mt-4">
+                  <iframe
+                    src={getPdfPreviewUrl(pdfUrl)}
+                    className="w-full h-full border-0"
+                    title="معاينة ملف Google Drive"
+                    loading="lazy"
+                  />
+                </div>
+              )}
             </div>
 
             {/* YouTube Embed Mockup */}
