@@ -21,7 +21,7 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
     <aside
       id={instanceId}
       aria-label="مساحة إعلانية"
-      class="w-full my-4 rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col justify-between"
+      class="w-full my-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col justify-between"
       data-ad-position={position}
     >
       <!-- Disclosing Header -->
@@ -57,8 +57,8 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
           </div>
         </a>
       ) : slot.slot_type === 'google' ? (
-        <!-- Adsterra 1:1 Native Banner Container (Auto-resizing & Centered) -->
-        <div class="w-full flex justify-center items-center p-2 sm:p-3 overflow-x-hidden">
+        <!-- Adsterra 1:1 Single Banner Container (Strict Fixed Height & Overflow Hidden) -->
+        <div class="w-full h-[180px] max-h-[180px] flex justify-center items-center overflow-hidden bg-slate-50/20">
           <iframe
             id={`frame-${dynamicContainerId}`}
             srcdoc={`<!DOCTYPE html>
@@ -75,37 +75,29 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
     }
     html, body {
       width: 100%;
-      height: auto;
-      min-height: 100%;
+      height: 180px;
+      max-height: 180px;
       background: transparent;
       display: flex;
-      flex-direction: column;
       justify-content: center;
       align-items: center;
-      overflow-x: hidden !important;
-      overflow-y: visible !important;
+      overflow: hidden !important;
       font-family: system-ui, -apple-system, sans-serif;
     }
     #container-ccae9d506cf77407ce62d684b21d33c5 {
       width: 100%;
       max-width: 100%;
+      height: 180px;
+      max-height: 180px;
       display: flex;
-      flex-direction: column;
       justify-content: center;
       align-items: center;
       margin: 0 auto !important;
-      overflow-x: hidden !important;
-    }
-    #container-ccae9d506cf77407ce62d684b21d33c5 > *,
-    .item, .ad-item {
-      margin: 0 auto !important;
-      max-width: 100% !important;
-      width: 100% !important;
-      text-align: center !important;
+      overflow: hidden !important;
     }
     img, picture, svg, video {
       max-width: 100% !important;
-      height: auto !important;
+      max-height: 160px !important;
       object-fit: contain !important;
       display: block;
       margin: 0 auto !important;
@@ -114,50 +106,16 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
       text-decoration: none;
       color: inherit;
       display: block;
-      max-width: 100% !important;
-      word-break: break-word;
-      overflow-wrap: break-word;
+      margin: 0 auto;
     }
   </style>
 </head>
 <body>
   <div id="container-ccae9d506cf77407ce62d684b21d33c5"></div>
   <script async="async" data-cfasync="false" src="https://pl31266860.profitableratecpmnetwork.com/ccae9d506cf77407ce62d684b21d33c5/invoke.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/iframe-resizer@4.3.9/js/iframeResizer.contentWindow.min.js"></script>
-  <script>
-    function sendHeight() {
-      var container = document.getElementById('container-ccae9d506cf77407ce62d684b21d33c5');
-      var h = Math.max(
-        document.body.scrollHeight,
-        document.documentElement.scrollHeight,
-        container ? container.offsetHeight : 0
-      );
-      if (h > 40) {
-        window.parent.postMessage({
-          type: 'thanaya-ad-resize',
-          frameId: 'frame-${dynamicContainerId}',
-          height: h
-        }, '*');
-      }
-    }
-    window.addEventListener('load', sendHeight);
-    window.addEventListener('resize', sendHeight);
-    if ('ResizeObserver' in window) {
-      new ResizeObserver(sendHeight).observe(document.body);
-    }
-    if ('MutationObserver' in window) {
-      new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true, attributes: true });
-    }
-    setTimeout(sendHeight, 300);
-    setTimeout(sendHeight, 800);
-    setTimeout(sendHeight, 1500);
-    setTimeout(sendHeight, 3000);
-    setTimeout(sendHeight, 5000);
-  </script>
 </body>
 </html>`}
-            class="w-full border-0 block mx-auto transition-[height] duration-200"
-            style="min-height: 140px; height: 260px; overflow-x: hidden;"
+            class="w-full h-[180px] max-h-[180px] border-0 overflow-hidden block mx-auto"
             loading="lazy"
             title={`إعلان ${position}`}
           ></iframe>
@@ -179,32 +137,6 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
 
 <script>
   import { supabase } from '../lib/supabase';
-
-  // Dynamic iframe auto-resize handler
-  function handleAdResize(e: MessageEvent) {
-    if (e.data && e.data.type === 'thanaya-ad-resize' && e.data.frameId && typeof e.data.height === 'number') {
-      const frame = document.getElementById(e.data.frameId) as HTMLIFrameElement | null;
-      if (frame && e.data.height > 40) {
-        frame.style.height = `${e.data.height + 10}px`;
-      }
-    }
-    // iframe-resizer protocol support
-    if (typeof e.data === 'string' && e.data.indexOf('[iFrameSizer]') === 0) {
-      const parts = e.data.split(':');
-      if (parts.length >= 2) {
-        const h = parseInt(parts[1], 10);
-        if (!isNaN(h) && h > 40) {
-          const allFrames = document.querySelectorAll('iframe[id^="frame-container-"]');
-          allFrames.forEach((f) => {
-            (f as HTMLElement).style.height = `${h + 10}px`;
-          });
-        }
-      }
-    }
-  }
-
-  window.removeEventListener('message', handleAdResize);
-  window.addEventListener('message', handleAdResize);
 
   function initAdTracking() {
     const isLive =
