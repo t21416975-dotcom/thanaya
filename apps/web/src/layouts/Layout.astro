@@ -15,17 +15,25 @@ interface Props {
 const {
   title,
   description = 'منصة ثنايا - التقييمات الأسبوعية وحلولها وامتحانات الثانوية العامة والبكالوريا المصرية مجمعة ومنظمة في مكان واحد.',
-  canonicalUrl = Astro.url.href,
+  canonicalUrl,
   ogType = 'website',
-  ogImage = 'https://thanaya.com/og-image.png',
+  ogImage = '/og-image.png',
   jsonLd,
 } = Astro.props;
+
+const canonicalURL = canonicalUrl
+  ? (canonicalUrl.startsWith('http') ? canonicalUrl : new URL(canonicalUrl, Astro.site).href)
+  : new URL(Astro.url.pathname, Astro.site).href;
+
+const socialImageURL = ogImage.startsWith('http')
+  ? ogImage
+  : new URL(ogImage, Astro.site).href;
 
 const siteSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'منصة ثنايا للبكالوريا المصرية',
-  url: 'https://thanaya.com',
+  url: 'https://thanaya-web.vercel.app',
   description: 'المكتبة المنظمة الأولى لتقييمات وحلول ومذكرات الثانوية العامة والبكالوريا المصرية.',
   inLanguage: 'ar-EG',
 };
@@ -54,25 +62,25 @@ const siteSchema = {
     <!-- SEO Meta Tags -->
     <title>{title}</title>
     <meta name="description" content={description} />
-    <link rel="canonical" href={canonicalUrl} />
+    <link rel="canonical" href={canonicalURL} />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="google-site-verification" content="2V3HvcXiOFtClje7g_ZbVT_f9DvtpVPkJZ1KL8yECuU" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content={ogType} />
-    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:url" content={canonicalURL} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:site_name" content="منصة ثنايا للبكالوريا" />
-    <meta property="og:image" content={ogImage} />
+    <meta property="og:image" content={socialImageURL} />
     <meta property="og:locale" content="ar_EG" />
 
     <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content={canonicalUrl} />
+    <meta name="twitter:url" content={canonicalURL} />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={ogImage} />
+    <meta name="twitter:image" content={socialImageURL} />
 
     <!-- Performance font preconnects -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />

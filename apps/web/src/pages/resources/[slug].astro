@@ -34,7 +34,8 @@ const pageDescription =
   resource.description ||
   `تحميل ومعاينة ${resource.title} في مادة ${resource.subject?.name || ''} (${resource.content_type?.name || 'مورد تعليمي'}) بصيغة PDF مباشرة مع حلول وشرح الفيديو لطلاب البكالوريا المصرية.`;
 
-const currentUrl = `https://thanaya.com/resources/${resource.slug}`;
+const currentUrl = new URL(`/resources/${resource.slug}`, Astro.site).href;
+const siteBaseUrl = new URL('/', Astro.site).href.replace(/\/$/, '');
 
 // JSON-LD Structured Data (LearningResource & Breadcrumbs)
 const breadcrumbSchema = {
@@ -45,7 +46,7 @@ const breadcrumbSchema = {
       '@type': 'ListItem',
       position: 1,
       name: 'الرئيسية',
-      item: 'https://thanaya.com',
+      item: siteBaseUrl,
     },
     ...(resource.subject
       ? [
@@ -53,7 +54,7 @@ const breadcrumbSchema = {
             '@type': 'ListItem',
             position: 2,
             name: resource.subject.name,
-            item: `https://thanaya.com/subjects/${resource.subject.slug}`,
+            item: new URL(`/subjects/${resource.subject.slug}`, Astro.site).href,
           },
         ]
       : []),
@@ -63,7 +64,7 @@ const breadcrumbSchema = {
             '@type': 'ListItem',
             position: 3,
             name: resource.content_type.name,
-            item: `https://thanaya.com/subjects/${resource.subject.slug}/${resource.content_type.slug}`,
+            item: new URL(`/subjects/${resource.subject.slug}/${resource.content_type.slug}`, Astro.site).href,
           },
         ]
       : []),
@@ -91,7 +92,7 @@ const learningResourceSchema = {
   provider: {
     '@type': 'Organization',
     name: 'منصة ثنايا التعليمية',
-    url: 'https://thanaya.com',
+    url: siteBaseUrl,
   },
 };
 
