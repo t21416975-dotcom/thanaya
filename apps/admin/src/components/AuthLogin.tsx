@@ -18,7 +18,7 @@ export function AuthLogin({ onSuccess }: AuthLoginProps) {
     setLoading(true);
 
     try {
-      // If live Supabase URL is present, authenticate with Supabase Auth
+      // Live Supabase authentication
       if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL !== 'https://your-project.supabase.co') {
         const { error: authError } = await supabase.auth.signInWithPassword({
           email,
@@ -26,13 +26,7 @@ export function AuthLogin({ onSuccess }: AuthLoginProps) {
         });
         if (authError) throw authError;
       } else {
-        // Local preview fallback authentication
-        if (email === 'admin@thanaya.com' && password === 'admin123') {
-          localStorage.setItem('thanaya_admin_session', 'mock_token');
-        } else {
-          // Allow any admin email for demo if entered or hint default credentials
-          localStorage.setItem('thanaya_admin_session', 'mock_token');
-        }
+        throw new Error('لوحة التحكم غير مُهيأة. يرجى تعيين VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY في متغيرات البيئة.');
       }
       onSuccess();
     } catch (err: any) {

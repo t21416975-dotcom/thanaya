@@ -58,10 +58,11 @@ const { resourceId, resourceTitle } = Astro.props;
       </div>
 
       <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">تفاصيل إضافية (اختياري)</label>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">تفاصيل إضافية (اختياري - بحد أقصى 2000 حرف)</label>
         <textarea
           name="details"
           rows={3}
+          maxlength={2000}
           placeholder="وضح المشكلة لمساعدتنا في إصلاحها بأسرع وقت..."
           class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
         ></textarea>
@@ -111,10 +112,20 @@ const { resourceId, resourceTitle } = Astro.props;
           e.preventDefault();
           if (!submitBtn || !statusEl) return;
 
+          // Client-side rate limiting / cooldown (60 seconds)
+          const lastReportTs = Number(localStorage.getItem('thanaya_last_report_ts') || '0');
+          const now = Date.now();
+          if (now - lastReportTs < 60000) {
+            statusEl.className = 'text-xs p-2 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 block';
+            statusEl.textContent = 'يرجى الانتظار دقيقة واحدة قبل إرسال بلاغ آخر.';
+            return;
+          }
+
           const formData = new FormData(form);
           const resourceId = form.getAttribute('data-resource-id');
           const issueType = formData.get('issue_type') as string;
-          const details = formData.get('details') as string;
+          const detailsRaw = formData.get('details') as string;
+          const details = detailsRaw ? detailsRaw.trim().slice(0, 2000) : null;
 
           submitBtn.disabled = true;
           submitBtn.textContent = 'جاري الإرسال...';
@@ -124,10 +135,11 @@ const { resourceId, resourceTitle } = Astro.props;
               await (supabase.from('reports') as any).insert({
                 resource_id: resourceId!,
                 issue_type: issueType as any,
-                details: details?.trim() || null,
+                details,
               });
             }
 
+            localStorage.setItem('thanaya_last_report_ts', String(Date.now()));
             statusEl.className = 'text-xs p-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 block';
             statusEl.textContent = 'شكرًا لك! تم استلام بلاغك وسيقوم فريق العمل بمراجعته فورًا.';
             form.reset();

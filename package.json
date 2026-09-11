@@ -18,5 +18,11 @@
   "devDependencies": {
     "prettier": "^3.5.2",
     "typescript": "^5.7.3"
+  },
+  "overrides": {
+    "@vercel/routing-utils": {
+      "path-to-regexp": "6.3.0"
+    },
+    "path-to-regexp": "6.3.0"
   }
 }

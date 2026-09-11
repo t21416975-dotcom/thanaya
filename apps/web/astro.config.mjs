@@ -1,5 +1,4 @@
 import { defineConfig } from 'astro/config';
-import tailwind from '@astrojs/tailwind';
 import sitemap from '@astrojs/sitemap';
 import vercel from '@astrojs/vercel';
 
@@ -13,7 +12,6 @@ export default defineConfig({
     defaultStrategy: 'hover',
   },
   integrations: [
-    tailwind({ applyBaseStyles: true }),
     sitemap({
       changefreq: 'daily',
       priority: 0.8,

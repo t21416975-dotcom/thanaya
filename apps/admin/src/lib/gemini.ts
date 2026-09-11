@@ -1,4 +1,5 @@
 import type { ExamQuestion } from '@thanaya/types';
+import { supabase } from './supabase';
 
 export interface ExtractionResult {
   success: boolean;
@@ -129,15 +130,21 @@ export async function extractExamQuestionsFromPdf({
 }): Promise<ExtractionResult> {
   const base64Data = await fileToBase64(file);
 
-  // 1. Try calling the backend /api/ai/extract-exam endpoint first
+  // 1. Try calling the backend /api/ai/extract-exam endpoint first with admin auth token
   try {
     const formData = new FormData();
     formData.append('file', file);
     if (systemPrompt) formData.append('system_prompt', systemPrompt);
     if (modelName) formData.append('model_name', modelName);
-    if (apiKey) formData.append('api_key', apiKey);
     if (questionsCount && questionsCount > 0) {
       formData.append('questions_count', String(questionsCount));
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
     const apiBaseUrl = (import.meta as any).env?.VITE_PUBLIC_API_URL || '';
@@ -150,6 +157,7 @@ export async function extractExamQuestionsFromPdf({
       try {
         const res = await fetch(url, {
           method: 'POST',
+          headers,
           body: formData,
         });
 
@@ -206,7 +214,7 @@ export async function extractExamQuestionsFromPdf({
 
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
         modelName.trim() || 'gemini-2.5-flash'
-      )}:generateContent?key=${encodeURIComponent(activeKey.trim())}`;
+      )}:generateContent`;
 
       const body = {
         systemInstruction: {
@@ -257,7 +265,10 @@ export async function extractExamQuestionsFromPdf({
 
       const resp = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': activeKey.trim(),
+        },
         body: JSON.stringify(body),
       });
 
@@ -295,7 +306,9 @@ export async function extractExamQuestionsFromPdf({
         };
       }
     } catch (directErr: any) {
-      console.error('Direct Gemini extraction failed:', directErr);
+      if (import.meta.env.DEV) {
+        console.error('Direct Gemini extraction failed:', directErr);
+      }
       return {
         success: false,
         error: directErr.message || 'فشل الاتصال بـ Gemini API.',

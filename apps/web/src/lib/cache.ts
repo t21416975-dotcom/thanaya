@@ -51,7 +51,9 @@ class SmartMemoryCache {
       this.set(key, fresh, ttlSeconds);
       return fresh;
     } catch (err) {
-      console.error(`[SmartCache Error] Fetch failed for key "${key}":`, err);
+      if (import.meta.env.DEV) {
+        console.error(`[SmartCache Error] Fetch failed for key "${key}":`, err);
+      }
       if (fallback !== undefined) {
         return fallback;
       }

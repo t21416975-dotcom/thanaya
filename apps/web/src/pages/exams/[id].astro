@@ -14,7 +14,7 @@ if (!exam) {
 const pageTitle = `${exam.title} - امتحان تجريبي تفاعلي | منصة ثنايا`;
 const pageDescription = `امتحان تفاعلي في ${exam.subject?.name || 'البكالوريا'} يحتوي على ${exam.questions.length} سؤال MCQ مع مؤقت زمني وتصحيح وشرح فوري.`;
 
-const questionsJson = JSON.stringify(exam.questions);
+const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
 ---
 
 <Layout title={pageTitle} description={pageDescription}>
@@ -317,6 +317,26 @@ const questionsJson = JSON.stringify(exam.questions);
 
       const optionLetters = ['أ', 'ب', 'ج', 'د'];
 
+      // Sanitization helpers to prevent XSS from database content
+      function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function sanitizeImageUrl(url) {
+        if (!url || typeof url !== 'string') return null;
+        const trimmed = url.trim();
+        if (/^https?:\/\//i.test(trimmed)) {
+          return escapeHtml(trimmed);
+        }
+        return null;
+      }
+
       // Start Exam
       function startExam() {
         welcomeSection.classList.add('hidden');
@@ -375,16 +395,17 @@ const questionsJson = JSON.stringify(exam.questions);
 
         currentQBadge.textContent = String(index + 1);
         qNumberText.textContent = String(index + 1);
-        qTextDisplay.textContent = q.question_text;
+        qTextDisplay.textContent = q.question_text || '';
 
-        // Render question image if available
+        // Render question image if available with strict URL validation
         const existingImg = document.getElementById('q-image-display');
         if (existingImg) existingImg.remove();
-        if (q.image_url) {
+        const safeImgUrl = sanitizeImageUrl(q.image_url);
+        if (safeImgUrl) {
           const imgWrapper = document.createElement('div');
           imgWrapper.id = 'q-image-display';
           imgWrapper.className = 'mt-3 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50';
-          imgWrapper.innerHTML = `<img src="${q.image_url}" alt="صورة السؤال" class="w-full max-h-72 object-contain" onerror="this.parentElement.style.display='none'" />`;
+          imgWrapper.innerHTML = `<img src="${safeImgUrl}" alt="صورة السؤال" class="w-full max-h-72 object-contain" onerror="this.parentElement.style.display='none'" />`;
           qTextDisplay.parentElement.appendChild(imgWrapper);
         }
 
@@ -397,9 +418,9 @@ const questionsJson = JSON.stringify(exam.questions);
           qStatusBadge.className = 'text-xs font-medium text-slate-400';
         }
 
-        // Render Options
+        // Render Options safely
         qOptionsContainer.innerHTML = '';
-        q.options.forEach((optText, optIdx) => {
+        (q.options || []).forEach((optText, optIdx) => {
           const isSelected = userAnswers[index] === optIdx;
           const optCard = document.createElement('div');
           optCard.className = `flex items-center gap-3.5 p-4 rounded-2xl border transition cursor-pointer select-none ${
@@ -415,9 +436,9 @@ const questionsJson = JSON.stringify(exam.questions);
               ${isSelected ? '<div class="w-2 h-2 rounded-full bg-white"></div>' : ''}
             </div>
             <span class="w-7 h-7 rounded-lg bg-white border border-slate-200 text-xs font-extrabold text-slate-700 flex items-center justify-center shrink-0 shadow-sm">
-              ${optionLetters[optIdx] || optIdx + 1}
+              ${escapeHtml(optionLetters[optIdx] || String(optIdx + 1))}
             </span>
-            <span class="text-sm font-semibold text-slate-800 flex-1 leading-relaxed">${optText}</span>
+            <span class="text-sm font-semibold text-slate-800 flex-1 leading-relaxed">${escapeHtml(optText)}</span>
           `;
 
           optCard.onclick = () => {
@@ -545,7 +566,7 @@ const questionsJson = JSON.stringify(exam.questions);
           }
 
           let optionsHtml = '';
-          q.options.forEach((opt, optIdx) => {
+          (q.options || []).forEach((opt, optIdx) => {
             const isThisCorrect = optIdx === q.correct_option_index;
             const isThisUserChoice = optIdx === userAns;
 
@@ -564,9 +585,9 @@ const questionsJson = JSON.stringify(exam.questions);
               <div class="flex items-center justify-between gap-3 p-3.5 rounded-xl border ${optStyle}">
                 <div class="flex items-center gap-3">
                   <span class="w-6 h-6 rounded-md bg-white border border-slate-200 text-xs font-bold text-slate-700 flex items-center justify-center shrink-0">
-                    ${optionLetters[optIdx] || optIdx + 1}
+                    ${escapeHtml(optionLetters[optIdx] || String(optIdx + 1))}
                   </span>
-                  <span class="text-xs sm:text-sm leading-relaxed">${opt}</span>
+                  <span class="text-xs sm:text-sm leading-relaxed">${escapeHtml(opt)}</span>
                 </div>
                 ${badge}
               </div>
@@ -582,11 +603,12 @@ const questionsJson = JSON.stringify(exam.questions);
                 </svg>
                 <span>التفسير والشرح النموذجي:</span>
               </div>
-              <p class="leading-relaxed text-slate-700 font-medium">${q.explanation}</p>
+              <p class="leading-relaxed text-slate-700 font-medium">${escapeHtml(q.explanation)}</p>
             </div>
           `
             : '';
 
+          const safeReviewImg = sanitizeImageUrl(q.image_url);
           card.innerHTML = `
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
               <span class="text-xs font-extrabold text-slate-900 bg-slate-100 px-3 py-1 rounded-full">
@@ -594,8 +616,8 @@ const questionsJson = JSON.stringify(exam.questions);
               </span>
               ${statusTag}
             </div>
-            <h4 class="text-base font-bold text-slate-900 leading-relaxed">${q.question_text}</h4>
-            ${q.image_url ? `<div class="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50"><img src="${q.image_url}" alt="صورة السؤال" class="w-full max-h-64 object-contain" onerror="this.parentElement.style.display='none'" /></div>` : ''}
+            <h4 class="text-base font-bold text-slate-900 leading-relaxed">${escapeHtml(q.question_text || '')}</h4>
+            ${safeReviewImg ? `<div class="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50"><img src="${safeReviewImg}" alt="صورة السؤال" class="w-full max-h-64 object-contain" onerror="this.parentElement.style.display='none'" /></div>` : ''}
             <div class="space-y-2.5 pt-1">
               ${optionsHtml}
             </div>

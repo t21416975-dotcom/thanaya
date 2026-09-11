@@ -2,6 +2,12 @@ import { supabase, isSupabaseConfigured } from './supabase';
 import { smartCache } from './cache';
 import type { Subject, ContentType, Week, Resource, AdSlot, DirectAd, Exam, ExamQuestion, ExamWithQuestions } from '@thanaya/types';
 
+function logError(...args: any[]): void {
+  if (import.meta.env.DEV) {
+    console.error(...args);
+  }
+}
+
 // Mock seed data for development fallback when Supabase is not connected
 const mockSubjects: Subject[] = [
   { id: '1', name: 'اللغة العربية', slug: 'arabic', icon: 'book-open', description: 'النحو والبلاغة والنصوص والأدب', order_index: 1, is_active: true, created_at: '', updated_at: '' },
@@ -170,12 +176,12 @@ export const publicApi = {
             .eq('is_active', true)
             .order('order_index');
           if (error) {
-            console.error('Error fetching subjects from Supabase:', error);
+            logError('Error fetching subjects from Supabase:', error);
             return mockSubjects.filter((s) => s.is_active);
           }
           return (data as unknown as Subject[]) || [];
         } catch (err) {
-          console.error('Supabase exception in getActiveSubjects:', err);
+          logError('Supabase exception in getActiveSubjects:', err);
           return mockSubjects.filter((s) => s.is_active);
         }
       }
@@ -202,7 +208,7 @@ export const publicApi = {
           }
           return data as unknown as Subject;
         } catch (err) {
-          console.error(`Supabase exception in getSubjectBySlug (${slug}):`, err);
+          logError(`Supabase exception in getSubjectBySlug (${slug}):`, err);
           return mockSubjects.find((s) => s.slug === slug && s.is_active) || null;
         }
       }
@@ -223,12 +229,12 @@ export const publicApi = {
             .eq('is_active', true)
             .order('order_index');
           if (error) {
-            console.error('Error fetching content types:', error);
+            logError('Error fetching content types:', error);
             return mockContentTypes.filter((c) => c.is_active);
           }
           return (data as unknown as ContentType[]) || [];
         } catch (err) {
-          console.error('Supabase exception in getActiveContentTypes:', err);
+          logError('Supabase exception in getActiveContentTypes:', err);
           return mockContentTypes.filter((c) => c.is_active);
         }
       }
@@ -255,7 +261,7 @@ export const publicApi = {
           }
           return data as unknown as ContentType;
         } catch (err) {
-          console.error(`Supabase exception in getContentTypeBySlug (${slug}):`, err);
+          logError(`Supabase exception in getContentTypeBySlug (${slug}):`, err);
           return mockContentTypes.find((c) => c.slug === slug && c.is_active) || null;
         }
       }
@@ -276,12 +282,12 @@ export const publicApi = {
             .order('term')
             .order('week_number');
           if (error) {
-            console.error('Error fetching weeks:', error);
+            logError('Error fetching weeks:', error);
             return mockWeeks;
           }
           return (data as unknown as Week[]) || [];
         } catch (err) {
-          console.error('Supabase exception in getWeeks:', err);
+          logError('Supabase exception in getWeeks:', err);
           return mockWeeks;
         }
       }
@@ -309,12 +315,12 @@ export const publicApi = {
 
           const { data, error } = await query;
           if (error) {
-            console.error('Error fetching resources:', error);
+            logError('Error fetching resources:', error);
             return [];
           }
           return (data as unknown as Resource[]) || [];
         } catch (err) {
-          console.error('Supabase exception in getPublishedResources:', err);
+          logError('Supabase exception in getPublishedResources:', err);
           return [];
         }
       }
@@ -346,7 +352,7 @@ export const publicApi = {
           }
           return data as unknown as Resource;
         } catch (err) {
-          console.error(`Supabase exception in getResourceBySlug (${slug}):`, err);
+          logError(`Supabase exception in getResourceBySlug (${slug}):`, err);
           return mockResources.find((r) => r.slug === slug && r.is_published) || null;
         }
       }
@@ -370,7 +376,7 @@ export const publicApi = {
             .single();
           return (data as unknown as AdSlot) || null;
         } catch (err) {
-          console.error(`Supabase exception in getAdSlot (${position}):`, err);
+          logError(`Supabase exception in getAdSlot (${position}):`, err);
           return null;
         }
       }
@@ -407,7 +413,7 @@ export const publicApi = {
             .single();
           return (data as unknown as DirectAd) || null;
         } catch (err) {
-          console.error(`Supabase exception in getActiveDirectAdForSlot (${position}):`, err);
+          logError(`Supabase exception in getActiveDirectAdForSlot (${position}):`, err);
           return null;
         }
       }
@@ -433,12 +439,12 @@ export const publicApi = {
 
           const { data, error } = await query;
           if (error) {
-            console.error('Error fetching exams:', error);
+            logError('Error fetching exams:', error);
             return mockExams.filter((e) => !subjectId || e.subject_id === subjectId);
           }
           return (data as unknown as ExamWithQuestions[]) || [];
         } catch (err) {
-          console.error('Supabase exception in getPublishedExams:', err);
+          logError('Supabase exception in getPublishedExams:', err);
           return mockExams.filter((e) => !subjectId || e.subject_id === subjectId);
         }
       }
@@ -467,7 +473,7 @@ export const publicApi = {
           questions.sort((a, b) => a.question_number - b.question_number);
           return { ...exam, questions };
         } catch (err) {
-          console.error(`Supabase exception in getExamById (${id}):`, err);
+          logError(`Supabase exception in getExamById (${id}):`, err);
           return mockExams.find((e) => e.id === id) || null;
         }
       }

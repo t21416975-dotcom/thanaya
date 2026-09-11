@@ -22,8 +22,80 @@ interface ExtractedQuestion {
   explanation: string;
 }
 
+// Sliding window rate limiter for extract-exam
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const MAX_REQUESTS_PER_WINDOW = 5;
+
+function checkRateLimit(clientIp: string): boolean {
+  const now = Date.now();
+  const record = rateLimitMap.get(clientIp);
+
+  if (!record || now > record.resetAt) {
+    rateLimitMap.set(clientIp, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+
+  if (record.count >= MAX_REQUESTS_PER_WINDOW) {
+    return false;
+  }
+
+  record.count++;
+  return true;
+}
+
 export const POST: APIRoute = async ({ request }) => {
   try {
+    // 1. IP Rate Limiting Check
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
+    if (!checkRateLimit(clientIp)) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'تم تجاوز معدل الطلبات المسموح به. يرجى الانتظار دقيقة قبل المحاولة مرة أخرى.',
+        }),
+        { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '60' } }
+      );
+    }
+
+    // 2. Authentication and Authorization Check
+    if (!isSupabaseConfigured) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'خدمة التحقق من الهوية غير مهيأة على الخادم.' }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const authHeader = request.headers.get('authorization') || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : '';
+
+    if (!token) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'غير مصرح: يجب تسجيل الدخول كمسؤول لاستخدام هذه الخدمة.' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData?.user) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'جلسة تسجيل الدخول غير صالحة أو منتهية الصلاحية.' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { data: adminRow, error: adminError } = await (supabase.from('admins') as any)
+      .select('id')
+      .eq('id', userData.user.id)
+      .single();
+
+    if (adminError || !adminRow) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'مرفوض: ليس لديك صلاحية مسؤول للنظام.' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     let base64Data = '';
     let mimeType = 'application/pdf';
 
@@ -31,7 +103,6 @@ export const POST: APIRoute = async ({ request }) => {
 
     let reqModelName: string | null = null;
     let reqSystemPrompt: string | null = null;
-    let reqApiKey: string | null = null;
     let reqQuestionsCount: number | null = null;
 
     if (contentType.includes('multipart/form-data')) {
@@ -47,11 +118,9 @@ export const POST: APIRoute = async ({ request }) => {
 
       const promptField = formData.get('system_prompt');
       const modelField = formData.get('model_name');
-      const keyField = formData.get('api_key');
       const countField = formData.get('questions_count');
       if (typeof promptField === 'string' && promptField.trim()) reqSystemPrompt = promptField.trim();
       if (typeof modelField === 'string' && modelField.trim()) reqModelName = modelField.trim();
-      if (typeof keyField === 'string' && keyField.trim()) reqApiKey = keyField.trim();
       if (countField) {
         const parsed = parseInt(String(countField), 10);
         if (!isNaN(parsed) && parsed > 0) reqQuestionsCount = parsed;
@@ -67,7 +136,6 @@ export const POST: APIRoute = async ({ request }) => {
       mimeType = body.mime_type || 'application/pdf';
       if (body.system_prompt) reqSystemPrompt = String(body.system_prompt).trim();
       if (body.model_name) reqModelName = String(body.model_name).trim();
-      if (body.api_key) reqApiKey = String(body.api_key).trim();
       if (body.questions_count) {
         const parsed = parseInt(String(body.questions_count), 10);
         if (!isNaN(parsed) && parsed > 0) reqQuestionsCount = parsed;
@@ -89,23 +157,24 @@ export const POST: APIRoute = async ({ request }) => {
     // Dynamic AI settings priority: 1. Request payload -> 2. Supabase system_settings -> 3. Defaults / Env
     let modelName = reqModelName || DEFAULT_MODEL;
     let systemPrompt = reqSystemPrompt || DEFAULT_PROMPT;
-    let geminiApiKey = reqApiKey || process.env.GEMINI_API_KEY || (import.meta as any).env?.GEMINI_API_KEY || '';
+    // Security: Only read Gemini API Key from server environment variables
+    const geminiApiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.GEMINI_API_KEY || '';
 
-    if (isSupabaseConfigured && (!reqSystemPrompt || !reqModelName || !geminiApiKey)) {
+    if (isSupabaseConfigured && (!reqSystemPrompt || !reqModelName)) {
       try {
         const { data } = await (supabase.from('system_settings') as any).select('*');
         const settings = data as Array<{ key: string; value: string; description?: string }> | null;
         if (settings && settings.length > 0) {
           const modelRow = settings.find((s) => s.key === 'gemini_model_name');
           const promptRow = settings.find((s) => s.key === 'gemini_exam_prompt');
-          const apiKeyRow = settings.find((s) => s.key === 'gemini_api_key');
 
           if (!reqModelName && modelRow?.value) modelName = modelRow.value.trim();
           if (!reqSystemPrompt && promptRow?.value) systemPrompt = promptRow.value.trim();
-          if (!geminiApiKey && apiKeyRow?.value) geminiApiKey = apiKeyRow.value.trim();
         }
       } catch (err) {
-        console.warn('Could not load system_settings from Supabase, using defaults:', err);
+        if (import.meta.env.DEV) {
+          console.warn('Could not load system_settings from Supabase, using defaults:', err);
+        }
       }
     }
 
@@ -113,7 +182,7 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'مفتاح Gemini API غير مهيأ (GEMINI_API_KEY). يرجى تعيين المفتاح في متغيرات البيئة أو في إعدادات النظام.',
+          error: 'مفتاح Gemini API غير مهيأ في متغيرات بيئة السيرفر (GEMINI_API_KEY).',
         }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
@@ -130,8 +199,8 @@ export const POST: APIRoute = async ({ request }) => {
 3. لكل سؤال: 4 خيارات واضحة، تحديد الإجابة الصحيحة، وشرح تفسيري وافٍ.`
       : 'استخرج كافة أسئلة الاختيار من متعدد من هذا الملف واكتب شرحاً وتفسيراً وافياً للإجابة الصحيحة لكل سؤال بصيغة JSON المحددة.';
 
-    // Call Google Gemini REST API with Structured JSON Schema
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(geminiApiKey)}`;
+    // Call Google Gemini REST API securely using x-goog-api-key header (no key in URL)
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent`;
 
     const geminiPayload = {
       systemInstruction: {
@@ -184,13 +253,16 @@ export const POST: APIRoute = async ({ request }) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-goog-api-key': geminiApiKey,
       },
       body: JSON.stringify(geminiPayload),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API error response:', errorText);
+      if (import.meta.env.DEV) {
+        console.error('Gemini API error response:', errorText);
+      }
       let parsedMessage = `خطأ من مزود الذكاء الاصطناعي (${response.status}): ${response.statusText}`;
       try {
         const errorJson = JSON.parse(errorText);
@@ -220,7 +292,9 @@ export const POST: APIRoute = async ({ request }) => {
     try {
       parsedResult = JSON.parse(candidateText);
     } catch (parseErr) {
-      console.error('Failed to parse Gemini response text as JSON:', candidateText);
+      if (import.meta.env.DEV) {
+        console.error('Failed to parse Gemini response text as JSON:', candidateText);
+      }
       return new Response(
         JSON.stringify({ success: false, error: 'فشل تحليل الاستجابة كبنية JSON صالحة.' }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
@@ -261,7 +335,9 @@ export const POST: APIRoute = async ({ request }) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (err: any) {
-    console.error('Exception in extract-exam API:', err);
+    if (import.meta.env.DEV) {
+      console.error('Exception in extract-exam API:', err);
+    }
     return new Response(
       JSON.stringify({ success: false, error: err.message || 'حدث خطأ غير متوقع في الخادم.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

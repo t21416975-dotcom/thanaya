@@ -23,7 +23,9 @@ export async function recordResourceView(resourceId: string): Promise<void> {
         p_resource_id: resourceId,
       });
     } catch (err) {
-      console.error('Failed to increment view count:', err);
+      if (import.meta.env.DEV) {
+        console.error('Failed to increment view count:', err);
+      }
     }
   }
 }
@@ -51,7 +53,9 @@ export async function recordResourceDownload(resourceId: string): Promise<void> 
         p_resource_id: resourceId,
       });
     } catch (err) {
-      console.error('Failed to increment download count:', err);
+      if (import.meta.env.DEV) {
+        console.error('Failed to increment download count:', err);
+      }
     }
   }
 }

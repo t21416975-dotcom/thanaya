@@ -23,8 +23,7 @@ export function App() {
         const { data } = await supabase.auth.getSession();
         setIsAuthenticated(!!data.session);
       } else {
-        const localSession = localStorage.getItem('thanaya_admin_session');
-        setIsAuthenticated(!!localSession);
+        setIsAuthenticated(false);
       }
     };
     checkAuth();

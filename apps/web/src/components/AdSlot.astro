@@ -24,7 +24,7 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
       class="w-full my-6 overflow-hidden rounded-lg border border-dashed border-slate-300/80 bg-slate-50/80 shadow-inner flex flex-col justify-between"
       data-ad-position={position}
     >
-      <!-- Disclosing Header with Ad Badge -->
+      {/* Disclosing Header with Ad Badge */}
       <div class="flex items-center justify-between px-3 py-1.5 bg-slate-100/70 border-b border-dashed border-slate-200 text-[11px] text-slate-400 font-medium select-none">
         <span class="flex items-center gap-1.5">
           <svg class="w-3 h-3 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -37,7 +37,7 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
         <span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-200/70 text-slate-500 font-mono font-semibold uppercase tracking-wider">Ad</span>
       </div>
 
-      <!-- Direct Ad Rendering -->
+      {/* Direct Ad Rendering */}
       {slot.slot_type === 'direct' && directAd ? (
         <a
           href={directAd.target_url}
@@ -66,10 +66,11 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
           </div>
         </a>
       ) : slot.slot_type === 'google' ? (
-        <!-- Adsterra 1:1 Height-based Clipped Container (Centered & 1:1 Layout) -->
+        /* Adsterra 1:1 Height-based Clipped Container (Centered & 1:1 Layout) */
         <div class="w-full min-h-[250px] max-h-[300px] h-[280px] flex justify-center items-center overflow-hidden bg-transparent">
           <iframe
             id={`frame-${dynamicContainerId}`}
+            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
             srcdoc={`<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -137,7 +138,7 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
           ></iframe>
         </div>
       ) : (
-        <!-- Platform Support Fallback Message -->
+        /* Platform Support Fallback Message */
         <div class="p-5 text-center flex flex-col items-center justify-center space-y-1">
           <p class="text-xs sm:text-sm font-semibold text-slate-800">
             منصة ثنايا مجانية لجميع طلاب مصر ❤️
