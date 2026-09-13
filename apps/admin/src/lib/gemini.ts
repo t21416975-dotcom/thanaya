@@ -1,5 +1,4 @@
 import type { ExamQuestion } from '@thanaya/types';
-import { supabase } from './supabase';
 
 export interface ExtractionResult {
   success: boolean;
@@ -7,6 +6,99 @@ export interface ExtractionResult {
   total_questions?: number;
   questions: Omit<ExamQuestion, 'id' | 'exam_id' | 'created_at'>[];
   error?: string;
+}
+
+const STORAGE_KEY_GEMINI = 'thanaya_admin_gemini_api_key';
+
+/**
+ * Get stored Gemini API Key from localStorage or Vite environment variable
+ */
+export function getStoredGeminiApiKey(): string {
+  try {
+    const local = localStorage.getItem(STORAGE_KEY_GEMINI);
+    if (local && local.trim()) return local.trim();
+  } catch {
+    // ignore
+  }
+  return (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+}
+
+/**
+ * Save Gemini API Key strictly in admin's local browser storage
+ */
+export function setStoredGeminiApiKey(key: string): void {
+  try {
+    if (key.trim()) {
+      localStorage.setItem(STORAGE_KEY_GEMINI, key.trim());
+    } else {
+      localStorage.removeItem(STORAGE_KEY_GEMINI);
+    }
+  } catch (err) {
+    console.error('Failed to save Gemini API key locally:', err);
+  }
+}
+
+/**
+ * Remove stored Gemini API Key from browser
+ */
+export function removeStoredGeminiApiKey(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY_GEMINI);
+  } catch (err) {
+    console.error('Failed to remove Gemini API key:', err);
+  }
+}
+
+/**
+ * Test a Gemini API key and model connectivity directly with Google AI Cloud
+ */
+export async function testGeminiApiKey(
+  apiKey: string,
+  modelName: string = 'gemini-2.5-flash'
+): Promise<{ success: boolean; message: string }> {
+  const trimmedKey = apiKey.trim();
+  if (!trimmedKey) {
+    return { success: false, message: 'يرجى إدخال مفتاح الـ API أولاً.' };
+  }
+
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+    modelName.trim() || 'gemini-2.5-flash'
+  )}:generateContent`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': trimmedKey,
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: 'قل كلمة "نجح" فقط للتحقق من الاتصال.' }] }],
+        generationConfig: { maxOutputTokens: 10 },
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      let errorDetail = `رمز الخطأ ${res.status}`;
+      try {
+        const parsed = JSON.parse(errText);
+        if (parsed.error?.message) {
+          errorDetail = parsed.error.message;
+        }
+      } catch {
+        // ignore
+      }
+      return { success: false, message: `فشل الاتصال: ${errorDetail}` };
+    }
+
+    return { success: true, message: `تم الاتصال بنجاح بموديل (${modelName}) ومفتاحك فعال وصالح!` };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err.message || 'تعذر الوصول إلى سيرفر Google Gemini API. تأكد من اتصال الإنترنت.',
+    };
+  }
 }
 
 /**
@@ -113,7 +205,7 @@ export function generateMockQuestions(_examTitle?: string, count: number = 5): O
 }
 
 /**
- * Extracts MCQ questions from a PDF file using either the server API or direct Gemini REST call
+ * Extracts MCQ questions from a PDF file directly using Google Gemini REST API (Client-side)
  */
 export async function extractExamQuestionsFromPdf({
   file,
@@ -128,70 +220,26 @@ export async function extractExamQuestionsFromPdf({
   apiKey?: string;
   questionsCount?: number;
 }): Promise<ExtractionResult> {
-  const base64Data = await fileToBase64(file);
+  const activeKey = (apiKey && apiKey.trim()) || getStoredGeminiApiKey();
 
-  // 1. Try calling the backend /api/ai/extract-exam endpoint first with admin auth token
-  try {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (systemPrompt) formData.append('system_prompt', systemPrompt);
-    if (modelName) formData.append('model_name', modelName);
-    if (questionsCount && questionsCount > 0) {
-      formData.append('questions_count', String(questionsCount));
-    }
-
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData?.session?.access_token;
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const apiBaseUrl = (import.meta as any).env?.VITE_PUBLIC_API_URL || '';
-    const endpointsToTry = [
-      `${apiBaseUrl}/api/ai/extract-exam`,
-      ...(apiBaseUrl ? [] : ['https://thanaya.dpdns.org/api/ai/extract-exam']),
-    ];
-
-    for (const url of endpointsToTry) {
-      try {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers,
-          body: formData,
-        });
-
-        const contentType = res.headers.get('content-type') || '';
-        if (res.ok && contentType.includes('application/json')) {
-          const data = await res.json();
-          if (data.success && Array.isArray(data.questions) && data.questions.length > 0) {
-            let finalQs = data.questions;
-            if (questionsCount && questionsCount > 0 && finalQs.length > questionsCount) {
-              finalQs = finalQs.slice(0, questionsCount);
-            }
-            return {
-              success: true,
-              model_used: data.model_used || modelName,
-              total_questions: finalQs.length,
-              questions: finalQs,
-            };
-          }
-        }
-      } catch {
-        // try next endpoint
-      }
-    }
-  } catch (err) {
-    console.warn('Server route /api/ai/extract-exam not reachable, trying direct client Gemini API...', err);
+  // If no API key is configured, fallback to mock demo questions
+  if (!activeKey) {
+    const targetMockCount = questionsCount && questionsCount > 0 ? questionsCount : 5;
+    const mock = generateMockQuestions(file.name.replace(/\.pdf$/i, ''), targetMockCount);
+    return {
+      success: true,
+      model_used: `${modelName} (بيئة معاينة تجريبية - بدون مفتاح API)`,
+      total_questions: mock.length,
+      questions: mock,
+    };
   }
 
-  // 2. Direct Gemini REST API call if apiKey is provided
-  const activeKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY;
-  if (activeKey && activeKey.trim()) {
-    try {
-      let prompt =
-        systemPrompt ||
-        `أنت خبير تربوي ومعلم أول في وزارة التربية والتعليم للثانوية العامة والبكالوريا المصرية. مهمتك هي إنشاء واستخراج أسئلة الاختيار من متعدد (MCQs) التفاعلية من ملف الـ PDF المرفق بدقة علمية وتربوية عالية، مع توليد إجابات دقيقة وشرح وتفسير نموذجي شامل لكل سؤال.
+  try {
+    const base64Data = await fileToBase64(file);
+
+    let prompt =
+      systemPrompt ||
+      `أنت خبير تربوي ومعلم أول في وزارة التربية والتعليم للثانوية العامة والبكالوريا المصرية. مهمتك هي إنشاء واستخراج أسئلة الاختيار من متعدد (MCQs) التفاعلية من ملف الـ PDF المرفق بدقة علمية وتربوية عالية، مع توليد إجابات دقيقة وشرح وتفسير نموذجي شامل لكل سؤال.
 
 القواعد والضوابط الصارمة:
 1. الالتزام التام بالمنهج ومنع الخروج عنه: استخرج واعتمد حصراً على المفاهيم والقوانين والدروس الواردة في ملف الـ PDF المرفوع. يُمنع منعاً باتاً إدخال أسئلة أو مواضيع من مناهج أخرى أو معلومات خارجية خارج حدود هذا الملف.
@@ -201,129 +249,121 @@ export async function extractExamQuestionsFromPdf({
 5. التفسير والشرح النموذجي: اكتب في حقل explanation شرحاً علمياً تفصيلياً مقنعاً وواضحاً يوضح للطالب خطوات الحل الرياضي أو التعليل العلمي والقاعدة المتبعة وسبب صحة الخيار المختار.
 6. الإخراج الإجباري: يجب أن تكون النتيجة حصراً بصيغة JSON المحددة.`;
 
-      if (questionsCount && questionsCount > 0) {
-        prompt += `\n\nتنبيه إلزامي ومحدد: العدد الإجمالي للأسئلة في مصفوفة questions يجب أن يكون بالضبط ${questionsCount} سؤالاً. إذا كان عدد الأسئلة المكتوبة بالملف أقل من ${questionsCount}، يجب عليك صياغة وتوليد أسئلة جديدة إضافية بنفس نمط البكالوريا ومبنية بالكامل وبدقة على شرح وقوانين ومعلومات الملف حتى يكتمل العدد المطلوب (${questionsCount} سؤالاً) بدقة متناهية.`;
-      }
+    if (questionsCount && questionsCount > 0) {
+      prompt += `\n\nتنبيه إلزامي ومحدد: العدد الإجمالي للأسئلة في مصفوفة questions يجب أن يكون بالضبط ${questionsCount} سؤالاً. إذا كان عدد الأسئلة المكتوبة بالملف أقل من ${questionsCount}، يجب عليك صياغة وتوليد أسئلة جديدة إضافية بنفس نمط البكالوريا ومبنية بالكامل وبدقة على شرح وقوانين ومعلومات الملف حتى يكتمل العدد المطلوب (${questionsCount} سؤالاً) بدقة متناهية.`;
+    }
 
-      const promptUserText = questionsCount && questionsCount > 0
+    const promptUserText =
+      questionsCount && questionsCount > 0
         ? `المهمة: إنشاء وإخراج بالضبط ${questionsCount} سؤال اختيار من متعدد (MCQ) متوافقة مع نظام البكالوريا بناءً على هذا الملف:
 1. استخرج أولاً كافة الأسئلة الموجودة بالفعل في ملف الـ PDF.
 2. إذا كان عدد الأسئلة المكتوبة بالملف أقل من ${questionsCount} سؤال، قم فوراً بتوليد وصياغة أسئلة جديدة إضافية تغطي كافة موضوعات ودروس ومفاهيم الملف حتى يكتمل العدد المطلوب وهو ${questionsCount} سؤالاً بالضبط لا أقل ولا أكثر.
 3. لكل سؤال: 4 خيارات واضحة، تحديد الإجابة الصحيحة، وشرح تفسيري وافٍ.`
         : 'استخرج كافة أسئلة الاختيار من متعدد من هذا الملف واكتب شرحاً وتفسيراً وافياً للإجابة الصحيحة لكل سؤال بصيغة JSON المحددة.';
 
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-        modelName.trim() || 'gemini-2.5-flash'
-      )}:generateContent`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+      modelName.trim() || 'gemini-2.5-flash'
+    )}:generateContent`;
 
-      const body = {
-        systemInstruction: {
-          parts: [{ text: prompt }],
-        },
-        contents: [
-          {
-            parts: [
-              {
-                inlineData: {
-                  mimeType: file.type || 'application/pdf',
-                  data: base64Data,
-                },
-              },
-              {
-                text: promptUserText,
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: 'OBJECT',
-            properties: {
-              questions: {
-                type: 'ARRAY',
-                items: {
-                  type: 'OBJECT',
-                  properties: {
-                    question_number: { type: 'INTEGER' },
-                    question_text: { type: 'STRING' },
-                    options: {
-                      type: 'ARRAY',
-                      items: { type: 'STRING' },
-                    },
-                    correct_option_index: { type: 'INTEGER' },
-                    explanation: { type: 'STRING' },
-                  },
-                  required: ['question_number', 'question_text', 'options', 'correct_option_index', 'explanation'],
-                },
+    const body = {
+      systemInstruction: {
+        parts: [{ text: prompt }],
+      },
+      contents: [
+        {
+          parts: [
+            {
+              inlineData: {
+                mimeType: file.type || 'application/pdf',
+                data: base64Data,
               },
             },
-            required: ['questions'],
+            {
+              text: promptUserText,
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            questions: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  question_number: { type: 'INTEGER' },
+                  question_text: { type: 'STRING' },
+                  options: {
+                    type: 'ARRAY',
+                    items: { type: 'STRING' },
+                  },
+                  correct_option_index: { type: 'INTEGER' },
+                  explanation: { type: 'STRING' },
+                },
+                required: ['question_number', 'question_text', 'options', 'correct_option_index', 'explanation'],
+              },
+            },
           },
+          required: ['questions'],
         },
-      };
+      },
+    };
 
-      const resp = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': activeKey.trim(),
-        },
-        body: JSON.stringify(body),
-      });
+    const resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': activeKey,
+      },
+      body: JSON.stringify(body),
+    });
 
-      if (!resp.ok) {
-        const errText = await resp.text();
-        let errMsg = `Gemini API Error (${resp.status}): ${resp.statusText}`;
-        try {
-          const errJson = JSON.parse(errText);
-          if (errJson.error?.message) errMsg = errJson.error.message;
-        } catch {
-          // ignore
-        }
-        throw new Error(errMsg);
+    if (!resp.ok) {
+      const errText = await resp.text();
+      let errMsg = `خطأ في اتصال Gemini API (${resp.status})`;
+      try {
+        const errJson = JSON.parse(errText);
+        if (errJson.error?.message) errMsg = errJson.error.message;
+      } catch {
+        // ignore
       }
-
-      const jsonResp = await resp.json();
-      const textOutput = jsonResp.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!textOutput) throw new Error('لم يتم استلام نص استجابة من Gemini.');
-
-      const parsed = JSON.parse(textOutput);
-      if (Array.isArray(parsed.questions) && parsed.questions.length > 0) {
-        let qs = parsed.questions;
-        if (questionsCount && questionsCount > 0 && qs.length > questionsCount) {
-          qs = qs.slice(0, questionsCount);
-        }
-        const sanitized = qs.map((q: any, idx: number) => ({
-          ...q,
-          question_number: idx + 1,
-        }));
-        return {
-          success: true,
-          model_used: modelName,
-          total_questions: sanitized.length,
-          questions: sanitized,
-        };
-      }
-    } catch (directErr: any) {
-      if (import.meta.env.DEV) {
-        console.error('Direct Gemini extraction failed:', directErr);
-      }
-      return {
-        success: false,
-        error: directErr.message || 'فشل الاتصال بـ Gemini API.',
-        questions: [],
-      };
+      throw new Error(errMsg);
     }
-  }
 
-  // 3. Fallback for demo/development when no API key is configured yet
-  const targetMockCount = questionsCount && questionsCount > 0 ? questionsCount : 5;
-  const mock = generateMockQuestions(file.name.replace(/\.pdf$/i, ''), targetMockCount);
-  return {
-    success: true,
-    model_used: `${modelName} (بيئة معاينة تجريبية - بدون مفتاح API)`,
-    total_questions: mock.length,
-    questions: mock,
-  };
+    const jsonResp = await resp.json();
+    const textOutput = jsonResp.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!textOutput) throw new Error('لم يتم استلام نص استجابة من Gemini.');
+
+    const parsed = JSON.parse(textOutput);
+    if (Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+      let qs = parsed.questions;
+      if (questionsCount && questionsCount > 0 && qs.length > questionsCount) {
+        qs = qs.slice(0, questionsCount);
+      }
+      const sanitized = qs.map((q: any, idx: number) => ({
+        ...q,
+        question_number: idx + 1,
+      }));
+      return {
+        success: true,
+        model_used: modelName,
+        total_questions: sanitized.length,
+        questions: sanitized,
+      };
+    } else {
+      throw new Error('لم يتمكن الموديل من استخراج أي أسئلة صالحة من الملف.');
+    }
+  } catch (err: any) {
+    if (import.meta.env.DEV) {
+      console.error('Gemini extraction failed:', err);
+    }
+    return {
+      success: false,
+      error: err.message || 'فشل الاتصال بـ Gemini API.',
+      questions: [],
+    };
+  }
 }

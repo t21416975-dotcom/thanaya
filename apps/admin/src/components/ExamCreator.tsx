@@ -208,13 +208,11 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
     try {
       const modelSetting = systemSettings.find((s) => s.key === 'gemini_model_name')?.value;
       const promptSetting = systemSettings.find((s) => s.key === 'gemini_exam_prompt')?.value;
-      const apiKeySetting = systemSettings.find((s) => s.key === 'gemini_api_key')?.value;
 
       const result = await extractExamQuestionsFromPdf({
         file: selectedFile,
         modelName: modelSetting || 'gemini-2.5-flash',
         systemPrompt: promptSetting,
-        apiKey: apiKeySetting,
         questionsCount: count,
       });
 
