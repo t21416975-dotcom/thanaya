@@ -70,7 +70,7 @@ const instanceId = `ad-slot-${position}-${dynamicSuffix}`;
         <div class="w-full min-h-[250px] max-h-[300px] h-[280px] flex justify-center items-center overflow-hidden bg-transparent">
           <iframe
             id={`frame-${dynamicContainerId}`}
-            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-forms"
             srcdoc={`<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>

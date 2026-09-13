@@ -16,12 +16,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
         // HIGH-1: Content Security Policy
         const csp = [
           "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' https://pl31266860.profitableratecpmnetwork.com",
+          "script-src 'self' 'unsafe-inline' https://*.profitableratecpmnetwork.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com",
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
           "font-src 'self' https://fonts.gstatic.com data:",
           "img-src 'self' data: blob: https:",
-          "frame-src 'self' https://drive.google.com https://www.youtube.com https://www.youtube-nocookie.com",
-          "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com",
+          "frame-src 'self' https://drive.google.com https://docs.google.com https://www.youtube.com https://www.youtube-nocookie.com https://*.profitableratecpmnetwork.com https://googleads.g.doubleclick.net https://*.googlesyndication.com",
+          "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://*.profitableratecpmnetwork.com https://pagead2.googlesyndication.com https://*.google.com https://*.google-analytics.com",
           "media-src 'self' https:",
           "object-src 'none'",
           "base-uri 'self'",
