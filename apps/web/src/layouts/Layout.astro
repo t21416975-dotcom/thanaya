@@ -34,7 +34,7 @@ const siteSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'منصة ثنايا للبكالوريا المصرية',
-  url: 'https://thanaya-web.vercel.app',
+  url: Astro.site ? new URL('/', Astro.site).href : 'https://thanaya.dpdns.org',
   description: 'المكتبة المنظمة الأولى لتقييمات وحلول ومذكرات الثانوية العامة والبكالوريا المصرية.',
   inLanguage: 'ar-EG',
 };

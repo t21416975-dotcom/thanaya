@@ -150,7 +150,7 @@ export async function extractExamQuestionsFromPdf({
     const apiBaseUrl = (import.meta as any).env?.VITE_PUBLIC_API_URL || '';
     const endpointsToTry = [
       `${apiBaseUrl}/api/ai/extract-exam`,
-      ...(apiBaseUrl ? [] : ['https://thanaya-web.vercel.app/api/ai/extract-exam']),
+      ...(apiBaseUrl ? [] : ['https://thanaya.dpdns.org/api/ai/extract-exam']),
     ];
 
     for (const url of endpointsToTry) {
