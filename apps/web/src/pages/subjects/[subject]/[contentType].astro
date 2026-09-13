@@ -62,8 +62,13 @@ const resources = await publicApi.getPublishedResources({
       </div>
 
       <div class="space-y-3">
-        {resources.map((res) => (
-          <ResourceCard resource={res} />
+        {resources.map((res, index) => (
+          <>
+            <ResourceCard resource={res} />
+            {index === 2 && resources.length > 4 && (
+              <AdSlot position="subject_page" />
+            )}
+          </>
         ))}
 
         {resources.length === 0 && (

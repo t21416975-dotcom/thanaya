@@ -148,8 +148,13 @@ const subjectExams = await publicApi.getPublishedExams(subject.id);
       </div>
 
       <div class="space-y-3">
-        {resources.map((res) => (
-          <ResourceCard resource={res} />
+        {resources.map((res, index) => (
+          <>
+            <ResourceCard resource={res} />
+            {index === 2 && resources.length > 4 && (
+              <AdSlot position="subject_page" />
+            )}
+          </>
         ))}
         {resources.length === 0 && (
           <div class="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400 text-sm">

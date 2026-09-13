@@ -106,7 +106,7 @@ const jsonLd = [breadcrumbSchema, learningResourceSchema];
   ogType="article"
   jsonLd={jsonLd}
 >
-  <div class="space-y-8 max-w-4xl mx-auto">
+  <div class="space-y-8 max-w-5xl mx-auto">
     <Breadcrumb
       items={[
         ...(resource.subject ? [{ label: resource.subject.name, href: `/subjects/${resource.subject.slug}` }] : []),
@@ -209,68 +209,78 @@ const jsonLd = [breadcrumbSchema, learningResourceSchema];
       </div>
     </article>
 
-    {/* Post-Meta Ad Slot */}
-    <AdSlot position="resource_after_meta" />
+    {/* Native PDF Viewer & Desktop Sticky Sidebar */}
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div class="lg:col-span-8 space-y-6">
+        {/* Native PDF Viewer Section */}
+        <section class="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-sm">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+              <svg class="w-5 h-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+              <span>معاينة ملف الـ PDF</span>
+            </h3>
 
-    {/* Native PDF Viewer Section */}
-    <section class="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-sm">
-      <div class="flex items-center justify-between">
-        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
-          <svg class="w-5 h-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-            <polyline points="10 9 9 9 8 9"></polyline>
-          </svg>
-          <span>معاينة ملف الـ PDF</span>
-        </h3>
-
-        <a
-          href={fullViewUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="text-xs font-semibold text-emerald-700 hover:underline flex items-center gap-1"
-        >
-          <span>فتح في نافذة كاملة</span>
-          <span>↗</span>
-        </a>
-      </div>
-
-      <!-- PDF Embed Frame -->
-      <div class="w-full h-[650px] rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex flex-col items-center justify-center">
-        {isDrive ? (
-          <iframe
-            src={previewUrl}
-            class="w-full h-full border-0"
-            allow="autoplay; fullscreen"
-            loading="lazy"
-            title={`معاينة ملف: ${resource.title}`}
-          ></iframe>
-        ) : (
-          <iframe
-            src={`https://docs.google.com/viewer?url=${encodeURIComponent(resource.pdf_url)}&embedded=true`}
-            class="w-full h-full border-0"
-            title={`معاينة: ${resource.title}`}
-            loading="lazy"
-            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-          ></iframe>
-          <div class="hidden p-8 text-center space-y-3">
-            <p class="text-sm text-slate-600">
-              متصفحك لا يدعم معاينة ملف الـ PDF مباشرة داخل الصفحة.
-            </p>
             <a
-              href={downloadUrl}
+              href={fullViewUrl}
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-block px-5 py-2.5 bg-emerald-600 text-white rounded-lg text-xs font-bold"
+              class="text-xs font-semibold text-emerald-700 hover:underline flex items-center gap-1"
             >
-              انقر هنا لتحميل أو فتح الملف مباشرة
+              <span>فتح في نافذة كاملة</span>
+              <span>↗</span>
             </a>
           </div>
-        )}
+
+          <!-- PDF Embed Frame -->
+          <div class="w-full h-[650px] rounded-xl overflow-hidden border border-slate-200 bg-slate-100 flex flex-col items-center justify-center">
+            {isDrive ? (
+              <iframe
+                src={previewUrl}
+                class="w-full h-full border-0"
+                allow="autoplay; fullscreen"
+                loading="lazy"
+                title={`معاينة ملف: ${resource.title}`}
+              ></iframe>
+            ) : (
+              <iframe
+                src={`https://docs.google.com/viewer?url=${encodeURIComponent(resource.pdf_url)}&embedded=true`}
+                class="w-full h-full border-0"
+                title={`معاينة: ${resource.title}`}
+                loading="lazy"
+                sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+              ></iframe>
+              <div class="hidden p-8 text-center space-y-3">
+                <p class="text-sm text-slate-600">
+                  متصفحك لا يدعم معاينة ملف الـ PDF مباشرة داخل الصفحة.
+                </p>
+                <a
+                  href={downloadUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-block px-5 py-2.5 bg-emerald-600 text-white rounded-lg text-xs font-bold"
+                >
+                  انقر هنا لتحميل أو فتح الملف مباشرة
+                </a>
+              </div>
+            )}
+          </div>
+        </section>
       </div>
-    </section>
+
+      {/* Desktop Sticky Sidebar Ad */}
+      <aside class="hidden lg:block lg:col-span-4 sticky top-20">
+        <AdSlot position="resource_after_meta" />
+      </aside>
+    </div>
+
+    {/* Content Break Ad Slot (Between PDF Viewer and Solution Video / Related) */}
+    <AdSlot position="resource_after_meta" />
 
     {/* YouTube Solution Video Section (Lazy) */}
     {resource.youtube_url && (
