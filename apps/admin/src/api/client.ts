@@ -30,6 +30,7 @@ const initialExams: Exam[] = [
     subject_id: '2',
     time_limit_minutes: 30,
     is_published: true,
+    is_coming_soon: false,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -85,6 +86,7 @@ const initialResources: Resource[] = [
     youtube_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     description: 'تقييم الأسبوع الرابع للجبر والهندسة الفراغية',
     is_published: true,
+    is_coming_soon: false,
     published_at: new Date().toISOString(),
     views_count: 142,
     downloads_count: 58,
@@ -516,6 +518,8 @@ export const api = {
           subject_id: examData.subject_id,
           time_limit_minutes: examData.time_limit_minutes,
           is_published: examData.is_published,
+          is_coming_soon: examData.is_coming_soon ?? false,
+          coming_soon_message: examData.coming_soon_message ?? null,
         })
         .select('*, subject:subjects(*)')
         .single();
@@ -549,6 +553,8 @@ export const api = {
       subject_id: examData.subject_id,
       time_limit_minutes: examData.time_limit_minutes,
       is_published: examData.is_published,
+      is_coming_soon: examData.is_coming_soon ?? false,
+      coming_soon_message: examData.coming_soon_message ?? null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       subject: memorySubjects.find((s) => s.id === examData.subject_id),

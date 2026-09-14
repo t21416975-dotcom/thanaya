@@ -47,6 +47,8 @@ export type Resource = {
   pdf_url: string;
   youtube_url?: string | null;
   is_published: boolean;
+  is_coming_soon: boolean;
+  coming_soon_message?: string | null;
   published_at?: string | null;
   views_count: number;
   downloads_count: number;
@@ -121,6 +123,8 @@ export type Exam = {
   subject_id: string;
   time_limit_minutes: number;
   is_published: boolean;
+  is_coming_soon: boolean;
+  coming_soon_message?: string | null;
   created_at: string;
   updated_at: string;
   // Joined relation fields

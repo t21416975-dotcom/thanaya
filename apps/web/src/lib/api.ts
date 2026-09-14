@@ -47,6 +47,7 @@ const mockResources: Resource[] = [
     youtube_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     description: 'أسئلة التقييم الوزاري الأسبوعي لمادة الجبر والهندسة الفراغية.',
     is_published: true,
+    is_coming_soon: false,
     published_at: new Date().toISOString(),
     views_count: 512,
     downloads_count: 240,
@@ -67,6 +68,7 @@ const mockResources: Resource[] = [
     youtube_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     description: 'نموذج الإجابة التفصيلي لتقييم الأسبوع الرابع مع فيديو الشرح.',
     is_published: true,
+    is_coming_soon: false,
     published_at: new Date().toISOString(),
     views_count: 820,
     downloads_count: 430,
@@ -87,6 +89,7 @@ const mockResources: Resource[] = [
     youtube_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     description: 'تقييم الوزارة للأسبوع الرابع في فيزياء الثانوية العامة.',
     is_published: true,
+    is_coming_soon: false,
     published_at: new Date().toISOString(),
     views_count: 670,
     downloads_count: 310,
@@ -107,6 +110,7 @@ const mockResources: Resource[] = [
     youtube_url: null,
     description: 'نموذج اختبار شامل مع سلم التقدير والتصحيح.',
     is_published: true,
+    is_coming_soon: false,
     published_at: new Date().toISOString(),
     views_count: 380,
     downloads_count: 190,
@@ -124,6 +128,7 @@ const mockExams: ExamWithQuestions[] = [
     subject_id: '2',
     time_limit_minutes: 30,
     is_published: true,
+    is_coming_soon: false,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     subject: mockSubjects[1],
@@ -306,7 +311,8 @@ export const publicApi = {
           let query = supabase
             .from('resources')
             .select('*, subject:subjects(*), content_type:content_types(*), week:weeks(*)')
-            .eq('is_published', true)
+            .or('is_published.eq.true,is_coming_soon.eq.true')
+            .order('is_coming_soon', { ascending: true })
             .order('created_at', { ascending: false });
 
           if (filter?.subjectId) query = query.eq('subject_id', filter.subjectId);
@@ -325,7 +331,7 @@ export const publicApi = {
         }
       }
 
-      let list = mockResources.filter((r) => r.is_published);
+      let list = mockResources.filter((r) => r.is_published || r.is_coming_soon);
       if (filter?.subjectId) list = list.filter((r) => r.subject_id === filter.subjectId);
       if (filter?.contentTypeId) list = list.filter((r) => r.content_type_id === filter.contentTypeId);
       if (filter?.limit) list = list.slice(0, filter.limit);
@@ -432,7 +438,8 @@ export const publicApi = {
           let query = supabase
             .from('exams')
             .select('*, subject:subjects(*), questions:exam_questions(*)')
-            .eq('is_published', true)
+            .or('is_published.eq.true,is_coming_soon.eq.true')
+            .order('is_coming_soon', { ascending: true })
             .order('created_at', { ascending: false });
 
           if (subjectId) query = query.eq('subject_id', subjectId);
@@ -448,7 +455,7 @@ export const publicApi = {
           return mockExams.filter((e) => !subjectId || e.subject_id === subjectId);
         }
       }
-      return mockExams.filter((e) => e.is_published && (!subjectId || e.subject_id === subjectId));
+      return mockExams.filter((e) => (e.is_published || e.is_coming_soon) && (!subjectId || e.subject_id === subjectId));
     }, mockExams);
   },
 

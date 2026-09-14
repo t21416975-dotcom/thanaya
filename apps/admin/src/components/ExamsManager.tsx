@@ -68,6 +68,7 @@ export function ExamsManager() {
     if (filterSubject !== 'all' && e.subject_id !== filterSubject) return false;
     if (filterStatus === 'published' && !e.is_published) return false;
     if (filterStatus === 'draft' && e.is_published) return false;
+    if (filterStatus === 'coming_soon' && !e.is_coming_soon) return false;
     return true;
   });
 
@@ -134,6 +135,7 @@ export function ExamsManager() {
             <option value="all">الكل</option>
             <option value="published">منشور فقط</option>
             <option value="draft">مسودة / غير منشور</option>
+            <option value="coming_soon">قريباً</option>
           </select>
         </div>
 
@@ -202,6 +204,11 @@ export function ExamsManager() {
                           </>
                         )}
                       </button>
+                      {exam.is_coming_soon && !exam.is_published && (
+                        <span className="bg-amber-50 text-amber-700 text-xs px-2 py-0.5 rounded-full border border-amber-200 font-bold mr-2">
+                          قريباً
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-xs text-slate-400">
                       {new Date(exam.created_at).toLocaleDateString('ar-EG')}

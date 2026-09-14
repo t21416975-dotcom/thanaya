@@ -44,6 +44,8 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
   const [subjectId, setSubjectId] = useState(initialExam?.subject_id || '');
   const [timeLimitMinutes, setTimeLimitMinutes] = useState(initialExam?.time_limit_minutes || 30);
   const [isPublished, setIsPublished] = useState(initialExam ? initialExam.is_published : true);
+  const [isComingSoon, setIsComingSoon] = useState(initialExam?.is_coming_soon || false);
+  const [comingSoonMessage, setComingSoonMessage] = useState(initialExam?.coming_soon_message || '');
 
   // Questions State
   const [questions, setQuestions] = useState<QuestionDraft[]>(
@@ -298,7 +300,9 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
         title: title.trim(),
         subject_id: subjectId,
         time_limit_minutes: timeLimitMinutes,
-        is_published: isPublished,
+        is_published: isComingSoon ? false : isPublished,
+        is_coming_soon: isComingSoon,
+        coming_soon_message: isComingSoon ? (comingSoonMessage.trim() || null) : null,
       };
 
       const questionsPayload = questions.map((q, idx) => ({
@@ -660,6 +664,44 @@ export function ExamCreator({ initialExam, onClose, onSuccess }: ExamCreatorProp
             >
               {isPublished ? '✓ منشور للطلاب' : 'مسودة (Draft)'}
             </button>
+          </div>
+
+          {/* Coming Soon toggle */}
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900">عرض كـ "قريباً"</h4>
+                <p className="text-xs text-slate-500">
+                  {isComingSoon
+                    ? 'سيظهر للطلاب بلون رمادي مع شارة "قريباً" بدون إمكانية بدء الامتحان.'
+                    : 'امتحان عادي يظهر بشكل طبيعي للطلاب.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !isComingSoon;
+                  setIsComingSoon(next);
+                  if (next) setIsPublished(false);
+                }}
+                className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
+                  isComingSoon
+                    ? 'bg-amber-500 text-white hover:bg-amber-600'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {isComingSoon ? '✓ قريباً' : 'عادي'}
+              </button>
+            </div>
+            {isComingSoon && (
+              <input
+                type="text"
+                value={comingSoonMessage}
+                onChange={(e) => setComingSoonMessage(e.target.value)}
+                placeholder='رسالة مخصصة (اختياري) — مثال: "متاح بعد امتحان الأسبوع الخامس"'
+                className="w-full px-3.5 py-2.5 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+              />
+            )}
           </div>
 
           {/* Questions Header & Quick Actions */}

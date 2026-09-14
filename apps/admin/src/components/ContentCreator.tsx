@@ -25,6 +25,8 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
   const [youtubeUrl, setYoutubeUrl] = useState(initialResource?.youtube_url || '');
   const [description, setDescription] = useState(initialResource?.description || '');
   const [isPublished, setIsPublished] = useState(initialResource ? initialResource.is_published : true);
+  const [isComingSoon, setIsComingSoon] = useState(initialResource?.is_coming_soon || false);
+  const [comingSoonMessage, setComingSoonMessage] = useState(initialResource?.coming_soon_message || '');
 
   // Validation & UI states
   const [error, setError] = useState<string | null>(null);
@@ -141,8 +143,10 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
         pdf_url: pdfUrl.trim(),
         youtube_url: youtubeUrl.trim() || null,
         description: description.trim() || null,
-        is_published: isPublished,
-        published_at: isPublished ? (initialResource?.published_at || new Date().toISOString()) : null,
+        is_published: isComingSoon ? false : isPublished,
+        is_coming_soon: isComingSoon,
+        coming_soon_message: isComingSoon ? (comingSoonMessage.trim() || null) : null,
+        published_at: (isComingSoon ? false : isPublished) ? (initialResource?.published_at || new Date().toISOString()) : null,
       };
 
       if (initialResource) {
@@ -394,6 +398,44 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
             >
               {isPublished ? '✓ منشور للعامة' : 'مسودة (Draft)'}
             </button>
+          </div>
+
+          {/* Coming Soon toggle */}
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900">عرض كـ "قريباً"</h4>
+                <p className="text-xs text-slate-500">
+                  {isComingSoon
+                    ? 'سيظهر للطلاب بلون رمادي مع شارة "قريباً" بدون إمكانية فتحه.'
+                    : 'عنصر عادي يظهر بشكل طبيعي للطلاب.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !isComingSoon;
+                  setIsComingSoon(next);
+                  if (next) setIsPublished(false);
+                }}
+                className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
+                  isComingSoon
+                    ? 'bg-amber-500 text-white hover:bg-amber-600'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {isComingSoon ? '✓ قريباً' : 'عادي'}
+              </button>
+            </div>
+            {isComingSoon && (
+              <input
+                type="text"
+                value={comingSoonMessage}
+                onChange={(e) => setComingSoonMessage(e.target.value)}
+                placeholder='رسالة مخصصة (اختياري) — مثال: "متاح بعد امتحان الأسبوع الخامس"'
+                className="w-full px-3.5 py-2.5 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+              />
+            )}
           </div>
 
           {/* Footer Actions */}

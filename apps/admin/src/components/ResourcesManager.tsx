@@ -76,6 +76,7 @@ export function ResourcesManager() {
     if (filterContentType !== 'all' && res.content_type_id !== filterContentType) return false;
     if (filterStatus === 'published' && !res.is_published) return false;
     if (filterStatus === 'draft' && res.is_published) return false;
+    if (filterStatus === 'coming_soon' && !res.is_coming_soon) return false;
     return true;
   });
 
@@ -149,6 +150,7 @@ export function ResourcesManager() {
             <option value="all">الكل</option>
             <option value="published">منشور فقط</option>
             <option value="draft">مسودة / غير منشور</option>
+            <option value="coming_soon">قريباً</option>
           </select>
         </div>
 
@@ -232,6 +234,11 @@ export function ResourcesManager() {
                         </>
                       )}
                     </button>
+                    {res.is_coming_soon && !res.is_published && (
+                      <span className="bg-amber-50 text-amber-700 text-xs px-2 py-0.5 rounded-full border border-amber-200 font-bold mr-2">
+                        قريباً
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-xs text-slate-500">
                     <div>👁 {res.views_count} مشاهدة</div>
