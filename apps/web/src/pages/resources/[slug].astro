@@ -30,10 +30,10 @@ const relatedResources = await publicApi.getPublishedResources({
 const filteredRelated = relatedResources.filter((r) => r.id !== resource.id).slice(0, 3);
 
 // Dynamic SEO Title & Description with Egyptian search keywords
-const pageTitle = `${resource.title} | ${resource.subject?.name || ''} ثانوية عامة وبكالوريا`;
+const pageTitle = `${resource.title} | ${resource.subject?.name || ''} تانية بكالوريا`;
 const pageDescription =
   resource.description ||
-  `تحميل ومعاينة ${resource.title} في مادة ${resource.subject?.name || ''} (${resource.content_type?.name || 'مورد تعليمي'}) بصيغة PDF مباشرة مع حلول وشرح الفيديو لطلاب البكالوريا المصرية.`;
+  `تحميل ومعاينة ${resource.title} في مادة ${resource.subject?.name || ''} (${resource.content_type?.name || 'مورد تعليمي'}) بصيغة PDF مباشرة مع حلول وشرح الفيديو لطلاب تانية بكالوريا.`;
 
 const currentUrl = new URL(`/resources/${resource.slug}`, Astro.site).href;
 
