@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Layers, Calendar, FileText, Megaphone, Flag, BarChart3, LogOut, CheckCircle, HelpCircle, Sparkles, Menu, X } from 'lucide-react';
+import { BookOpen, Layers, Calendar, FileText, Megaphone, Flag, BarChart3, LogOut, CheckCircle, HelpCircle, Sparkles, Menu, X, Bell } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { SubjectsManager } from './components/SubjectsManager';
 import { ContentTypesManager } from './components/ContentTypesManager';
@@ -10,11 +10,12 @@ import { AISettingsManager } from './components/AISettingsManager';
 import { ReportsManager } from './components/ReportsManager';
 import { AdsManager } from './components/AdsManager';
 import { AnalyticsView } from './components/AnalyticsView';
+import { NotificationsManager } from './components/NotificationsManager';
 import { AuthLogin } from './components/AuthLogin';
 
 export function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [activeTab, setActiveTab] = useState<'resources' | 'exams' | 'ai_settings' | 'subjects' | 'content_types' | 'weeks' | 'ads' | 'reports' | 'analytics'>('resources');
+  const [activeTab, setActiveTab] = useState<'resources' | 'exams' | 'notifications' | 'ai_settings' | 'subjects' | 'content_types' | 'weeks' | 'ads' | 'reports' | 'analytics'>('resources');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export function App() {
   const navigation = [
     { id: 'resources' as const, name: 'الموارد والمحتوى', icon: FileText },
     { id: 'exams' as const, name: 'الامتحانات التجريبية (MCQ)', icon: HelpCircle },
+    { id: 'notifications' as const, name: 'الإشعارات والتنبيهات', icon: Bell },
     { id: 'ai_settings' as const, name: 'إعدادات الذكاء الاصطناعي (AI)', icon: Sparkles },
     { id: 'subjects' as const, name: 'المواد الدراسية', icon: BookOpen },
     { id: 'content_types' as const, name: 'أنواع المحتوى', icon: Layers },
@@ -160,6 +162,7 @@ export function App() {
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1">
           {activeTab === 'resources' && <ResourcesManager />}
           {activeTab === 'exams' && <ExamsManager />}
+          {activeTab === 'notifications' && <NotificationsManager />}
           {activeTab === 'ai_settings' && <AISettingsManager />}
           {activeTab === 'subjects' && <SubjectsManager />}
           {activeTab === 'content_types' && <ContentTypesManager />}

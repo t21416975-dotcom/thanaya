@@ -18,12 +18,16 @@
     "astro": "^7.3.2",
     "autoprefixer": "^10.4.20",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "web-push": "^3.6.7"
   },
   "overrides": {
     "@vercel/routing-utils": {
       "path-to-regexp": "6.3.0"
     },
     "path-to-regexp": "6.3.0"
+  },
+  "devDependencies": {
+    "@types/web-push": "^3.6.4"
   }
 }

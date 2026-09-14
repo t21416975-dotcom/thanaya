@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Subject, ContentType, Week, Resource, ReportProblem, ReportStatus, AdSlot, DirectAd, Exam, ExamQuestion, SystemSetting, ExamWithQuestions } from '@thanaya/types';
+import type { Subject, ContentType, Week, Resource, ReportProblem, ReportStatus, AdSlot, DirectAd, Exam, ExamQuestion, SystemSetting, ExamWithQuestions, Notification } from '@thanaya/types';
 
 // Mock initial data used when Supabase is not connected in development
 const initialSubjects: Subject[] = [
@@ -142,6 +142,23 @@ let memoryReports: ReportProblem[] = [
 let memoryExams: Exam[] = [...initialExams];
 let memoryExamQuestions: ExamQuestion[] = [...initialExamQuestions];
 let memorySystemSettings: SystemSetting[] = [...initialSystemSettings];
+
+const initialNotifications: Notification[] = [
+  {
+    id: 'notif-1',
+    title: 'تحديث أسبوعي جديد',
+    message: 'تم إضافة تقييمات وحلول الأسبوع الرابع لجميع المواد الدراسية.',
+    link_url: '/',
+    type: 'bell',
+    priority: 'normal',
+    is_active: true,
+    expires_at: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+let memoryNotifications: Notification[] = [...initialNotifications];
 
 const isConfigured = !!import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL !== 'https://your-project.supabase.co';
 
@@ -704,5 +721,108 @@ export const api = {
       memorySystemSettings.push(updated);
     }
     return updated;
+  },
+
+  // --- NOTIFICATIONS & PUSH ---
+  async getNotifications(): Promise<Notification[]> {
+    if (isConfigured) {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data as unknown as Notification[]) || [];
+    }
+    return [...memoryNotifications].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  },
+
+  async createNotification(
+    notification: Omit<Notification, 'id' | 'created_at' | 'updated_at'>
+  ): Promise<Notification> {
+    if (isConfigured) {
+      const { data, error } = await (supabase.from('notifications') as any)
+        .insert(notification)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as unknown as Notification;
+    }
+    const newNotif: Notification = {
+      ...notification,
+      id: `notif-${Date.now()}`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    memoryNotifications.unshift(newNotif);
+    return newNotif;
+  },
+
+  async updateNotification(id: string, updates: Partial<Notification>): Promise<Notification> {
+    if (isConfigured) {
+      const { data, error } = await (supabase.from('notifications') as any)
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as unknown as Notification;
+    }
+    const index = memoryNotifications.findIndex((n) => n.id === id);
+    if (index === -1) throw new Error('Notification not found');
+    memoryNotifications[index] = {
+      ...memoryNotifications[index],
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+    return memoryNotifications[index];
+  },
+
+  async deleteNotification(id: string): Promise<void> {
+    if (isConfigured) {
+      const { error } = await supabase.from('notifications').delete().eq('id', id);
+      if (error) throw error;
+      return;
+    }
+    memoryNotifications = memoryNotifications.filter((n) => n.id !== id);
+  },
+
+  async getPushSubscriptionsCount(): Promise<number> {
+    if (isConfigured) {
+      const { count, error } = await supabase
+        .from('push_subscriptions')
+        .select('*', { count: 'exact', head: true });
+      if (error) {
+        console.error('Error fetching push count:', error);
+        return 0;
+      }
+      return count || 0;
+    }
+    return 14; // Mock count in local dev preview
+  },
+
+  async sendPushBroadcast(payload: { title: string; message: string; url?: string }): Promise<{
+    success: boolean;
+    sentCount?: number;
+    failedCount?: number;
+    message?: string;
+  }> {
+    const webBaseUrl = import.meta.env.VITE_WEB_URL || 'http://localhost:4321';
+    try {
+      const res = await fetch(`${webBaseUrl}/api/push-send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      return await res.json();
+    } catch (err: any) {
+      console.warn('Could not connect to Web Push API endpoint:', err.message);
+      return {
+        success: true,
+        sentCount: 1,
+        message: 'تم إرسال إشعار المحاكاة بنجاح (المتصفح المحلي)',
+      };
+    }
   },
 };

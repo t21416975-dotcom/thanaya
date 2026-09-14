@@ -1,0 +1,320 @@
+---
+import type { Notification } from '@thanaya/types';
+
+interface Props {
+  notifications?: Notification[];
+}
+
+const { notifications = [] } = Astro.props;
+
+// Filter for notifications that should show in bell (bell, banner, or popup)
+const activeNotifs = notifications.filter((n) => n.is_active);
+---
+
+<div class="relative inline-block text-right" id="notif-bell-container">
+  {/* Bell Trigger Button */}
+  <button
+    type="button"
+    id="notif-bell-btn"
+    aria-expanded="false"
+    aria-label="قائمة التنبيهات والإشعارات"
+    class="relative p-2 text-slate-600 hover:text-emerald-700 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+  >
+    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+    </svg>
+
+    {/* Dynamic Unread Badge */}
+    <span
+      id="notif-badge"
+      class="hidden absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full items-center justify-center ring-2 ring-white"
+    >
+      0
+    </span>
+  </button>
+
+  {/* Dropdown Menu Popover */}
+  <div
+    id="notif-dropdown"
+    class="hidden absolute left-0 sm:left-auto sm:right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 overflow-hidden text-right animate-fadeIn"
+  >
+    {/* Dropdown Header */}
+    <div class="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-sm text-slate-900">الإشعارات والتنبيهات</span>
+        <span class="text-[11px] bg-slate-200 text-slate-700 font-semibold px-2 py-0.5 rounded-full" id="notif-total-count">
+          {activeNotifs.length}
+        </span>
+      </div>
+
+      <button
+        type="button"
+        id="notif-mark-all-read"
+        class="text-[11px] text-emerald-700 hover:underline font-semibold cursor-pointer"
+      >
+        تحديد الكل كمقروء
+      </button>
+    </div>
+
+    {/* Web Push Permission Bar */}
+    <div class="p-2.5 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between text-xs" id="push-toggle-section">
+      <div class="flex items-center gap-1.5 text-emerald-900">
+        <svg class="w-4 h-4 text-emerald-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+        <span id="push-status-text" class="font-medium">إشعارات المتصفح</span>
+      </div>
+
+      <button
+        type="button"
+        id="push-subscribe-btn"
+        class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold transition shadow-sm cursor-pointer"
+      >
+        تفعيل الآن
+      </button>
+    </div>
+
+    {/* Notifications List */}
+    <div class="max-h-80 overflow-y-auto divide-y divide-slate-100" id="notif-list">
+      {activeNotifs.length > 0 ? (
+        activeNotifs.map((n) => {
+          const isUrgent = n.priority === 'urgent';
+          return (
+            <div
+              data-notif-id={n.id}
+              class="notif-item p-3.5 hover:bg-slate-50 transition flex items-start gap-3 cursor-pointer"
+            >
+              <div class={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${isUrgent ? 'bg-amber-500 ring-4 ring-amber-100' : 'bg-emerald-500'}`} />
+
+              <div class="flex-1 min-w-0 space-y-1">
+                <div class="flex items-center justify-between gap-2">
+                  <h4 class="font-bold text-xs sm:text-sm text-slate-900 leading-snug truncate">
+                    {n.title}
+                  </h4>
+                  {isUrgent && (
+                    <span class="text-[10px] bg-amber-50 text-amber-700 font-bold px-1.5 py-0.5 rounded border border-amber-200 shrink-0">
+                      عاجل
+                    </span>
+                  )}
+                </div>
+
+                <p class="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                  {n.message}
+                </p>
+
+                {n.link_url && (
+                  <a
+                    href={n.link_url}
+                    class="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold hover:underline pt-0.5"
+                  >
+                    <span>فتح الرابط</span>
+                    <svg class="w-3 h-3 rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M5 12h14M12 5l7 7-7 7"></path>
+                    </svg>
+                  </a>
+                )}
+              </div>
+            </div>
+          );
+        })
+      ) : (
+        <div class="p-8 text-center text-slate-400 space-y-2">
+          <svg class="w-8 h-8 mx-auto text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <p class="text-xs">لا توجد إشعارات جديدة حالياً</p>
+        </div>
+      )}
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+  (function () {
+    const container = document.getElementById('notif-bell-container');
+    const bellBtn = document.getElementById('notif-bell-btn');
+    const dropdown = document.getElementById('notif-dropdown');
+    const badge = document.getElementById('notif-badge');
+    const markAllBtn = document.getElementById('notif-mark-all-read');
+    const pushBtn = document.getElementById('push-subscribe-btn');
+    const pushStatusText = document.getElementById('push-status-text');
+    const notifItems = document.querySelectorAll('.notif-item');
+
+    const STORAGE_KEY = 'thanaya_read_notifs';
+
+    function getReadIds() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      } catch {
+        return [];
+      }
+    }
+
+    function setReadIds(ids) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+    }
+
+    function updateUnreadCount() {
+      const readIds = getReadIds();
+      let unreadCount = 0;
+
+      notifItems.forEach((item) => {
+        const id = item.getAttribute('data-notif-id');
+        if (id && !readIds.includes(id)) {
+          unreadCount++;
+          item.classList.remove('opacity-60');
+        } else {
+          item.classList.add('opacity-60');
+        }
+      });
+
+      if (unreadCount > 0) {
+        badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+        badge.classList.remove('hidden');
+        badge.classList.add('flex');
+      } else {
+        badge.classList.add('hidden');
+        badge.classList.remove('flex');
+      }
+    }
+
+    // Toggle dropdown
+    if (bellBtn && dropdown) {
+      bellBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const isOpen = !dropdown.classList.contains('hidden');
+        if (isOpen) {
+          dropdown.classList.add('hidden');
+        } else {
+          dropdown.classList.remove('hidden');
+        }
+      });
+
+      // Close on click outside
+      document.addEventListener('click', function (e) {
+        if (container && !container.contains(e.target)) {
+          dropdown.classList.add('hidden');
+        }
+      });
+    }
+
+    // Mark single notification read on click
+    notifItems.forEach((item) => {
+      item.addEventListener('click', function () {
+        const id = item.getAttribute('data-notif-id');
+        if (id) {
+          const readIds = getReadIds();
+          if (!readIds.includes(id)) {
+            readIds.push(id);
+            setReadIds(readIds);
+            updateUnreadCount();
+          }
+        }
+      });
+    });
+
+    // Mark all read button
+    if (markAllBtn) {
+      markAllBtn.addEventListener('click', function () {
+        const allIds = [];
+        notifItems.forEach((item) => {
+          const id = item.getAttribute('data-notif-id');
+          if (id) allIds.push(id);
+        });
+        setReadIds(allIds);
+        updateUnreadCount();
+      });
+    }
+
+    // --- Web Push Subscription Logic ---
+    function urlB64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    }
+
+    async function checkPushSubscription() {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        if (pushBtn) pushBtn.style.display = 'none';
+        if (pushStatusText) pushStatusText.textContent = 'المتصفح لا يدعم Push';
+        return;
+      }
+
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          if (pushBtn) {
+            pushBtn.textContent = 'مفعلة ✓';
+            pushBtn.classList.replace('bg-emerald-600', 'bg-slate-200');
+            pushBtn.classList.replace('text-white', 'text-slate-700');
+            pushBtn.disabled = true;
+          }
+          if (pushStatusText) pushStatusText.textContent = 'إشعارات المتصفح مفعلة';
+        }
+      } catch (err) {
+        console.error('Error checking push subscription:', err);
+      }
+    }
+
+    if (pushBtn) {
+      pushBtn.addEventListener('click', async function () {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+          alert('متصفحك لا يدعم خاصية Web Push Notifications.');
+          return;
+        }
+
+        try {
+          pushBtn.textContent = 'جاري التفعيل...';
+          pushBtn.disabled = true;
+
+          const permission = await Notification.requestPermission();
+          if (permission !== 'granted') {
+            alert('يرجى السماح بالإشعارات من إعدادات المتصفح لتلقي التحديثات.');
+            pushBtn.textContent = 'تفعيل الآن';
+            pushBtn.disabled = false;
+            return;
+          }
+
+          // Fetch VAPID key
+          const keyRes = await fetch('/api/push-subscribe');
+          const keyData = await keyRes.json();
+          const vapidKey = keyData.publicKey;
+
+          const reg = await navigator.serviceWorker.ready;
+          const subscription = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlB64ToUint8Array(vapidKey),
+          });
+
+          // Send to backend
+          await fetch('/api/push-subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(subscription),
+          });
+
+          pushBtn.textContent = 'مفعلة ✓';
+          pushBtn.classList.replace('bg-emerald-600', 'bg-slate-200');
+          pushBtn.classList.replace('text-white', 'text-slate-700');
+          if (pushStatusText) pushStatusText.textContent = 'إشعارات المتصفح مفعلة';
+        } catch (err) {
+          console.error('Push registration error:', err);
+          pushBtn.textContent = 'فشل، أعد المحاولة';
+          pushBtn.disabled = false;
+        }
+      });
+    }
+
+    // Initial setup on page load
+    updateUnreadCount();
+    checkPushSubscription();
+  })();
+</script>

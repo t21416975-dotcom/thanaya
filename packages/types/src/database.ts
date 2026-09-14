@@ -155,6 +155,30 @@ export type ExamWithQuestions = Exam & {
   questions: ExamQuestion[];
 };
 
+export type NotificationType = 'bell' | 'banner' | 'popup';
+export type NotificationPriority = 'normal' | 'urgent';
+
+export type Notification = {
+  id: string;
+  title: string;
+  message: string;
+  link_url?: string | null;
+  type: NotificationType;
+  priority: NotificationPriority;
+  is_active: boolean;
+  expires_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PushSubscriptionRecord = {
+  id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  created_at: string;
+};
+
 // Database Schema Representation
 export interface Database {
   public: {
@@ -224,6 +248,16 @@ export interface Database {
         Row: SystemSetting;
         Insert: Omit<SystemSetting, 'updated_at'>;
         Update: Partial<Omit<SystemSetting, 'key'>>;
+      };
+      notifications: {
+        Row: Notification;
+        Insert: Omit<Notification, 'id' | 'created_at' | 'updated_at'> & { id?: string };
+        Update: Partial<Omit<Notification, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      push_subscriptions: {
+        Row: PushSubscriptionRecord;
+        Insert: Omit<PushSubscriptionRecord, 'id' | 'created_at'> & { id?: string };
+        Update: Partial<Omit<PushSubscriptionRecord, 'id' | 'created_at'>>;
       };
     };
     Functions: {

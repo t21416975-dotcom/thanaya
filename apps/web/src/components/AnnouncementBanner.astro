@@ -1,0 +1,80 @@
+---
+import type { Notification } from '@thanaya/types';
+
+interface Props {
+  notifications?: Notification[];
+}
+
+const { notifications = [] } = Astro.props;
+
+// Filter for active banner notifications
+const bannerNotifs = notifications.filter((n) => n.type === 'banner' && n.is_active);
+const topBanner = bannerNotifs[0]; // Take top active banner
+---
+
+{topBanner && (
+  <div
+    id={`announcement-banner-${topBanner.id}`}
+    data-banner-id={topBanner.id}
+    class={`hidden relative z-50 text-xs sm:text-sm font-medium px-4 py-2.5 transition-all duration-200 ${
+      topBanner.priority === 'urgent'
+        ? 'bg-amber-600 text-white'
+        : 'bg-emerald-800 text-emerald-50'
+    }`}
+  >
+    <div class="max-w-5xl mx-auto flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2 flex-1 min-w-0">
+        <span class="shrink-0 p-1 rounded-md bg-white/15">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+        </span>
+        <div class="truncate flex items-center gap-2">
+          <span class="font-bold shrink-0">{topBanner.title}:</span>
+          <span class="truncate opacity-95">{topBanner.message}</span>
+        </div>
+        {topBanner.link_url && (
+          <a
+            href={topBanner.link_url}
+            class="shrink-0 underline hover:no-underline font-bold mr-1.5 transition"
+          >
+            عرض المزيد ←
+          </a>
+        )}
+      </div>
+
+      <button
+        type="button"
+        id={`dismiss-banner-${topBanner.id}`}
+        aria-label="إغلاق التنبيه"
+        class="p-1 rounded-md hover:bg-white/20 transition shrink-0 cursor-pointer"
+      >
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <script is:inline define:vars={{ bannerId: topBanner.id }}>
+    (function () {
+      const bannerEl = document.getElementById('announcement-banner-' + bannerId);
+      const dismissBtn = document.getElementById('dismiss-banner-' + bannerId);
+      if (!bannerEl) return;
+
+      const isDismissed = localStorage.getItem('thanaya_dismissed_banner_' + bannerId);
+      if (!isDismissed) {
+        bannerEl.classList.remove('hidden');
+      }
+
+      if (dismissBtn) {
+        dismissBtn.addEventListener('click', function () {
+          bannerEl.style.display = 'none';
+          localStorage.setItem('thanaya_dismissed_banner_' + bannerId, 'true');
+        });
+      }
+    })();
+  </script>
+)}

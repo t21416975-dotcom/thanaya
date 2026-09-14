@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { smartCache } from './cache';
-import type { Subject, ContentType, Week, Resource, AdSlot, DirectAd, Exam, ExamQuestion, ExamWithQuestions } from '@thanaya/types';
+import type { Subject, ContentType, Week, Resource, AdSlot, DirectAd, Exam, ExamQuestion, ExamWithQuestions, Notification } from '@thanaya/types';
 
 function logError(...args: any[]): void {
   if (import.meta.env.DEV) {
@@ -164,6 +164,21 @@ const mockExams: ExamWithQuestions[] = [
         created_at: new Date().toISOString(),
       },
     ],
+  },
+];
+
+const mockNotifications: Notification[] = [
+  {
+    id: 'notif-1',
+    title: 'تحديث أسبوعي جديد',
+    message: 'تم إضافة تقييمات وحلول الأسبوع الرابع لجميع المواد الدراسية.',
+    link_url: '/',
+    type: 'bell',
+    priority: 'normal',
+    is_active: true,
+    expires_at: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   },
 ];
 
@@ -486,6 +501,35 @@ export const publicApi = {
       }
       return mockExams.find((e) => e.id === id) || null;
     }, null);
+  },
+
+  /**
+   * Get all active in-app notifications (Cached for 30s)
+   */
+  async getActiveNotifications(): Promise<Notification[]> {
+    return smartCache.wrap('notifications:active', 30, async () => {
+      if (isSupabaseConfigured) {
+        try {
+          const now = new Date().toISOString();
+          const { data, error } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('is_active', true)
+            .or(`expires_at.is.null,expires_at.gt.${now}`)
+            .order('created_at', { ascending: false });
+
+          if (error) {
+            logError('Error fetching notifications:', error);
+            return mockNotifications.filter((n) => n.is_active);
+          }
+          return (data as unknown as Notification[]) || [];
+        } catch (err) {
+          logError('Supabase exception in getActiveNotifications:', err);
+          return mockNotifications.filter((n) => n.is_active);
+        }
+      }
+      return mockNotifications.filter((n) => n.is_active);
+    }, mockNotifications.filter((n) => n.is_active));
   },
 
   /**
