@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import { publicApi } from '../../lib/api';
+import { buildPageSchema } from '../../lib/geo';
 
 const subjects = await publicApi.getActiveSubjects();
 const exams = await publicApi.getPublishedExams();
@@ -15,6 +16,8 @@ const filteredExams = currentSubject
   ? exams.filter((e) => e.subject_id === currentSubject.id)
   : exams;
 
+const jsonLd = buildPageSchema({ pageType: 'examListing', subject: currentSubject, exams: filteredExams });
+
 const pageTitle = currentSubject
   ? `امتحانات تفاعلية في ${currentSubject.name} | منصة ثنايا`
   : 'الامتحانات التجريبية التفاعلية (MCQs) للبكالوريا | منصة ثنايا';
@@ -22,7 +25,7 @@ const pageTitle = currentSubject
 const pageDescription = 'امتحانات تجريبية تفاعلية بنظام الاختيار من متعدد (MCQs) مع تصحيح فوري ومؤقت زمني وتفسير تفصيلي لكل سؤال.';
 ---
 
-<Layout title={pageTitle} description={pageDescription}>
+<Layout title={pageTitle} description={pageDescription} jsonLd={jsonLd}>
   <div class="space-y-8">
     <Breadcrumb
       items={[

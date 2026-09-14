@@ -1,10 +1,14 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { buildPageSchema } from '../lib/geo';
+
+const jsonLd = buildPageSchema({ pageType: 'about' });
 ---
 
 <Layout
   title="من نحن | منصة ثنايا"
   description="تعرف على منصة ثنايا — المكتبة التعليمية المنظمة لطلاب الثانوية العامة والبكالوريا المصرية."
+  jsonLd={jsonLd}
 >
   <div class="max-w-3xl mx-auto space-y-8">
 

@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import { publicApi } from '../../lib/api';
+import { buildPageSchema } from '../../lib/geo';
 
 const { id } = Astro.params;
 const exam = id ? await publicApi.getExamById(id) : null;
@@ -11,13 +12,15 @@ if (!exam) {
   return Astro.redirect('/404');
 }
 
+const jsonLd = buildPageSchema({ pageType: 'exam', exam });
+
 const pageTitle = `${exam.title} - امتحان تجريبي تفاعلي | منصة ثنايا`;
 const pageDescription = `امتحان تفاعلي في ${exam.subject?.name || 'البكالوريا'} يحتوي على ${exam.questions.length} سؤال MCQ مع مؤقت زمني وتصحيح وشرح فوري.`;
 
 const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
 ---
 
-<Layout title={pageTitle} description={pageDescription}>
+<Layout title={pageTitle} description={pageDescription} jsonLd={jsonLd}>
   <div class="space-y-6 max-w-4xl mx-auto">
     <Breadcrumb
       items={[

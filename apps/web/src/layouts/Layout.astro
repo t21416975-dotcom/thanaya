@@ -5,6 +5,7 @@ import NavigationLoadingIndicator from '../components/NavigationLoadingIndicator
 import AnnouncementBanner from '../components/AnnouncementBanner.astro';
 import NotificationBell from '../components/NotificationBell.astro';
 import { publicApi } from '../lib/api';
+import { PLATFORM_NAME, buildOrganizationSchema, buildWebSiteSchema } from '../lib/geo';
 import '../styles/global.css';
 
 interface Props {
@@ -33,14 +34,8 @@ const socialImageURL = ogImage.startsWith('http')
   ? ogImage
   : new URL(ogImage, Astro.site).href;
 
-const siteSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'WebSite',
-  name: 'منصة ثنايا للبكالوريا المصرية',
-  url: Astro.site ? new URL('/', Astro.site).href : 'https://thanaya.dpdns.org',
-  description: 'المكتبة المنظمة الأولى لتقييمات وحلول ومذكرات الثانوية العامة والبكالوريا المصرية.',
-  inLanguage: 'ar-EG',
-};
+const siteSchema = buildWebSiteSchema();
+const organizationSchema = buildOrganizationSchema();
 
 const notifications = await publicApi.getActiveNotifications();
 ---
@@ -77,7 +72,7 @@ const notifications = await publicApi.getActiveNotifications();
     <meta property="og:url" content={canonicalURL} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:site_name" content="منصة ثنايا للبكالوريا" />
+    <meta property="og:site_name" content={PLATFORM_NAME} />
     <meta property="og:image" content={socialImageURL} />
     <meta property="og:locale" content="ar_EG" />
 
@@ -96,8 +91,12 @@ const notifications = await publicApi.getActiveNotifications();
       rel="stylesheet"
     />
 
-    <!-- Global JSON-LD Schema -->
-    <script is:inline type="application/ld+json" set:html={JSON.stringify(siteSchema)} />
+    <!-- Global JSON-LD Schema (Organization identity + WebSite) -->
+    <script
+      is:inline
+      type="application/ld+json"
+      set:html={JSON.stringify([organizationSchema, siteSchema])}
+    />
 
     <!-- Page-Specific JSON-LD Schema (if provided) -->
     {
@@ -105,7 +104,7 @@ const notifications = await publicApi.getActiveNotifications();
         <script
           is:inline
           type="application/ld+json"
-          set:html={JSON.stringify(Array.isArray(jsonLd) ? jsonLd : jsonLd)}
+          set:html={JSON.stringify(jsonLd)}
         />
       )
     }

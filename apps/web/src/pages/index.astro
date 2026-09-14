@@ -4,12 +4,17 @@ import SubjectCard from '../components/SubjectCard.astro';
 import ResourceCard from '../components/ResourceCard.astro';
 import AdSlot from '../components/AdSlot.astro';
 import { publicApi } from '../lib/api';
+import { buildPageSchema } from '../lib/geo';
 
 const subjects = await publicApi.getActiveSubjects();
 const latestAssessments = await publicApi.getPublishedResources({ limit: 6 });
+const jsonLd = buildPageSchema({ pageType: 'home', resources: latestAssessments });
 ---
 
-<Layout title="منصة ثنايا | التقييمات والحلول والمذكرات للبكالوريا المصرية">
+<Layout
+  title="منصة ثنايا | التقييمات والحلول والمذكرات للبكالوريا المصرية"
+  jsonLd={jsonLd}
+>
   <div class="space-y-10">
     {/* Hero Section */}
     <section class="text-center py-10 bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">

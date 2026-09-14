@@ -4,6 +4,7 @@ import Breadcrumb from '../../components/Breadcrumb.astro';
 import ResourceCard from '../../components/ResourceCard.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import { publicApi } from '../../lib/api';
+import { buildPageSchema } from '../../lib/geo';
 
 const { subject: subjectSlug } = Astro.params;
 const subject = await publicApi.getSubjectBySlug(subjectSlug || '');
@@ -15,11 +16,14 @@ if (!subject) {
 const contentTypes = await publicApi.getActiveContentTypes();
 const resources = await publicApi.getPublishedResources({ subjectId: subject.id });
 const subjectExams = await publicApi.getPublishedExams(subject.id);
+
+const jsonLd = buildPageSchema({ pageType: 'subject', subject, contentTypes });
 ---
 
 <Layout
   title={`${subject.name} | منصة ثنايا`}
   description={`تقييمات وحلول وامتحانات مادة ${subject.name} لطلاب الثانوية العامة والبكالوريا المصرية.`}
+  jsonLd={jsonLd}
 >
   <div class="space-y-8">
     <Breadcrumb items={[{ label: subject.name }]} />
