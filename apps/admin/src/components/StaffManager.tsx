@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ShieldCheck, UserPlus } from 'lucide-react';
+import { ShieldCheck, UserPlus, Loader2 } from 'lucide-react';
 import { api } from '../api/client';
 import { Modal } from './Modal';
 import { supabase } from '../lib/supabase';
@@ -18,6 +18,8 @@ export function StaffManager() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<AdminRole>('editor');
+  const [isSendingInvite, setIsSendingInvite] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<AdminUser | null>(null);
 
   const { data: staff = [], isLoading } = useQuery({ queryKey: ['staff'], queryFn: () => api.getStaff() });
@@ -50,19 +52,34 @@ export function StaffManager() {
   }, [grants]);
 
   const sendInvite = async () => {
-    // إنشاء الحساب يحتاج service_role، لذا يمر عبر Edge Function (القسم 8)
-    const { data, error } = await supabase.functions.invoke('admin-invite', {
-      body: {
-        email: inviteEmail,
-        role: inviteRole,
-        redirectTo: window.location.origin,
-      },
-    });
-    if (error) { alert(error.message); return; }
-    alert((data as { message?: string })?.message ?? 'تم إرسال الدعوة');
-    setInviteOpen(false);
-    setInviteEmail('');
-    invalidate();
+    if (isSendingInvite) return;
+    if (!inviteEmail.trim()) {
+      setInviteError('يرجى إدخال البريد الإلكتروني للموظف.');
+      return;
+    }
+    setIsSendingInvite(true);
+    setInviteError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-invite', {
+        body: {
+          email: inviteEmail.trim(),
+          role: inviteRole,
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      alert((data as { message?: string })?.message ?? 'تم إرسال الدعوة بنجاح');
+      setInviteOpen(false);
+      setInviteEmail('');
+      setInviteError(null);
+      invalidate();
+    } catch (err: any) {
+      setInviteError(err.message || 'فشل إرسال الدعوة. يرجى التأكد من البريد والمحاولة مرة أخرى.');
+    } finally {
+      setIsSendingInvite(false);
+    }
   };
 
   return (
@@ -161,31 +178,73 @@ export function StaffManager() {
       )}
 
       {inviteOpen && (
-        <Modal isOpen={inviteOpen} title="إضافة موظف جديد" onClose={() => setInviteOpen(false)}>
-          <div className="space-y-3 p-1">
-            <input
-              type="email" dir="ltr" value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder="staff@thanaya.com"
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-            />
-            <select
-              value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value as AdminRole)}
-              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-            >
-              {(['editor', 'admin'] as AdminRole[]).map((r) => (
-                <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-              ))}
-            </select>
+        <Modal
+          isOpen={inviteOpen}
+          title="إضافة موظف جديد"
+          onClose={() => {
+            if (!isSendingInvite) {
+              setInviteOpen(false);
+              setInviteError(null);
+            }
+          }}
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              sendInvite();
+            }}
+            className="space-y-3 p-1"
+          >
+            {inviteError && (
+              <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+                {inviteError}
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                البريد الإلكتروني
+              </label>
+              <input
+                type="email"
+                dir="ltr"
+                required
+                disabled={isSendingInvite}
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="staff@thanaya.com"
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                الرتبة
+              </label>
+              <select
+                disabled={isSendingInvite}
+                value={inviteRole}
+                onChange={(e) => setInviteRole(e.target.value as AdminRole)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                {(['editor', 'admin'] as AdminRole[]).map((r) => (
+                  <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                ))}
+              </select>
+            </div>
             <button
-              type="button"
-              onClick={sendInvite}
-              className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold cursor-pointer"
+              type="submit"
+              disabled={isSendingInvite}
+              className="w-full flex items-center justify-center gap-2 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              إرسال الدعوة
+              {isSendingInvite ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>جاري إرسال الدعوة...</span>
+                </>
+              ) : (
+                <span>إرسال الدعوة</span>
+              )}
             </button>
-          </div>
+          </form>
         </Modal>
       )}
     </div>
