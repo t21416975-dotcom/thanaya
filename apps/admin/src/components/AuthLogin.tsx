@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Lock, Mail, AlertCircle, ShieldCheck } from 'lucide-react';
 
@@ -11,6 +11,22 @@ export function AuthLogin({ onSuccess }: AuthLoginProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const raw = window.location.hash || window.location.search;
+    if (raw && (raw.includes('error=') || raw.includes('error_code='))) {
+      const query = raw.replace(/^[#?]/, '');
+      const params = new URLSearchParams(query);
+      const errorCode = params.get('error_code');
+      const errorDesc = params.get('error_description');
+
+      if (errorCode === 'otp_expired') {
+        setError('رابط الدعوة انتهت صلاحيته أو تم استخدامه مسبقًا. يُرجى من المدير العام إرسال دعوة جديدة لك.');
+      } else if (errorDesc) {
+        setError(decodeURIComponent(errorDesc.replace(/\+/g, ' ')));
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -52,7 +52,11 @@ export function StaffManager() {
   const sendInvite = async () => {
     // إنشاء الحساب يحتاج service_role، لذا يمر عبر Edge Function (القسم 8)
     const { data, error } = await supabase.functions.invoke('admin-invite', {
-      body: { email: inviteEmail, role: inviteRole },
+      body: {
+        email: inviteEmail,
+        role: inviteRole,
+        redirectTo: window.location.origin,
+      },
     });
     if (error) { alert(error.message); return; }
     alert((data as { message?: string })?.message ?? 'تم إرسال الدعوة');

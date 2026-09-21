@@ -13,6 +13,7 @@ import { AdsManager } from './components/AdsManager';
 import { AnalyticsView } from './components/AnalyticsView';
 import { NotificationsManager } from './components/NotificationsManager';
 import { StaffManager } from './components/StaffManager';
+import { SetPasswordModal } from './components/SetPasswordModal';
 import { AuthLogin } from './components/AuthLogin';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -27,6 +28,7 @@ export function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('resources');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showSetPassword, setShowSetPassword] = useState(false);
   const { permissions, can, isLoading: permsLoading } = usePermissions();
 
   useEffect(() => {
@@ -34,6 +36,11 @@ export function App() {
       if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL !== 'https://your-project.supabase.co') {
         const { data } = await supabase.auth.getSession();
         setIsAuthenticated(!!data.session);
+
+        const hash = window.location.hash;
+        if (hash && (hash.includes('type=invite') || hash.includes('type=recovery'))) {
+          setShowSetPassword(true);
+        }
       } else {
         setIsAuthenticated(false);
       }
@@ -213,6 +220,13 @@ export function App() {
           {activeTab === 'staff' && <StaffManager />}
         </div>
       </main>
+
+      {showSetPassword && (
+        <SetPasswordModal
+          isOpen={showSetPassword}
+          onClose={() => setShowSetPassword(false)}
+        />
+      )}
     </div>
   );
 }

@@ -28,16 +28,21 @@ Deno.serve(async (req) => {
     return json({ error: 'غير مصرح بإدارة الفريق' }, 403);
   }
 
-  const { email, role } = await req.json();
+  const { email, role, redirectTo } = await req.json();
   if (!email || !['admin', 'editor'].includes(role)) {
     return json({ error: 'بيانات غير صالحة' }, 400);
   }
+
+  const redirectTarget = redirectTo
+    || Deno.env.get('ADMIN_INVITE_REDIRECT')
+    || req.headers.get('origin')
+    || undefined;
 
   // (3) التنفيذ بمفتاح service_role (يبقى في أسرار الدالة فقط)
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
 
   const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: Deno.env.get('ADMIN_INVITE_REDIRECT') ?? undefined,
+    redirectTo: redirectTarget,
   });
   if (inviteError) return json({ error: inviteError.message }, 400);
 
