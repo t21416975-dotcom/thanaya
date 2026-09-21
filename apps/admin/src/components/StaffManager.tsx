@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ShieldCheck, UserPlus, Loader2 } from 'lucide-react';
+import { ShieldCheck, UserPlus, Loader2, Trash2, KeyRound } from 'lucide-react';
 import { api } from '../api/client';
 import { Modal } from './Modal';
-import { supabase } from '../lib/supabase';
 import { PermissionEditor } from './PermissionEditor';
+import { usePermissions } from '../lib/permissions';
 import type { AdminPermission, AdminUser, AdminRole } from '@thanaya/types';
 
 export const ROLE_LABELS: Record<AdminRole, string> = {
@@ -15,8 +15,13 @@ export const ROLE_LABELS: Record<AdminRole, string> = {
 
 export function StaffManager() {
   const queryClient = useQueryClient();
+  const { permissions } = usePermissions();
+  const isSuperAdmin = permissions.is_super_admin;
+  const currentAdminId = permissions.admin_id;
+
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [invitePassword, setInvitePassword] = useState('');
   const [inviteRole, setInviteRole] = useState<AdminRole>('editor');
   const [isSendingInvite, setIsSendingInvite] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
@@ -41,6 +46,17 @@ export function StaffManager() {
     onSuccess: invalidate,
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.deleteStaff(id),
+    onSuccess: (res) => {
+      alert(res?.message || 'تم حذف الموظف بنجاح');
+      invalidate();
+    },
+    onError: (err: any) => {
+      alert(err.message || 'فشل حذف الموظف');
+    },
+  });
+
   const grantsByAdmin = useMemo(() => {
     const map = new Map<string, AdminPermission[]>();
     for (const g of grants) {
@@ -51,32 +67,34 @@ export function StaffManager() {
     return map;
   }, [grants]);
 
-  const sendInvite = async () => {
+  const handleCreateStaff = async () => {
     if (isSendingInvite) return;
     if (!inviteEmail.trim()) {
       setInviteError('يرجى إدخال البريد الإلكتروني للموظف.');
       return;
     }
+    if (!invitePassword || invitePassword.length < 6) {
+      setInviteError('يرجى إدخال كلمة مرور مكونة من 6 خانات على الأقل.');
+      return;
+    }
+
     setIsSendingInvite(true);
     setInviteError(null);
     try {
-      const { data, error } = await supabase.functions.invoke('admin-invite', {
-        body: {
-          email: inviteEmail.trim(),
-          role: inviteRole,
-          redirectTo: window.location.origin,
-        },
+      const res = await api.createStaff({
+        email: inviteEmail.trim(),
+        password: invitePassword,
+        role: inviteRole,
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
 
-      alert((data as { message?: string })?.message ?? 'تم إرسال الدعوة بنجاح');
+      alert(res?.message || 'تم إنشاء حساب الموظف بنجاح ويمكنه تسجيل الدخول فوراً');
       setInviteOpen(false);
       setInviteEmail('');
+      setInvitePassword('');
       setInviteError(null);
       invalidate();
     } catch (err: any) {
-      setInviteError(err.message || 'فشل إرسال الدعوة. يرجى التأكد من البريد والمحاولة مرة أخرى.');
+      setInviteError(err.message || 'فشل إنشاء حساب الموظف. يرجى التأكد من البيانات والمحاولة مرة أخرى.');
     } finally {
       setIsSendingInvite(false);
     }
@@ -96,8 +114,11 @@ export function StaffManager() {
         </div>
         <button
           type="button"
-          onClick={() => setInviteOpen(true)}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold cursor-pointer"
+          onClick={() => {
+            setInviteError(null);
+            setInviteOpen(true);
+          }}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold cursor-pointer shadow-sm transition-colors"
         >
           <UserPlus className="w-4 h-4" /> إضافة موظف
         </button>
@@ -116,18 +137,30 @@ export function StaffManager() {
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td className="p-3 text-slate-500" colSpan={5}>جاري التحميل...</td></tr>
+              <tr><td className="p-3 text-slate-500 text-center" colSpan={5}>جاري التحميل...</td></tr>
             )}
             {staff.map((member) => {
               const memberGrants = grantsByAdmin.get(member.id) ?? [];
+              const isSelf = member.id === currentAdminId;
+
               return (
-                <tr key={member.id} className="border-t border-slate-100">
-                  <td className="p-3 font-medium text-slate-700" dir="ltr">{member.email}</td>
+                <tr key={member.id} className="border-t border-slate-100 hover:bg-slate-50/50">
+                  <td className="p-3 font-medium text-slate-700" dir="ltr">
+                    <div className="flex items-center gap-2">
+                      <span>{member.email}</span>
+                      {isSelf && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-normal">
+                          (حسابك)
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="p-3">
                     <select
                       value={member.role}
+                      disabled={!isSuperAdmin && member.role === 'super_admin'}
                       onChange={(e) => roleMutation.mutate({ id: member.id, role: e.target.value as AdminRole })}
-                      className="border border-slate-300 rounded-lg px-2 py-1 text-xs"
+                      className="border border-slate-300 rounded-lg px-2 py-1 text-xs disabled:bg-slate-100 disabled:text-slate-400"
                     >
                       {(['super_admin', 'admin', 'editor'] as AdminRole[]).map((r) => (
                         <option key={r} value={r}>{ROLE_LABELS[r]}</option>
@@ -137,12 +170,14 @@ export function StaffManager() {
                   <td className="p-3">
                     <button
                       type="button"
+                      disabled={isSelf}
                       onClick={() => activeMutation.mutate({ id: member.id, is_active: !member.is_active })}
-                      className={`text-xs px-2.5 py-1 rounded-full border cursor-pointer ${
+                      className={`text-xs px-2.5 py-1 rounded-full border cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 transition-colors ${
                         member.is_active
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : 'bg-rose-50 text-rose-700 border-rose-200'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                          : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
                       }`}
+                      title={isSelf ? 'لا يمكنك تعطيل حسابك الخاص' : undefined}
                     >
                       {member.is_active ? 'مُفعَّل' : 'مُعطَّل'}
                     </button>
@@ -153,13 +188,36 @@ export function StaffManager() {
                       : `${memberGrants.length} سطر (منها ${memberGrants.filter((g) => g.effect === 'deny').length} منع)`}
                   </td>
                   <td className="p-3">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedStaff(member)}
-                      className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 cursor-pointer"
-                    >
-                      تعديل الحدود
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStaff(member)}
+                        className="text-xs px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 cursor-pointer font-medium text-slate-700 transition-colors"
+                      >
+                        تعديل الحدود
+                      </button>
+
+                      {isSuperAdmin && !isSelf && (
+                        <button
+                          type="button"
+                          disabled={deleteMutation.isPending && deleteMutation.variables === member.id}
+                          onClick={() => {
+                            if (window.confirm(`هل أنت متأكد من حذف الموظف (${member.email}) نهائياً؟\nسيتم إلغاء حسابه وصلاحياته بالكامل.`)) {
+                              deleteMutation.mutate(member.id);
+                            }
+                          }}
+                          className="text-xs px-2.5 py-1.5 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 flex items-center gap-1 cursor-pointer disabled:opacity-50 transition-colors"
+                          title="حذف الموظف نهائياً من النظام"
+                        >
+                          {deleteMutation.isPending && deleteMutation.variables === member.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                          <span>حذف</span>
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -180,7 +238,7 @@ export function StaffManager() {
       {inviteOpen && (
         <Modal
           isOpen={inviteOpen}
-          title="إضافة موظف جديد"
+          title="إضافة موظف جديد (مباشر)"
           onClose={() => {
             if (!isSendingInvite) {
               setInviteOpen(false);
@@ -191,15 +249,20 @@ export function StaffManager() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              sendInvite();
+              handleCreateStaff();
             }}
-            className="space-y-3 p-1"
+            className="space-y-4 p-1"
           >
+            <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-xs text-emerald-800 leading-relaxed">
+              💡 <strong>إنشاء فوري:</strong> سيتم تفعيل حساب الموظف مباشرة بكلمة المرور المدخلة دون الحاجة لروابط تفعيل أو إرسال إيميلات.
+            </div>
+
             {inviteError && (
               <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
                 {inviteError}
               </div>
             )}
+
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 البريد الإلكتروني
@@ -215,6 +278,28 @@ export function StaffManager() {
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                <KeyRound className="w-3.5 h-3.5 text-slate-500" />
+                كلمة المرور
+              </label>
+              <input
+                type="text"
+                dir="ltr"
+                required
+                minLength={6}
+                disabled={isSendingInvite}
+                value={invitePassword}
+                onChange={(e) => setInvitePassword(e.target.value)}
+                placeholder="اكتب كلمة مرور للموظف (6 خانات على الأقل)"
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono disabled:bg-slate-100 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">
+                احفظ كلمة المرور دي وشاركها مع الموظف عشان يسجل دخوله بيها.
+              </p>
+            </div>
+
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 الرتبة
@@ -230,18 +315,19 @@ export function StaffManager() {
                 ))}
               </select>
             </div>
+
             <button
               type="submit"
               disabled={isSendingInvite}
-              className="w-full flex items-center justify-center gap-2 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isSendingInvite ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>جاري إرسال الدعوة...</span>
+                  <span>جاري إنشاء الحساب...</span>
                 </>
               ) : (
-                <span>إرسال الدعوة</span>
+                <span>إنشاء وتفعيل الحساب فوراً</span>
               )}
             </button>
           </form>

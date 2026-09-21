@@ -935,6 +935,50 @@ export const api = {
     if (error) throw error;
   },
 
+  async createStaff(input: { email: string; password: string; role: AdminRole }): Promise<{ message: string }> {
+    const { data, error } = await supabase.functions.invoke('admin-invite', {
+      body: {
+        action: 'create',
+        email: input.email.trim(),
+        password: input.password,
+        role: input.role,
+      },
+    });
+    if (error) {
+      let msg = error.message;
+      try {
+        if ('context' in error && typeof (error as any).context?.json === 'function') {
+          const body = await (error as any).context.json();
+          if (body?.error) msg = body.error;
+        }
+      } catch {}
+      throw new Error(msg);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data;
+  },
+
+  async deleteStaff(staffId: string): Promise<{ message: string }> {
+    const { data, error } = await supabase.functions.invoke('admin-invite', {
+      body: {
+        action: 'delete',
+        staffId,
+      },
+    });
+    if (error) {
+      let msg = error.message;
+      try {
+        if ('context' in error && typeof (error as any).context?.json === 'function') {
+          const body = await (error as any).context.json();
+          if (body?.error) msg = body.error;
+        }
+      } catch {}
+      throw new Error(msg);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data;
+  },
+
   /** البلاغات عبر RPC لأن الفلترة بالنطاق تحدث في القاعدة (يتفادى حجب العلاقات بـRLS) */
   async listStaffReports() {
     if (isConfigured) {
