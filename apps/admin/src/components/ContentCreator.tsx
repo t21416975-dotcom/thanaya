@@ -202,11 +202,11 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
         </div>
 
         {/* Tab Switcher (Editor vs Live Preview) */}
-        <div className="flex items-center gap-1 bg-slate-200 p-1 rounded-lg text-xs font-semibold self-start sm:self-auto">
+        <div className="flex items-center gap-1 bg-slate-200 p-1 rounded-xl text-xs font-semibold w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setPreviewTab('editor')}
-            className={`px-3 py-1.5 rounded-md transition cursor-pointer ${
+            className={`flex-1 sm:flex-initial py-2 px-3.5 rounded-lg transition cursor-pointer text-center ${
               previewTab === 'editor' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -215,7 +215,7 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
           <button
             type="button"
             onClick={() => setPreviewTab('preview')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition cursor-pointer ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-2 px-3.5 rounded-lg transition cursor-pointer text-center ${
               previewTab === 'preview' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -458,33 +458,31 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
           </div>
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition"
+              className="w-full sm:w-auto px-5 py-2.5 min-h-[44px] text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
             >
               إلغاء
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-7 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition shadow-sm disabled:opacity-50 flex items-center gap-2"
+              className="w-full sm:w-auto px-7 py-2.5 min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
               {isSubmitting ? (
                 <span>جاري الحفظ...</span>
               ) : (
-                <>
-                  <span>{initialResource ? 'حفظ التعديلات' : 'نشر / حفظ المورد'}</span>
-                </>
+                <span>{initialResource ? 'حفظ التعديلات' : 'نشر / حفظ المورد'}</span>
               )}
             </button>
           </div>
         </form>
       ) : (
         /* Live Student Page Mockup Preview */
-        <div className="p-6 bg-slate-100 min-h-[500px]">
-          <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-slate-200 p-6 space-y-6 shadow-sm">
+        <div className="p-3 sm:p-6 bg-slate-100 min-h-[500px]">
+          <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 space-y-6 shadow-sm">
             {/* Breadcrumb preview */}
             <div className="text-xs text-slate-500 flex items-center gap-2">
               <span>الرئيسية</span>

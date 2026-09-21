@@ -78,9 +78,9 @@ export function SetPasswordModal({ isOpen, onClose }: SetPasswordModalProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full pl-3 pr-10 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                 />
-                <Lock className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
+                <Lock className="w-4 h-4 text-slate-400 absolute right-3 top-3.5" />
               </div>
             </div>
 
@@ -94,9 +94,9 @@ export function SetPasswordModal({ isOpen, onClose }: SetPasswordModalProps) {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full pl-3 pr-10 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                 />
-                <Lock className="w-4 h-4 text-slate-400 absolute right-3 top-2.5" />
+                <Lock className="w-4 h-4 text-slate-400 absolute right-3 top-3.5" />
               </div>
             </div>
 
@@ -104,7 +104,7 @@ export function SetPasswordModal({ isOpen, onClose }: SetPasswordModalProps) {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 cursor-pointer"
+                className="flex-1 py-2.5 min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 cursor-pointer"
               >
                 {loading ? 'جاري الحفظ...' : 'حفظ كلمة المرور'}
               </button>

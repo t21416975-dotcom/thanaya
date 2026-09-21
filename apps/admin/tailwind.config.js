@@ -3,6 +3,9 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        arabic: ['"IBM Plex Sans Arabic"', 'system-ui', 'sans-serif'],
+      },
       colors: {
         admin: {
           50: '#f8fafc',

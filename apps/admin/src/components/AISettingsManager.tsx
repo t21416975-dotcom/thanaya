@@ -188,7 +188,7 @@ export function AISettingsManager() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Model Selection Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="font-bold text-slate-900 flex items-center gap-2 text-sm">
               <Cpu className="w-4 h-4 text-emerald-600" />
@@ -218,26 +218,26 @@ export function AISettingsManager() {
                 dir="ltr"
               />
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
               <span className="font-medium">خيارات سريعة مقترحة:</span>
               <button
                 type="button"
                 onClick={() => setModelName('gemini-2.5-flash')}
-                className="px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 rounded-md font-mono border border-slate-200 transition cursor-pointer"
+                className="px-2.5 py-1.5 min-h-[32px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 rounded-md font-mono border border-slate-200 transition cursor-pointer"
               >
                 gemini-2.5-flash (موصى به - فائق السرعة)
               </button>
               <button
                 type="button"
                 onClick={() => setModelName('gemini-1.5-pro')}
-                className="px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 rounded-md font-mono border border-slate-200 transition cursor-pointer"
+                className="px-2.5 py-1.5 min-h-[32px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 rounded-md font-mono border border-slate-200 transition cursor-pointer"
               >
                 gemini-1.5-pro (استدلال متقدم)
               </button>
               <button
                 type="button"
                 onClick={() => setModelName('gemini-2.0-flash')}
-                className="px-2.5 py-1 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 rounded-md font-mono border border-slate-200 transition cursor-pointer"
+                className="px-2.5 py-1.5 min-h-[32px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-800 rounded-md font-mono border border-slate-200 transition cursor-pointer"
               >
                 gemini-2.0-flash
               </button>
@@ -246,7 +246,7 @@ export function AISettingsManager() {
         </div>
 
         {/* API Key Security Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <h3 className="font-bold text-slate-900 flex items-center gap-2 text-sm">
               <Key className="w-4 h-4 text-emerald-600" />
@@ -271,13 +271,13 @@ export function AISettingsManager() {
                   setTestResult(null);
                 }}
                 placeholder="AIzaSy..."
-                className="w-full pl-24 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+                className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
                 dir="ltr"
               />
               <button
                 type="button"
                 onClick={() => setShowApiKey(!showApiKey)}
-                className="absolute left-3 p-1 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                className="absolute left-3 p-1.5 text-slate-400 hover:text-slate-600 transition cursor-pointer"
                 title={showApiKey ? 'إخفاء المفتاح' : 'إظهار المفتاح'}
               >
                 {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -286,13 +286,13 @@ export function AISettingsManager() {
           </div>
 
           {/* Test & Actions Row */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={handleTestKey}
                 disabled={isTestingKey || !apiKey.trim()}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold transition disabled:opacity-50 cursor-pointer"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[40px] bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold transition disabled:opacity-50 cursor-pointer"
               >
                 {isTestingKey ? (
                   <>
@@ -311,7 +311,7 @@ export function AISettingsManager() {
                 <button
                   type="button"
                   onClick={handleClearKey}
-                  className="flex items-center gap-1 px-3 py-1.5 text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-lg text-xs font-medium transition cursor-pointer"
+                  className="flex items-center justify-center gap-1 px-3 py-2 min-h-[40px] text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-lg text-xs font-medium transition cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>مسح المفتاح</span>
@@ -323,7 +323,7 @@ export function AISettingsManager() {
               href="https://aistudio.google.com/app/apikey"
               target="_blank"
               rel="noreferrer"
-              className="text-xs text-emerald-700 hover:underline"
+              className="text-xs text-emerald-700 hover:underline py-1"
             >
               الحصول على مفتاح مجاني من Google AI Studio ↗
             </a>
@@ -356,7 +356,7 @@ export function AISettingsManager() {
         </div>
 
         {/* System Prompt Textarea Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="font-bold text-slate-900 flex items-center gap-2 text-sm">
               <Bot className="w-4 h-4 text-emerald-600" />
@@ -382,12 +382,12 @@ export function AISettingsManager() {
               rows={10}
               value={examPrompt}
               onChange={(e) => setExamPrompt(e.target.value)}
-              className="w-full p-4 bg-slate-50 border border-slate-300 rounded-xl text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition font-sans"
+              className="w-full p-3.5 sm:p-4 bg-slate-50 border border-slate-300 rounded-xl text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition font-sans"
               placeholder="أدخل توجيهات الـ System Prompt..."
             />
           </div>
 
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-800 space-y-1.5">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 sm:p-4 text-xs text-slate-800 space-y-1.5">
             <div className="font-bold flex items-center gap-1.5 text-slate-900">
               <HelpCircle className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>معايير توليد الأسئلة والشرح:</span>
@@ -403,7 +403,7 @@ export function AISettingsManager() {
           <button
             type="submit"
             disabled={saveMutation.isPending}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-7 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm disabled:opacity-50 cursor-pointer"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-7 py-3 min-h-[44px] rounded-xl text-sm font-semibold transition shadow-sm disabled:opacity-50 cursor-pointer"
           >
             <Save className="w-4 h-4" />
             <span>{saveMutation.isPending ? 'جاري الحفظ...' : 'حفظ وتطبيق الإعدادات'}</span>

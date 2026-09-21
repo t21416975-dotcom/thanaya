@@ -57,66 +57,66 @@ export function AnalyticsView() {
       </div>
 
       {/* Metric Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-3.5 sm:p-5 shadow-sm space-y-2 sm:space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">إجمالي المشاهدات</span>
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-              <Eye className="w-5 h-5" />
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-500">إجمالي المشاهدات</span>
+            <div className="p-1.5 sm:p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+              <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 font-mono">
+          <div className="text-lg sm:text-2xl font-extrabold text-slate-900 font-mono">
             {totalViews.toLocaleString('ar-EG')}
           </div>
-          <p className="text-[11px] text-slate-400">مشاهدة حقيقية لصفحات الموارد</p>
+          <p className="text-[10px] sm:text-[11px] text-slate-400">مشاهدة حقيقية لصفحات الموارد</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+        <div className="bg-white rounded-2xl border border-slate-200 p-3.5 sm:p-5 shadow-sm space-y-2 sm:space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">إجمالي تحميلات PDF</span>
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
-              <Download className="w-5 h-5" />
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-500">تحميلات PDF</span>
+            <div className="p-1.5 sm:p-2 bg-blue-50 text-blue-600 rounded-xl">
+              <Download className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 font-mono">
+          <div className="text-lg sm:text-2xl font-extrabold text-slate-900 font-mono">
             {totalDownloads.toLocaleString('ar-EG')}
           </div>
-          <p className="text-[11px] text-slate-400">تحميل مباشر للملفات</p>
+          <p className="text-[10px] sm:text-[11px] text-slate-400">تحميل مباشر للملفات</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+        <div className="bg-white rounded-2xl border border-slate-200 p-3.5 sm:p-5 shadow-sm space-y-2 sm:space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">الموارد المنشورة</span>
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-              <FileText className="w-5 h-5" />
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-500">الموارد المنشورة</span>
+            <div className="p-1.5 sm:p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 font-mono">
+          <div className="text-lg sm:text-2xl font-extrabold text-slate-900 font-mono">
             {publishedCount.toLocaleString('ar-EG')}
           </div>
-          <p className="text-[11px] text-slate-400">من أصل {resources.length} مورد مسجل</p>
+          <p className="text-[10px] sm:text-[11px] text-slate-400">من أصل {resources.length} مورد</p>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+        <div className="bg-white rounded-2xl border border-slate-200 p-3.5 sm:p-5 shadow-sm space-y-2 sm:space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">بلاغات قيد المتابعة</span>
-            <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
-              <Flag className="w-5 h-5" />
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-500">بلاغات قيد المتابعة</span>
+            <div className="p-1.5 sm:p-2 bg-amber-50 text-amber-600 rounded-xl">
+              <Flag className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 font-mono">
+          <div className="text-lg sm:text-2xl font-extrabold text-slate-900 font-mono">
             {pendingReportsCount.toLocaleString('ar-EG')}
           </div>
-          <p className="text-[11px] text-slate-400">من أصل {reports.length} بلاغ</p>
+          <p className="text-[10px] sm:text-[11px] text-slate-400">من أصل {reports.length} بلاغ</p>
         </div>
       </div>
 
       {isLoadingResources ? (
         <div className="text-center py-12 text-slate-400">جاري تحميل التقارير...</div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Top Viewed Resources */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-emerald-600" />
@@ -125,20 +125,20 @@ export function AnalyticsView() {
               <span className="text-xs text-slate-400">Top 5</span>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5 sm:space-y-3">
               {topViewed.map((item, idx) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition text-xs"
+                  className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition text-xs gap-2"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono font-bold text-slate-400 w-4">{idx + 1}.</span>
-                    <div>
-                      <h4 className="font-semibold text-slate-900">{item.title}</h4>
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <span className="font-mono font-bold text-slate-400 w-4 shrink-0">{idx + 1}.</span>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-semibold text-slate-900 truncate">{item.title}</h4>
                       <span className="text-[10px] text-slate-500">{item.subject?.name || 'مادة'}</span>
                     </div>
                   </div>
-                  <div className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md">
+                  <div className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 sm:px-2.5 py-1 rounded-md shrink-0">
                     {item.views_count} 👁
                   </div>
                 </div>
@@ -147,7 +147,7 @@ export function AnalyticsView() {
           </div>
 
           {/* Top Downloaded Resources */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
                 <Download className="w-4 h-4 text-blue-600" />
@@ -156,20 +156,20 @@ export function AnalyticsView() {
               <span className="text-xs text-slate-400">Top 5</span>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5 sm:space-y-3">
               {topDownloaded.map((item, idx) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition text-xs"
+                  className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition text-xs gap-2"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono font-bold text-slate-400 w-4">{idx + 1}.</span>
-                    <div>
-                      <h4 className="font-semibold text-slate-900">{item.title}</h4>
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <span className="font-mono font-bold text-slate-400 w-4 shrink-0">{idx + 1}.</span>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-semibold text-slate-900 truncate">{item.title}</h4>
                       <span className="text-[10px] text-slate-500">{item.subject?.name || 'مادة'}</span>
                     </div>
                   </div>
-                  <div className="font-mono font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md">
+                  <div className="font-mono font-bold text-blue-700 bg-blue-50 px-2 sm:px-2.5 py-1 rounded-md shrink-0">
                     {item.downloads_count} ⬇
                   </div>
                 </div>
@@ -178,12 +178,35 @@ export function AnalyticsView() {
           </div>
 
           {/* Subject Distribution */}
-          <div className="col-span-full bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <div className="col-span-full bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-sm text-slate-900">توزيع التفاعل والمشاهدات حسب المادة الدراسية</h3>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Mobile Cards for Subjects */}
+            <div className="sm:hidden space-y-2.5">
+              {subjectStats.map((sub) => (
+                <div key={sub.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-xs text-slate-900">{sub.name}</span>
+                    <span className="text-[11px] text-slate-500">{sub.resourceCount} مورد</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-emerald-50/70 p-2 rounded-lg text-emerald-800 flex items-center justify-between">
+                      <span className="text-[10px] text-emerald-700">المشاهدات</span>
+                      <span className="font-mono font-bold">{sub.views}</span>
+                    </div>
+                    <div className="bg-blue-50/70 p-2 rounded-lg text-blue-800 flex items-center justify-between">
+                      <span className="text-[10px] text-blue-700">التحميلات</span>
+                      <span className="font-mono font-bold">{sub.downloads}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table for Subjects */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-right border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-50 text-slate-600 border-b border-slate-200">

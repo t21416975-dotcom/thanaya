@@ -120,16 +120,16 @@ export function ContentTypesManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">أنواع المحتوى (Content Types)</h2>
-          <p className="text-sm text-slate-500">
+          <h2 className="text-lg sm:text-xl font-bold text-slate-900">أنواع المحتوى (Content Types)</h2>
+          <p className="text-xs sm:text-sm text-slate-500">
             إضافة أنواع تصنيفات وموارد جديدة ديناميكيًا دون الحاجة لتعديل كود المنصة
           </p>
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm self-start sm:self-auto cursor-pointer"
+          className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white px-4 py-2.5 sm:py-2 rounded-xl text-sm font-semibold transition shadow-sm w-full sm:w-auto cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>إضافة نوع محتوى جديد</span>
@@ -137,88 +137,177 @@ export function ContentTypesManager() {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-12 text-slate-400">جاري تحميل أنواع المحتوى...</div>
+        <div className="text-center py-12 text-slate-400 text-sm">جاري تحميل أنواع المحتوى...</div>
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-sm">
-          <table className="w-full text-right border-collapse min-w-[550px]">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                <th className="px-6 py-3">الترتيب</th>
-                <th className="px-6 py-3">نوع المحتوى</th>
-                <th className="px-6 py-3">الـSlug</th>
-                <th className="px-6 py-3">الوصف</th>
-                <th className="px-6 py-3">الحالة</th>
-                <th className="px-6 py-3 text-left">إجراءات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              {contentTypes.map((ct) => (
-                <tr key={ct.id} className="hover:bg-slate-50 transition">
-                  <td className="px-6 py-4 font-mono text-slate-500">{ct.order_index}</td>
-                  <td className="px-6 py-4 font-medium text-slate-900 flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-emerald-600" />
-                    <span>{ct.name}</span>
-                  </td>
-                  <td className="px-6 py-4 font-mono text-xs text-slate-500 dir-ltr text-right">
-                    /{ct.slug}
-                  </td>
-                  <td className="px-6 py-4 text-slate-500 text-xs">{ct.description || '—'}</td>
-                  <td className="px-6 py-4">
-                    <button
-                      onClick={() => toggleActive(ct)}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer transition ${
-                        ct.is_active
-                          ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      {ct.is_active ? (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>نشط</span>
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="w-3.5 h-3.5" />
-                          <span>معطل</span>
-                        </>
-                      )}
-                    </button>
-                  </td>
-                  <td className="px-6 py-4 text-left">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => openEditModal(ct)}
-                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition"
-                        title="تعديل"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`هل أنت متأكد من حذف نوع المحتوى "${ct.name}"؟`)) {
-                            deleteMutation.mutate(ct.id);
-                          }
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition"
-                        title="حذف"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+        <>
+          {/* Mobile Card View (shown below md:) */}
+          <div className="md:hidden space-y-3">
+            {contentTypes.map((ct) => (
+              <div
+                key={ct.id}
+                className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 text-xs font-mono font-bold flex items-center justify-center shrink-0">
+                        {ct.order_index}
+                      </span>
+                      <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5 truncate">
+                        <Layers className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="truncate">{ct.name}</span>
+                      </h3>
                     </div>
-                  </td>
+                    {ct.description && (
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                        {ct.description}
+                      </p>
+                    )}
+                    <div className="text-[11px] font-mono text-slate-400 dir-ltr text-right mt-1">
+                      /{ct.slug}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => openEditModal(ct)}
+                      className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition cursor-pointer active:scale-95"
+                      title="تعديل"
+                      aria-label="تعديل"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`هل أنت متأكد من حذف نوع المحتوى "${ct.name}"؟`)) {
+                          deleteMutation.mutate(ct.id);
+                        }
+                      }}
+                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer active:scale-95"
+                      title="حذف"
+                      aria-label="حذف"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Status Row */}
+                <div className="flex items-center justify-end pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => toggleActive(ct)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition active:scale-95 ${
+                      ct.is_active
+                        ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+                    }`}
+                  >
+                    {ct.is_active ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>نشط</span>
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="w-3.5 h-3.5" />
+                        <span>معطل</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {contentTypes.length === 0 && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-sm">
+                لا توجد أنواع محتوى مضافة.
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Table View (hidden on mobile, shown on md:) */}
+          <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-sm">
+            <table className="w-full text-right border-collapse min-w-[550px]">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-6 py-3">الترتيب</th>
+                  <th className="px-6 py-3">نوع المحتوى</th>
+                  <th className="px-6 py-3">الـSlug</th>
+                  <th className="px-6 py-3">الوصف</th>
+                  <th className="px-6 py-3">الحالة</th>
+                  <th className="px-6 py-3 text-left">إجراءات</th>
                 </tr>
-              ))}
-              {contentTypes.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-slate-400">
-                    لا توجد أنواع محتوى مضافة.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm">
+                {contentTypes.map((ct) => (
+                  <tr key={ct.id} className="hover:bg-slate-50 transition">
+                    <td className="px-6 py-4 font-mono text-slate-500">{ct.order_index}</td>
+                    <td className="px-6 py-4 font-medium text-slate-900 flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-emerald-600" />
+                      <span>{ct.name}</span>
+                    </td>
+                    <td className="px-6 py-4 font-mono text-xs text-slate-500 dir-ltr text-right">
+                      /{ct.slug}
+                    </td>
+                    <td className="px-6 py-4 text-slate-500 text-xs">{ct.description || '—'}</td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => toggleActive(ct)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer transition ${
+                          ct.is_active
+                            ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {ct.is_active ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>نشط</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>معطل</span>
+                          </>
+                        )}
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 text-left">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => openEditModal(ct)}
+                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition"
+                          title="تعديل"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`هل أنت متأكد من حذف نوع المحتوى "${ct.name}"؟`)) {
+                              deleteMutation.mutate(ct.id);
+                            }
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition"
+                          title="حذف"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {contentTypes.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-slate-400">
+                      لا توجد أنواع محتوى مضافة.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* Add / Edit Modal */}
@@ -236,7 +325,7 @@ export function ContentTypesManager() {
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="مثال: مذكرات ليلة الامتحان"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
@@ -248,7 +337,7 @@ export function ContentTypesManager() {
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               placeholder="مثال: exam-night-notes"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm font-mono text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
               dir="ltr"
             />
           </div>
@@ -260,7 +349,7 @@ export function ContentTypesManager() {
               min="1"
               value={orderIndex}
               onChange={(e) => setOrderIndex(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
@@ -271,11 +360,11 @@ export function ContentTypesManager() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="وصف لما يشمله هذا النوع من الموارد..."
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
-          <div className="flex items-center gap-2 pt-2">
+          <div className="flex items-center gap-2 pt-1">
             <input
               type="checkbox"
               id="isTypeActive"
@@ -288,18 +377,18 @@ export function ContentTypesManager() {
             </label>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 sm:gap-3 pt-4 border-t border-slate-100">
             <button
               type="button"
               onClick={closeModal}
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition"
+              className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition text-center"
             >
               إلغاء
             </button>
             <button
               type="submit"
               disabled={createMutation.isPending || updateMutation.isPending}
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
+              className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50 text-center"
             >
               {editingType ? 'حفظ التعديلات' : 'إضافة نوع المحتوى'}
             </button>

@@ -129,10 +129,10 @@ export function AdsManager() {
         </div>
 
         {/* Sub-tab Switcher */}
-        <div className="flex items-center gap-1 bg-slate-200 p-1 rounded-lg text-xs font-semibold self-start">
+        <div className="grid grid-cols-2 sm:flex bg-slate-200/80 p-1 rounded-xl text-xs font-semibold w-full sm:w-auto gap-1">
           <button
             onClick={() => setActiveSubTab('slots')}
-            className={`px-3 py-1.5 rounded-md transition ${
+            className={`px-3 py-2 sm:py-1.5 rounded-lg transition text-center cursor-pointer ${
               activeSubTab === 'slots' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -140,7 +140,7 @@ export function AdsManager() {
           </button>
           <button
             onClick={() => setActiveSubTab('direct_ads')}
-            className={`px-3 py-1.5 rounded-md transition ${
+            className={`px-3 py-2 sm:py-1.5 rounded-lg transition text-center cursor-pointer ${
               activeSubTab === 'direct_ads' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -151,20 +151,20 @@ export function AdsManager() {
 
       {activeSubTab === 'slots' ? (
         /* Ad Slots List */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {slots.map((slot) => (
             <div
               key={slot.id}
-              className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:border-slate-300 transition flex flex-col justify-between"
+              className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm hover:border-slate-300 transition flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-bold text-sm text-slate-900">{slot.name}</span>
-                  <span className="text-[10px] font-mono text-slate-400">{slot.position}</span>
+                  <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">{slot.position}</span>
                 </div>
 
                 <div className="space-y-3 mt-4">
-                  <div className="flex items-center justify-between text-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
                     <span className="text-slate-500 font-medium">نوع العرض:</span>
                     <select
                       value={slot.slot_type}
@@ -174,7 +174,7 @@ export function AdsManager() {
                           data: { slot_type: e.target.value as AdSlotType },
                         })
                       }
-                      className="border border-slate-300 rounded-lg px-2.5 py-1 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     >
                       <option value="google">شبكة إعلانية معتمدة (Ad Network / Adsterra)</option>
                       <option value="direct">إعلان مباشر (Direct Ad)</option>
@@ -193,10 +193,10 @@ export function AdsManager() {
                       data: { is_active: !slot.is_active },
                     })
                   }
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer transition ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition active:scale-95 ${
                     slot.is_active
-                      ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
                   }`}
                 >
                   {slot.is_active ? (
@@ -218,18 +218,98 @@ export function AdsManager() {
       ) : (
         /* Direct Ads Management */
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-slate-800">قائمة الإعلانات المباشرة للمعلنين</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h3 className="text-sm sm:text-base font-bold text-slate-800">قائمة الإعلانات المباشرة للمعلنين</h3>
             <button
               onClick={openAddModal}
-              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-medium transition shadow-sm"
+              className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white px-4 py-2.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm w-full sm:w-auto cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>إضافة إعلان مباشر جديد</span>
             </button>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-sm">
+          {/* Mobile Card View (shown below md:) */}
+          <div className="md:hidden space-y-3">
+            {directAds.map((ad) => {
+              const ctr =
+                ad.impressions_count > 0
+                  ? ((ad.clicks_count / ad.impressions_count) * 100).toFixed(1)
+                  : '0.0';
+              return (
+                <div
+                  key={ad.id}
+                  className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-bold text-slate-900 text-sm leading-snug break-words">
+                        {ad.title}
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {ad.advertiser_name}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => openEditModal(ad)}
+                        className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition cursor-pointer active:scale-95"
+                        title="تعديل"
+                        aria-label="تعديل"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`هل أنت متأكد من حذف إعلان "${ad.title}"؟`)) {
+                            deleteAdMutation.mutate(ad.id);
+                          }
+                        }}
+                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer active:scale-95"
+                        title="حذف"
+                        aria-label="حذف"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="font-mono text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">
+                      {ad.slot_position}
+                    </span>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                        ad.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {ad.is_active ? 'نشط' : 'متوقف'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50/80 -mx-4 -mb-4 p-3 rounded-b-2xl border-t border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <span>👁 {ad.impressions_count.toLocaleString('ar-EG')}</span>
+                      <span>🖱 {ad.clicks_count.toLocaleString('ar-EG')}</span>
+                    </div>
+                    <div className="font-bold text-emerald-700 font-mono">
+                      CTR: {ctr}%
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {directAds.length === 0 && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-sm">
+                لا توجد إعلانات مباشرة مسجلة حتى الآن.
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Table View (hidden on mobile, shown on md:) */}
+          <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-sm">
             <table className="w-full text-right border-collapse text-xs min-w-[650px]">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-600">
@@ -320,7 +400,7 @@ export function AdsManager() {
         maxWidth="max-w-xl"
       >
         <form onSubmit={handleFormSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">اسم المعلن / الأكاديمية *</label>
               <input
@@ -329,7 +409,7 @@ export function AdsManager() {
                 value={advertiserName}
                 onChange={(e) => setAdvertiserName(e.target.value)}
                 placeholder="مثال: منصة التفوق"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div>
@@ -337,7 +417,7 @@ export function AdsManager() {
               <select
                 value={slotPosition}
                 onChange={(e) => setSlotPosition(e.target.value as AdSlotPosition)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 {slots.map((s) => (
                   <option key={s.id} value={s.position}>
@@ -356,7 +436,7 @@ export function AdsManager() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="مثال: خصم 50% على مراجعات ليلة الامتحان"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
@@ -367,7 +447,7 @@ export function AdsManager() {
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="https://example.com/banner.jpg"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-mono text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-mono text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
               dir="ltr"
             />
           </div>
@@ -380,12 +460,12 @@ export function AdsManager() {
               value={targetUrl}
               onChange={(e) => setTargetUrl(e.target.value)}
               placeholder="https://advertiser-site.com"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-mono text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-mono text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
               dir="ltr"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">تاريخ البدء *</label>
               <input
@@ -393,7 +473,7 @@ export function AdsManager() {
                 required
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div>
@@ -403,12 +483,12 @@ export function AdsManager() {
                 required
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-2 pt-2">
+          <div className="flex items-center gap-2 pt-1">
             <input
               type="checkbox"
               id="isAdActive"
@@ -421,18 +501,18 @@ export function AdsManager() {
             </label>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 sm:gap-3 pt-4 border-t border-slate-100">
             <button
               type="button"
               onClick={closeModal}
-              className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition"
+              className="w-full sm:w-auto px-4 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition text-center"
             >
               إلغاء
             </button>
             <button
               type="submit"
               disabled={createAdMutation.isPending || updateAdMutation.isPending}
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50"
+              className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs font-semibold transition disabled:opacity-50 text-center"
             >
               {editingAd ? 'حفظ التعديلات' : 'إضافة الإعلان'}
             </button>

@@ -107,7 +107,7 @@ export function PermissionEditor({ member, grants, onClose, onSaved }: Props) {
 
   return (
     <Modal isOpen={true} title={`حدود: ${member.email}`} onClose={onClose} maxWidth="max-w-2xl">
-      <div className="space-y-4 max-h-[70vh] overflow-y-auto p-1">
+      <div className="space-y-4 max-h-[75dvh] overflow-y-auto p-1">
         {error && (
           <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg">{error}</div>
         )}
@@ -126,16 +126,16 @@ export function PermissionEditor({ member, grants, onClose, onSaved }: Props) {
               const row = rowsFor(perm.key);
               const options = perm.supports_scope ? optionsFor(row.scope_type) : [];
               return (
-                <div key={perm.key} className="border border-slate-200 rounded-xl p-3 space-y-2">
+                <div key={perm.key} className="border border-slate-200 rounded-xl p-3 sm:p-3.5 space-y-2.5">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <span className="text-xs font-medium text-slate-700">{perm.label_ar}</span>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 w-full sm:w-auto justify-end">
                       {(['preset', 'allow', 'deny'] as Mode[]).map((mode) => (
                         <button
                           key={mode}
                           type="button"
                           onClick={() => setRow(perm.key, { mode })}
-                          className={`text-[11px] px-2 py-1 rounded-md border transition ${
+                          className={`text-xs px-2.5 py-1.5 min-h-[34px] rounded-lg border transition ${
                             row.mode === mode
                               ? mode === 'deny'
                                 ? 'bg-rose-600 text-white border-rose-600'
@@ -152,14 +152,14 @@ export function PermissionEditor({ member, grants, onClose, onSaved }: Props) {
                   </div>
 
                   {row.mode === 'allow' && perm.supports_scope && (
-                    <div className="grid sm:grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <select
                         value={row.scope_type}
                         onChange={(e) => setRow(perm.key, {
                           scope_type: e.target.value as PermissionScopeType,
                           scope_id: '',
                         })}
-                        className="border border-slate-300 rounded-lg px-2 py-1.5 text-xs"
+                        className="border border-slate-300 rounded-lg px-2.5 py-2 text-xs bg-white"
                       >
                         <option value="global">كل النظام</option>
                         <option value="subject">مادة دراسية محددة</option>
@@ -173,7 +173,7 @@ export function PermissionEditor({ member, grants, onClose, onSaved }: Props) {
                         <select
                           value={row.scope_id}
                           onChange={(e) => setRow(perm.key, { scope_id: e.target.value })}
-                          className="border border-slate-300 rounded-lg px-2 py-1.5 text-xs"
+                          className="border border-slate-300 rounded-lg px-2.5 py-2 text-xs bg-white"
                         >
                           <option value="">— اختر —</option>
                           {options.map((o) => (
@@ -187,7 +187,7 @@ export function PermissionEditor({ member, grants, onClose, onSaved }: Props) {
                         value={row.expires_at}
                         onChange={(e) => setRow(perm.key, { expires_at: e.target.value })}
                         title="تاريخ انتهاء الصلاحية (اتركه فارغًا للدوام)"
-                        className="border border-slate-300 rounded-lg px-2 py-1.5 text-xs"
+                        className="border border-slate-300 rounded-lg px-2.5 py-2 text-xs bg-white"
                       />
                     </div>
                   )}
@@ -203,16 +203,20 @@ export function PermissionEditor({ member, grants, onClose, onSaved }: Props) {
           </div>
         ))}
 
-        <div className="flex items-center gap-2 sticky bottom-0 bg-white pt-2">
+        <div className="flex items-center gap-2 sticky bottom-0 bg-white pt-2 border-t border-slate-100">
           <button
             type="button"
             onClick={save}
             disabled={saving}
-            className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold"
+            className="flex-1 py-2.5 min-h-[44px] bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition cursor-pointer"
           >
             {saving ? 'جاري الحفظ...' : 'حفظ الحدود'}
           </button>
-          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-300 text-sm">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2.5 min-h-[44px] rounded-lg border border-slate-300 text-sm hover:bg-slate-50 transition cursor-pointer"
+          >
             إلغاء
           </button>
         </div>

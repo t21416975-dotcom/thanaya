@@ -125,14 +125,14 @@ export function SubjectsManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">المواد الدراسية</h2>
-          <p className="text-sm text-slate-500">إضافة وتعديل وترتيب المواد للثانوية والبكالوريا</p>
+          <h2 className="text-lg sm:text-xl font-bold text-slate-900">المواد الدراسية</h2>
+          <p className="text-xs sm:text-sm text-slate-500">إضافة وتعديل وترتيب المواد للثانوية والبكالوريا</p>
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm self-start sm:self-auto cursor-pointer"
+          className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white px-4 py-2.5 sm:py-2 rounded-xl text-sm font-semibold transition shadow-sm w-full sm:w-auto cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>إضافة مادة جديدة</span>
@@ -140,90 +140,185 @@ export function SubjectsManager() {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-12 text-slate-400">جاري تحميل المواد...</div>
+        <div className="text-center py-12 text-slate-400 text-sm">جاري تحميل المواد...</div>
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-sm">
-          <table className="w-full text-right border-collapse min-w-[550px]">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                <th className="px-6 py-3">الترتيب</th>
-                <th className="px-6 py-3">المادة</th>
-                <th className="px-6 py-3">الـSlug (الرابط)</th>
-                <th className="px-6 py-3">الحالة</th>
-                <th className="px-6 py-3 text-left">إجراءات</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              {subjects.map((subj) => (
-                <tr key={subj.id} className="hover:bg-slate-50 transition">
-                  <td className="px-6 py-4 font-mono text-slate-500">{subj.order_index}</td>
-                  <td className="px-6 py-4 font-medium text-slate-900">
+        <>
+          {/* Mobile Card View (shown below md:) */}
+          <div className="md:hidden space-y-3">
+            {subjects.map((subj) => (
+              <div
+                key={subj.id}
+                className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span>{subj.name}</span>
-                      {subj.description && (
-                        <span className="text-xs text-slate-400 font-normal">({subj.description})</span>
-                      )}
+                      <span className="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 text-xs font-mono font-bold flex items-center justify-center shrink-0">
+                        {subj.order_index}
+                      </span>
+                      <h3 className="font-bold text-slate-900 text-sm truncate">
+                        {subj.name}
+                      </h3>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 font-mono text-xs text-slate-500 dir-ltr text-right">
-                    /{subj.slug}
-                  </td>
-                  <td className="px-6 py-4">
+                    {subj.description && (
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                        {subj.description}
+                      </p>
+                    )}
+                    <div className="text-[11px] font-mono text-slate-400 dir-ltr text-right mt-1">
+                      /{subj.slug}
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
-                      onClick={() => toggleActive(subj)}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer transition ${
-                        subj.is_active
-                          ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
+                      onClick={() => openEditModal(subj)}
+                      className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition cursor-pointer active:scale-95"
+                      title="تعديل"
+                      aria-label="تعديل"
                     >
-                      {subj.is_active ? (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>نشط</span>
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="w-3.5 h-3.5" />
-                          <span>معطل</span>
-                        </>
-                      )}
+                      <Edit2 className="w-4 h-4" />
                     </button>
-                  </td>
-                  <td className="px-6 py-4 text-left">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => openEditModal(subj)}
-                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition"
-                        title="تعديل"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`هل أنت متأكد من حذف مادة "${subj.name}"؟`)) {
-                            deleteMutation.mutate(subj.id);
-                          }
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition"
-                        title="حذف"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+                    <button
+                      onClick={() => {
+                        if (confirm(`هل أنت متأكد من حذف مادة "${subj.name}"؟`)) {
+                          deleteMutation.mutate(subj.id);
+                        }
+                      }}
+                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition cursor-pointer active:scale-95"
+                      title="حذف"
+                      aria-label="حذف"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Status and Icon */}
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                  <div className="text-xs text-slate-500 flex items-center gap-1.5 font-mono">
+                    <span className="text-[11px] text-slate-400">أيقونة:</span>
+                    <span className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-700 text-[11px]">
+                      {subj.icon || 'book-open'}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => toggleActive(subj)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition active:scale-95 ${
+                      subj.is_active
+                        ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+                    }`}
+                  >
+                    {subj.is_active ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>نشط</span>
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="w-3.5 h-3.5" />
+                        <span>معطل</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {subjects.length === 0 && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-sm">
+                لا توجد مواد مضافة حتى الآن.
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Table View (hidden on mobile, shown on md:) */}
+          <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-sm">
+            <table className="w-full text-right border-collapse min-w-[550px]">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-6 py-3">الترتيب</th>
+                  <th className="px-6 py-3">المادة</th>
+                  <th className="px-6 py-3">الـSlug (الرابط)</th>
+                  <th className="px-6 py-3">الحالة</th>
+                  <th className="px-6 py-3 text-left">إجراءات</th>
                 </tr>
-              ))}
-              {subjects.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-400">
-                    لا توجد مواد مضافة حتى الآن.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm">
+                {subjects.map((subj) => (
+                  <tr key={subj.id} className="hover:bg-slate-50 transition">
+                    <td className="px-6 py-4 font-mono text-slate-500">{subj.order_index}</td>
+                    <td className="px-6 py-4 font-medium text-slate-900">
+                      <div className="flex items-center gap-2">
+                        <span>{subj.name}</span>
+                        {subj.description && (
+                          <span className="text-xs text-slate-400 font-normal">({subj.description})</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 font-mono text-xs text-slate-500 dir-ltr text-right">
+                      /{subj.slug}
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => toggleActive(subj)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer transition ${
+                          subj.is_active
+                            ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {subj.is_active ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>نشط</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>معطل</span>
+                          </>
+                        )}
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 text-left">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => openEditModal(subj)}
+                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition"
+                          title="تعديل"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`هل أنت متأكد من حذف مادة "${subj.name}"؟`)) {
+                              deleteMutation.mutate(subj.id);
+                            }
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition"
+                          title="حذف"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {subjects.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-slate-400">
+                      لا توجد مواد مضافة حتى الآن.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* Add / Edit Modal */}
@@ -241,7 +336,7 @@ export function SubjectsManager() {
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="مثال: الرياضيات البحتة"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
@@ -253,12 +348,12 @@ export function SubjectsManager() {
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               placeholder="مثال: pure-math"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm font-mono text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
               dir="ltr"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">الأيقونة (Lucide Icon)</label>
               <input
@@ -266,7 +361,7 @@ export function SubjectsManager() {
                 value={icon}
                 onChange={(e) => setIcon(e.target.value)}
                 placeholder="book-open, zap, calculator..."
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm font-mono text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 dir="ltr"
               />
             </div>
@@ -277,7 +372,7 @@ export function SubjectsManager() {
                 min="1"
                 value={orderIndex}
                 onChange={(e) => setOrderIndex(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
           </div>
@@ -289,11 +384,11 @@ export function SubjectsManager() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="وصف مختصر لمحتوى المادة..."
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
 
-          <div className="flex items-center gap-2 pt-2">
+          <div className="flex items-center gap-2 pt-1">
             <input
               type="checkbox"
               id="isActive"
@@ -306,18 +401,18 @@ export function SubjectsManager() {
             </label>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 sm:gap-3 pt-4 border-t border-slate-100">
             <button
               type="button"
               onClick={closeModal}
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition"
+              className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition text-center"
             >
               إلغاء
             </button>
             <button
               type="submit"
               disabled={createMutation.isPending || updateMutation.isPending}
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
+              className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50 text-center"
             >
               {editingSubject ? 'حفظ التعديلات' : 'إضافة المادة'}
             </button>

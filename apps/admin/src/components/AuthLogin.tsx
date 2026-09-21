@@ -113,7 +113,7 @@ export function AuthLogin({ onSuccess }: AuthLoginProps) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition shadow-sm disabled:opacity-50 cursor-pointer"
+            className="w-full py-3 min-h-[44px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition shadow-sm disabled:opacity-50 cursor-pointer flex items-center justify-center"
           >
             {loading ? 'جاري التحقق...' : 'دخول لوحة التحكم'}
           </button>
