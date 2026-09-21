@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Layers, Calendar, FileText, Megaphone, Flag, BarChart3, LogOut, CheckCircle, HelpCircle, Sparkles, Menu, X, Bell } from 'lucide-react';
+import { BookOpen, Layers, Calendar, FileText, Megaphone, Flag, BarChart3, LogOut, CheckCircle, HelpCircle, Sparkles, Menu, X, Bell, ShieldCheck } from 'lucide-react';
 import { supabase } from './lib/supabase';
+import { usePermissions } from './lib/permissions';
 import { SubjectsManager } from './components/SubjectsManager';
 import { ContentTypesManager } from './components/ContentTypesManager';
 import { WeeksManager } from './components/WeeksManager';
@@ -11,12 +12,22 @@ import { ReportsManager } from './components/ReportsManager';
 import { AdsManager } from './components/AdsManager';
 import { AnalyticsView } from './components/AnalyticsView';
 import { NotificationsManager } from './components/NotificationsManager';
+import { StaffManager } from './components/StaffManager';
 import { AuthLogin } from './components/AuthLogin';
+
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: 'مدير عام',
+  admin: 'أدمن',
+  editor: 'محرر محتوى',
+};
+
+type TabId = 'resources' | 'exams' | 'notifications' | 'ai_settings' | 'subjects' | 'content_types' | 'weeks' | 'ads' | 'reports' | 'analytics' | 'staff';
 
 export function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [activeTab, setActiveTab] = useState<'resources' | 'exams' | 'notifications' | 'ai_settings' | 'subjects' | 'content_types' | 'weeks' | 'ads' | 'reports' | 'analytics'>('resources');
+  const [activeTab, setActiveTab] = useState<TabId>('resources');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { permissions, can, isLoading: permsLoading } = usePermissions();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -38,6 +49,28 @@ export function App() {
     setIsAuthenticated(false);
   };
 
+  const navigation = [
+    { id: 'resources' as const,     name: 'الموارد والمحتوى',        icon: FileText,    perm: 'resources.view' },
+    { id: 'exams' as const,         name: 'الامتحانات التجريبية (MCQ)', icon: HelpCircle,  perm: 'exams.view' },
+    { id: 'notifications' as const, name: 'الإشعارات والتنبيهات',      icon: Bell,        perm: 'notifications.manage' },
+    { id: 'ai_settings' as const,   name: 'إعدادات الذكاء الاصطناعي (AI)', icon: Sparkles, perm: 'settings.manage' },
+    { id: 'subjects' as const,      name: 'المواد الدراسية',          icon: BookOpen,    perm: 'subjects.manage' },
+    { id: 'content_types' as const, name: 'أنواع المحتوى',            icon: Layers,      perm: 'content_types.manage' },
+    { id: 'weeks' as const,         name: 'الأسابيع',                icon: Calendar,    perm: 'weeks.manage' },
+    { id: 'reports' as const,       name: 'البلاغات',                icon: Flag,        perm: 'reports.view' },
+    { id: 'ads' as const,           name: 'الإعلانات',               icon: Megaphone,   perm: 'ads.manage' },
+    { id: 'analytics' as const,     name: 'الإحصائيات والتقارير',      icon: BarChart3,   perm: 'analytics.view' },
+    { id: 'staff' as const,         name: 'الفريق والصلاحيات',        icon: ShieldCheck, perm: 'staff.manage' },
+  ];
+
+  const visibleNav = navigation.filter((n) => can(n.perm));
+
+  useEffect(() => {
+    if (visibleNav.length > 0 && !visibleNav.some((n) => n.id === activeTab)) {
+      setActiveTab(visibleNav[0].id);
+    }
+  }, [permissions.admin_id, visibleNav.length, activeTab]);
+
   if (isAuthenticated === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900 text-slate-400 text-sm">
@@ -50,25 +83,28 @@ export function App() {
     return <AuthLogin onSuccess={() => setIsAuthenticated(true)} />;
   }
 
-  const navigation = [
-    { id: 'resources' as const, name: 'الموارد والمحتوى', icon: FileText },
-    { id: 'exams' as const, name: 'الامتحانات التجريبية (MCQ)', icon: HelpCircle },
-    { id: 'notifications' as const, name: 'الإشعارات والتنبيهات', icon: Bell },
-    { id: 'ai_settings' as const, name: 'إعدادات الذكاء الاصطناعي (AI)', icon: Sparkles },
-    { id: 'subjects' as const, name: 'المواد الدراسية', icon: BookOpen },
-    { id: 'content_types' as const, name: 'أنواع المحتوى', icon: Layers },
-    { id: 'weeks' as const, name: 'الأسابيع', icon: Calendar },
-    { id: 'reports' as const, name: 'البلاغات', icon: Flag },
-    { id: 'ads' as const, name: 'الإعلانات', icon: Megaphone },
-    { id: 'analytics' as const, name: 'الإحصائيات والتقارير', icon: BarChart3 },
-  ];
+  if (!permsLoading && !permissions.is_staff) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-900 text-slate-300 p-6 text-center">
+        <ShieldCheck className="w-10 h-10 text-rose-400" />
+        <p className="text-sm">حسابك غير مصرح له بالوصول، أو تم تعطيله. تواصل مع المدير العام.</p>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm cursor-pointer"
+        >
+          تسجيل الخروج
+        </button>
+      </div>
+    );
+  }
 
-  const handleTabChange = (tabId: typeof activeTab) => {
+  const handleTabChange = (tabId: TabId) => {
     setActiveTab(tabId);
     setIsMobileMenuOpen(false);
   };
 
-  const currentNav = navigation.find((n) => n.id === activeTab);
+  const currentNav = visibleNav.find((n) => n.id === activeTab) || navigation.find((n) => n.id === activeTab);
 
   return (
     <div className="min-h-screen flex bg-slate-100 text-slate-800 relative">
@@ -103,7 +139,7 @@ export function App() {
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {navigation.map((item) => {
+          {visibleNav.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
@@ -154,8 +190,12 @@ export function App() {
           </div>
           <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
             <CheckCircle className="w-3.5 h-3.5 shrink-0" />
-            <span className="hidden sm:inline">لوحة التحكم نشطة</span>
-            <span className="sm:hidden">نشط</span>
+            <span className="hidden sm:inline">
+              {ROLE_LABELS[permissions.role ?? ''] ?? 'مستخدم'}{permissions.email ? ` · ${permissions.email}` : ''}
+            </span>
+            <span className="sm:hidden">
+              {ROLE_LABELS[permissions.role ?? ''] ?? 'نشط'}
+            </span>
           </div>
         </header>
 
@@ -170,6 +210,7 @@ export function App() {
           {activeTab === 'reports' && <ReportsManager />}
           {activeTab === 'ads' && <AdsManager />}
           {activeTab === 'analytics' && <AnalyticsView />}
+          {activeTab === 'staff' && <StaffManager />}
         </div>
       </main>
     </div>

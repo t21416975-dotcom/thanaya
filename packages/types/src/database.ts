@@ -1,8 +1,60 @@
+export type AdminRole = 'super_admin' | 'admin' | 'editor';
+
 export type AdminUser = {
   id: string;
   email: string;
-  role: 'admin' | 'super_admin';
+  role: AdminRole;
+  is_active: boolean;
   created_at: string;
+  updated_at: string;
+};
+
+export type PermissionEffect = 'allow' | 'deny';
+export type PermissionScopeType = 'global' | 'subject' | 'content_type' | 'week' | 'resource' | 'exam';
+
+export type Permission = {
+  key: string;
+  label_ar: string;
+  category: 'general' | 'content' | 'exams' | 'structure' | 'operations' | 'system';
+  supports_scope: boolean;
+  order_index: number;
+};
+
+export type AdminRolePreset = { role: 'admin' | 'editor'; permission_key: string; created_at: string };
+
+export type AdminPermission = {
+  id: string;
+  admin_id: string;
+  permission_key: string;
+  effect: PermissionEffect;
+  scope_type: PermissionScopeType;
+  scope_id: string | null;
+  expires_at: string | null;
+  granted_by: string | null;
+  created_at: string;
+};
+
+export type AdminActivityLog = {
+  id: number;
+  admin_id: string | null;
+  action: string;
+  entity: string;
+  entity_id: string | null;
+  diff: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export type MyPermissions = {
+  admin_id: string | null;
+  email: string | null;
+  role: AdminRole | null;
+  is_active: boolean;
+  is_super_admin: boolean;
+  is_staff: boolean;
+  global: string[];
+  scoped: { key: string; scope_type: PermissionScopeType; scope_id: string | null }[];
+  denied: string[];
+  scoped_subject_ids: string[];
 };
 
 export type Subject = {
@@ -54,6 +106,8 @@ export type Resource = {
   downloads_count: number;
   created_at: string;
   updated_at: string;
+  created_by?: string | null;
+  updated_by?: string | null;
   // Joined relation fields
   subject?: Subject;
   content_type?: ContentType;
@@ -127,6 +181,8 @@ export type Exam = {
   coming_soon_message?: string | null;
   created_at: string;
   updated_at: string;
+  created_by?: string | null;
+  updated_by?: string | null;
   // Joined relation fields
   subject?: Subject;
   questions?: ExamQuestion[];
@@ -185,8 +241,28 @@ export interface Database {
     Tables: {
       admins: {
         Row: AdminUser;
-        Insert: Omit<AdminUser, 'created_at'>;
+        Insert: Omit<AdminUser, 'created_at' | 'updated_at'> & { created_at?: string; updated_at?: string };
         Update: Partial<Omit<AdminUser, 'id' | 'created_at'>>;
+      };
+      permissions: {
+        Row: Permission;
+        Insert: Omit<Permission, never>;
+        Update: Partial<Permission>;
+      };
+      admin_role_presets: {
+        Row: AdminRolePreset;
+        Insert: Omit<AdminRolePreset, 'created_at'> & { created_at?: string };
+        Update: Partial<AdminRolePreset>;
+      };
+      admin_permissions: {
+        Row: AdminPermission;
+        Insert: Omit<AdminPermission, 'id' | 'created_at' | 'granted_by'> & { id?: string; granted_by?: string | null };
+        Update: Partial<AdminPermission>;
+      };
+      admin_activity_log: {
+        Row: AdminActivityLog;
+        Insert: Omit<AdminActivityLog, 'id' | 'created_at'> & { id?: number };
+        Update: never;
       };
       subjects: {
         Row: Subject;
@@ -261,6 +337,38 @@ export interface Database {
       };
     };
     Functions: {
+      get_my_permissions: {
+        Args: Record<string, never>;
+        Returns: MyPermissions;
+      };
+      set_staff_permissions: {
+        Args: {
+          p_admin_id: string;
+          p_entries: {
+            key: string;
+            effect?: PermissionEffect;
+            scope_type?: PermissionScopeType;
+            scope_id?: string | null;
+            expires_at?: string | null;
+          }[];
+        };
+        Returns: number;
+      };
+      list_staff_reports: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          resource_id: string;
+          issue_type: ReportIssueType;
+          details: string | null;
+          status: ReportStatus;
+          created_at: string;
+          resolved_at: string | null;
+          resource_title: string;
+          subject_id: string | null;
+          subject_name: string | null;
+        }[];
+      };
       increment_resource_views: {
         Args: { p_resource_id: string };
         Returns: void;

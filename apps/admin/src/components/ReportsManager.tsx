@@ -2,21 +2,23 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Flag, CheckCircle } from 'lucide-react';
 import { api } from '../api/client';
+import { usePermissions } from '../lib/permissions';
 import type { ReportStatus } from '@thanaya/types';
 
 export function ReportsManager() {
   const queryClient = useQueryClient();
+  const { can } = usePermissions();
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
   const { data: reports = [], isLoading } = useQuery({
-    queryKey: ['reports'],
-    queryFn: () => api.getReports(),
+    queryKey: ['staff_reports'],
+    queryFn: () => api.listStaffReports(),
   });
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: ReportStatus }) => api.updateReportStatus(id, status),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['staff_reports'] });
     },
   });
 
@@ -91,9 +93,14 @@ export function ReportsManager() {
                   </span>
                 </div>
 
-                <div className="text-xs text-slate-500 flex items-center gap-2 pt-1">
+                <div className="text-xs text-slate-500 flex items-center gap-2 pt-1 flex-wrap">
                   <span>المورد:</span>
-                  <strong className="text-slate-700">{report.resource?.title || report.resource_id}</strong>
+                  <strong className="text-slate-700">{report.resource_title || report.resource_id}</strong>
+                  {report.subject_name && (
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                      {report.subject_name}
+                    </span>
+                  )}
                 </div>
 
                 {report.details && (
@@ -108,26 +115,28 @@ export function ReportsManager() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2 self-end md:self-center">
-                {report.status !== 'resolved' && (
-                  <button
-                    onClick={() => statusMutation.mutate({ id: report.id, status: 'resolved' })}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium transition"
-                  >
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    <span>تم الحل</span>
-                  </button>
-                )}
+              {can('reports.manage') && (
+                <div className="flex items-center gap-2 self-end md:self-center">
+                  {report.status !== 'resolved' && (
+                    <button
+                      onClick={() => statusMutation.mutate({ id: report.id, status: 'resolved' })}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium transition cursor-pointer"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      <span>تم الحل</span>
+                    </button>
+                  )}
 
-                {report.status !== 'ignored' && (
-                  <button
-                    onClick={() => statusMutation.mutate({ id: report.id, status: 'ignored' })}
-                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition"
-                  >
-                    تجاهل
-                  </button>
-                )}
-              </div>
+                  {report.status !== 'ignored' && (
+                    <button
+                      onClick={() => statusMutation.mutate({ id: report.id, status: 'ignored' })}
+                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition cursor-pointer"
+                    >
+                      تجاهل
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ))}
 

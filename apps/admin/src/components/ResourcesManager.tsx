@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit2, Trash2, Globe, EyeOff, FileText, Youtube } from 'lucide-react';
 import { api } from '../api/client';
+import { usePermissions } from '../lib/permissions';
 import { ContentCreator } from './ContentCreator';
 import type { Resource } from '@thanaya/types';
 
 export function ResourcesManager() {
   const queryClient = useQueryClient();
+  const { can, scopedSubjects } = usePermissions();
   const [isCreating, setIsCreating] = useState(false);
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
 
@@ -97,13 +99,15 @@ export function ResourcesManager() {
           <h2 className="text-xl font-bold text-slate-900">إدارة الموارد والملفات</h2>
           <p className="text-sm text-slate-500">إضافة ونشر وإدارة تقييمات وحلول وامتحانات البكالوريا</p>
         </div>
-        <button
-          onClick={openCreateView}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm self-start"
-        >
-          <Plus className="w-4 h-4" />
-          <span>+ إضافة محتوى جديد</span>
-        </button>
+        {can('resources.create') && (
+          <button
+            onClick={openCreateView}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm self-start cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ إضافة محتوى جديد</span>
+          </button>
+        )}
       </div>
 
       {/* Filter Bar */}
@@ -116,11 +120,13 @@ export function ResourcesManager() {
             className="border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:outline-none"
           >
             <option value="all">كل المواد</option>
-            {subjects.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
+            {subjects
+              .filter((s) => scopedSubjects('resources.view').length === 0 || scopedSubjects('resources.view').includes(s.id))
+              .map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
           </select>
         </div>
 
@@ -214,26 +220,48 @@ export function ResourcesManager() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <button
-                      onClick={() => togglePublish(res)}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer transition ${
-                        res.is_published
-                          ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                          : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-                      }`}
-                    >
-                      {res.is_published ? (
-                        <>
-                          <Globe className="w-3.5 h-3.5" />
-                          <span>منشور</span>
-                        </>
-                      ) : (
-                        <>
-                          <EyeOff className="w-3.5 h-3.5" />
-                          <span>مسودة</span>
-                        </>
-                      )}
-                    </button>
+                    {can('resources.publish') ? (
+                      <button
+                        onClick={() => togglePublish(res)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer transition ${
+                          res.is_published
+                            ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                            : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                        }`}
+                      >
+                        {res.is_published ? (
+                          <>
+                            <Globe className="w-3.5 h-3.5" />
+                            <span>منشور</span>
+                          </>
+                        ) : (
+                          <>
+                            <EyeOff className="w-3.5 h-3.5" />
+                            <span>مسودة</span>
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                          res.is_published
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-amber-50 text-amber-700'
+                        }`}
+                      >
+                        {res.is_published ? (
+                          <>
+                            <Globe className="w-3.5 h-3.5" />
+                            <span>منشور</span>
+                          </>
+                        ) : (
+                          <>
+                            <EyeOff className="w-3.5 h-3.5" />
+                            <span>مسودة</span>
+                          </>
+                        )}
+                      </span>
+                    )}
                     {res.is_coming_soon && !res.is_published && (
                       <span className="bg-amber-50 text-amber-700 text-xs px-2 py-0.5 rounded-full border border-amber-200 font-bold mr-2">
                         قريباً
@@ -246,24 +274,28 @@ export function ResourcesManager() {
                   </td>
                   <td className="px-6 py-4 text-left">
                     <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => openEditView(res)}
-                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition"
-                        title="تعديل وتعديل المحتوى"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`هل أنت متأكد من حذف المورد "${res.title}"؟`)) {
-                            deleteMutation.mutate(res.id);
-                          }
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition"
-                        title="حذف"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {can('resources.update') && (
+                        <button
+                          onClick={() => openEditView(res)}
+                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition cursor-pointer"
+                          title="تعديل وتعديل المحتوى"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {can('resources.delete') && (
+                        <button
+                          onClick={() => {
+                            if (confirm(`هل أنت متأكد من حذف المورد "${res.title}"؟`)) {
+                              deleteMutation.mutate(res.id);
+                            }
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition cursor-pointer"
+                          title="حذف"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

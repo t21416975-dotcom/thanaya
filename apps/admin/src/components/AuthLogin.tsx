@@ -25,6 +25,13 @@ export function AuthLogin({ onSuccess }: AuthLoginProps) {
           password,
         });
         if (authError) throw authError;
+
+        const { data: perms, error: permError } = await (supabase.rpc('get_my_permissions') as any);
+        if (permError) throw permError;
+        if (!perms || !perms.is_staff) {
+          await supabase.auth.signOut();
+          throw new Error('هذا الحساب غير مصرح له بالدخول إلى لوحة التحكم.');
+        }
       } else {
         throw new Error('لوحة التحكم غير مُهيأة. يرجى تعيين VITE_SUPABASE_URL و VITE_SUPABASE_ANON_KEY في متغيرات البيئة.');
       }

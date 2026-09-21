@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileText, Youtube, Eye, CheckCircle2, AlertTriangle, ArrowRight, ExternalLink } from 'lucide-react';
 import { api } from '../api/client';
+import { usePermissions } from '../lib/permissions';
 import { extractYouTubeVideoId, getYouTubeEmbedUrl } from '../lib/youtube';
 import { isGoogleDriveUrl, getPdfPreviewUrl, getPdfDownloadUrl } from '../lib/drive';
 import type { Resource } from '@thanaya/types';
@@ -14,6 +15,9 @@ interface ContentCreatorProps {
 
 export function ContentCreator({ initialResource, onClose, onSuccess }: ContentCreatorProps) {
   const queryClient = useQueryClient();
+  const { can, scopedSubjects } = usePermissions();
+  const canPublish = can('resources.publish');
+  const allowedSubjectIds = scopedSubjects(initialResource ? 'resources.update' : 'resources.create');
 
   // Form states
   const [title, setTitle] = useState(initialResource?.title || '');
@@ -24,7 +28,7 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
   const [pdfUrl, setPdfUrl] = useState(initialResource?.pdf_url || '');
   const [youtubeUrl, setYoutubeUrl] = useState(initialResource?.youtube_url || '');
   const [description, setDescription] = useState(initialResource?.description || '');
-  const [isPublished, setIsPublished] = useState(initialResource ? initialResource.is_published : true);
+  const [isPublished, setIsPublished] = useState(initialResource ? initialResource.is_published : canPublish);
   const [isComingSoon, setIsComingSoon] = useState(initialResource?.is_coming_soon || false);
   const [comingSoonMessage, setComingSoonMessage] = useState(initialResource?.coming_soon_message || '');
 
@@ -42,10 +46,14 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
   // Default initial select values
   useEffect(() => {
     if (!initialResource) {
-      if (subjects.length > 0 && !subjectId) setSubjectId(subjects[0].id);
+      const availableSubjects = subjects.filter((s) => allowedSubjectIds.length === 0 || allowedSubjectIds.includes(s.id));
+      if (availableSubjects.length > 0 && (!subjectId || !availableSubjects.some((s) => s.id === subjectId))) {
+        setSubjectId(availableSubjects[0].id);
+      }
       if (contentTypes.length > 0 && !contentTypeId) setContentTypeId(contentTypes[0].id);
+      if (!canPublish) setIsPublished(false);
     }
-  }, [subjects, contentTypes, initialResource, subjectId, contentTypeId]);
+  }, [subjects, contentTypes, initialResource, subjectId, contentTypeId, allowedSubjectIds, canPublish]);
 
   const generateSlug = (text: string) => {
     return text
@@ -234,14 +242,17 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
               <select
                 required
                 value={subjectId}
+                disabled={allowedSubjectIds.length === 1}
                 onChange={(e) => setSubjectId(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
               >
-                {subjects.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
+                {subjects
+                  .filter((s) => allowedSubjectIds.length === 0 || allowedSubjectIds.includes(s.id))
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
               </select>
             </div>
 
@@ -386,14 +397,22 @@ export function ContentCreator({ initialResource, onClose, onSuccess }: ContentC
                   ? 'المورد سيكون منشورًا ومتاحًا للطلاب فور الحفظ.'
                   : 'سيتم حفظ المورد كمسودة داخل لوحة التحكم فقط.'}
               </p>
+              {!canPublish && (
+                <p className="text-[11px] text-amber-600 mt-1">
+                  لا تملك صلاحية النشر — سيُحفظ المحتوى كمسودة وتُراجعه الإدارة.
+                </p>
+              )}
             </div>
             <button
               type="button"
+              disabled={!canPublish}
               onClick={() => setIsPublished(!isPublished)}
               className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
-                isPublished
-                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                  : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                !canPublish
+                  ? 'opacity-50 cursor-not-allowed bg-slate-200 text-slate-500'
+                  : isPublished
+                  ? 'bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer'
+                  : 'bg-amber-100 text-amber-800 hover:bg-amber-200 cursor-pointer'
               }`}
             >
               {isPublished ? '✓ منشور للعامة' : 'مسودة (Draft)'}
