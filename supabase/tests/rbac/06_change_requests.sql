@@ -338,4 +338,38 @@ BEGIN
 END $$;
 ROLLBACK;
 
+-- ----------------------------------------------------------------------------
+-- (ز) فحص النظافة: لا سياسة مطبَّقة على anon تستدعي دوالًا ممنوعة عليه
+--     anon بلا EXECUTE على دوال private ولا is_admin/get_my_permissions —
+--     أي استدعاء داخل سياسة تخصّه يُفشل قراءة الطلاب لهذا الجدول بالكامل.
+-- ----------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_bad   RECORD;
+    v_count INT := 0;
+BEGIN
+    FOR v_bad IN
+        SELECT p.polname,
+               c.relname,
+               pg_get_expr(p.polqual, p.polrelid) AS qual
+          FROM pg_policy p
+          JOIN pg_class c ON c.oid = p.polrelid
+          JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'public'
+           AND p.polroles @> ARRAY[(SELECT oid FROM pg_roles WHERE rolname = 'anon')][]::oid[]
+           AND (
+                 pg_get_expr(p.polqual, p.polrelid) ~ '(private|pg_catalog)\.\w+\('
+              OR pg_get_expr(p.polqual, p.polrelid) ~ '(is_admin|has_permission|can_manage_\w+|get_my_permissions|is_super_admin)\('
+               )
+    LOOP
+        v_count := v_count + 1;
+        RAISE NOTICE 'H1 BAD: %.% -> %', v_bad.relname, v_bad.polname, v_bad.qual;
+    END LOOP;
+
+    IF v_count > 0 THEN
+        RAISE EXCEPTION 'H1 FAIL: % سياسة لـanon تستدعي دوالًا ممنوعة عليه', v_count;
+    END IF;
+    RAISE NOTICE 'H1 PASS: كل سياسات anon خالية من استدعاء الدوال الممنوعة عليه';
+END $$;
+
 SELECT 'ALL CHANGE-REQUEST SCENARIOS PASSED' AS result;

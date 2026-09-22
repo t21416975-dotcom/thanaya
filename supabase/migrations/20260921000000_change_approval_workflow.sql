@@ -186,14 +186,19 @@ CREATE POLICY "Super admins can delete weeks"
 -- ---------------------------------------------------------------------------
 -- 7.3) الإعلانات + الإشعارات + الإعدادات: super_admin فقط (بلا طابور موافقات)
 -- ---------------------------------------------------------------------------
+-- قاعدة حاسمة: سياسة القراءة العامة (TO anon) يجب ألا تستدعي أي دالة إدارية،
+-- لأن anon لا يملك EXECUTE على دوال private ولا على is_admin/get_my_permissions
+-- (مُسحوبة عمدًا في ترحيل الصلاحيات) — أي استدعاء هنا يُفشل قراءة الطلاب.
+-- الوصول الكامل للطاقم يأتي من سياسة منفصلة TO authenticated.
 
 -- خانات الإعلانات
 DROP POLICY IF EXISTS "Ads managers can manage ad slots" ON public.ad_slots;
 DROP POLICY IF EXISTS "Public can view active ad slots"  ON public.ad_slots;
+DROP POLICY IF EXISTS "Super admins can manage ad slots" ON public.ad_slots;
+
 CREATE POLICY "Public can view active ad slots"
     ON public.ad_slots FOR SELECT TO anon, authenticated
-    USING (is_active = true OR private.is_super_admin());
-DROP POLICY IF EXISTS "Super admins can manage ad slots" ON public.ad_slots;
+    USING (is_active = true);
 
 CREATE POLICY "Super admins can manage ad slots"
     ON public.ad_slots FOR ALL TO authenticated
@@ -201,15 +206,13 @@ CREATE POLICY "Super admins can manage ad slots"
     WITH CHECK (private.is_super_admin());
 
 -- الإعلانات المباشرة
-DROP POLICY IF EXISTS "Ads managers can manage direct ads" ON public.direct_ads;
-DROP POLICY IF EXISTS "Public can view running direct ads" ON public.direct_ads;
+DROP POLICY IF EXISTS "Ads managers can manage direct ads"  ON public.direct_ads;
+DROP POLICY IF EXISTS "Public can view running direct ads"  ON public.direct_ads;
+DROP POLICY IF EXISTS "Super admins can manage direct ads" ON public.direct_ads;
+
 CREATE POLICY "Public can view running direct ads"
     ON public.direct_ads FOR SELECT TO anon, authenticated
-    USING (
-        (is_active = true AND NOW() BETWEEN start_date AND end_date)
-        OR private.is_super_admin()
-    );
-DROP POLICY IF EXISTS "Super admins can manage direct ads" ON public.direct_ads;
+    USING (is_active = true AND NOW() BETWEEN start_date AND end_date);
 
 CREATE POLICY "Super admins can manage direct ads"
     ON public.direct_ads FOR ALL TO authenticated
@@ -219,22 +222,22 @@ CREATE POLICY "Super admins can manage direct ads"
 -- الإشعارات
 DROP POLICY IF EXISTS "Notification managers can manage notifications" ON public.notifications;
 DROP POLICY IF EXISTS "Public can view active notifications"           ON public.notifications;
+DROP POLICY IF EXISTS "Super admins can manage notifications"          ON public.notifications;
+
 CREATE POLICY "Public can view active notifications"
     ON public.notifications FOR SELECT TO anon, authenticated
-    USING ((is_active = true AND (expires_at IS NULL OR expires_at > NOW()))
-           OR private.is_super_admin());
-DROP POLICY IF EXISTS "Super admins can manage notifications" ON public.notifications;
+    USING (is_active = true AND (expires_at IS NULL OR expires_at > NOW()));
 
 CREATE POLICY "Super admins can manage notifications"
     ON public.notifications FOR ALL TO authenticated
     USING (private.is_super_admin())
     WITH CHECK (private.is_super_admin());
 
--- إعدادات النظام والذكاء الاصطناعي
+-- إعدادات النظام والذكاء الاصطناعي (لا قراءة عامة — الطاقم فقط)
 DROP POLICY IF EXISTS "Settings managers can view system settings"   ON public.system_settings;
 DROP POLICY IF EXISTS "Settings managers can manage system settings" ON public.system_settings;
-DROP POLICY IF EXISTS "Super admins can view system settings" ON public.system_settings;
-DROP POLICY IF EXISTS "Super admins can manage system settings" ON public.system_settings;
+DROP POLICY IF EXISTS "Super admins can view system settings"        ON public.system_settings;
+DROP POLICY IF EXISTS "Super admins can manage system settings"      ON public.system_settings;
 
 CREATE POLICY "Super admins can view system settings"
     ON public.system_settings FOR SELECT TO authenticated
@@ -243,6 +246,7 @@ CREATE POLICY "Super admins can manage system settings"
     ON public.system_settings FOR ALL TO authenticated
     USING (private.is_super_admin())
     WITH CHECK (private.is_super_admin());
+
 
 -- ---------------------------------------------------------------------------
 -- 7.4) دوال RPC: تقديم الطلبات ومراجعتها (SECURITY DEFINER بنمط المشروع)
