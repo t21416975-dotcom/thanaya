@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from './supabase';
+import { setCurrentPermissions } from './approval';
 import type { MyPermissions, PermissionScopeType } from '@thanaya/types';
 
 export const EMPTY_PERMISSIONS: MyPermissions = {
@@ -34,6 +36,11 @@ export function usePermissions() {
   });
 
   const permissions = query.data ?? EMPTY_PERMISSIONS;
+
+  // زامن أحدث صلاحيات مع بوابة الاعتماد التي يقرأها api/client (خارج React)
+  useEffect(() => {
+    setCurrentPermissions(query.data ?? null);
+  }, [query.data]);
 
   /** يملك المفتاح بأي نطاق (عام أو محدود) */
   const can = (key: string): boolean =>

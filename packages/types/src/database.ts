@@ -44,6 +44,29 @@ export type AdminActivityLog = {
   created_at: string;
 };
 
+// ====== سير اعتماد التعديلات (طلبات التغيير) ======
+export type ChangeRequestEntity = 'resources' | 'exams' | 'subjects' | 'content_types' | 'weeks';
+export type ChangeRequestAction = 'create' | 'update' | 'delete';
+export type ChangeRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+
+export type ChangeRequest = {
+  id: string;
+  entity: ChangeRequestEntity;
+  entity_id: string | null;
+  action: ChangeRequestAction;
+  payload: Record<string, any>;
+  base_snapshot: Record<string, any> | null;
+  status: ChangeRequestStatus;
+  submitted_by: string;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  review_note?: string | null;
+  created_at: string;
+  // أعمدة مدمجة من جدول admins عبر دوال القوائم
+  submitter_email?: string | null;
+  reviewer_email?: string | null;
+};
+
 export type MyPermissions = {
   admin_id: string | null;
   email: string | null;
@@ -264,6 +287,14 @@ export interface Database {
         Insert: Omit<AdminActivityLog, 'id' | 'created_at'> & { id?: number };
         Update: never;
       };
+      change_requests: {
+        Row: ChangeRequest;
+        Insert: Omit<ChangeRequest, 'id' | 'created_at' | 'status' | 'submitted_by' | 'submitter_email' | 'reviewer_email'> & {
+          id?: string;
+          status?: ChangeRequestStatus;
+        };
+        Update: Partial<Pick<ChangeRequest, 'status' | 'review_note' | 'reviewed_by' | 'reviewed_at' | 'payload'>>;
+      };
       subjects: {
         Row: Subject;
         Insert: Omit<Subject, 'id' | 'created_at' | 'updated_at'> & { id?: string };
@@ -368,6 +399,40 @@ export interface Database {
           subject_id: string | null;
           subject_name: string | null;
         }[];
+      };
+      submit_change_request: {
+        Args: {
+          p_entity: ChangeRequestEntity;
+          p_entity_id: string | null;
+          p_action: ChangeRequestAction;
+          p_payload: Record<string, any>;
+        };
+        Returns: string;
+      };
+      review_change_request: {
+        Args: {
+          p_id: string;
+          p_decision: 'approved' | 'rejected';
+          p_note?: string | null;
+          p_modified_payload?: Record<string, any> | null;
+        };
+        Returns: void;
+      };
+      cancel_change_request: {
+        Args: { p_id: string };
+        Returns: void;
+      };
+      list_pending_changes: {
+        Args: Record<string, never>;
+        Returns: ChangeRequest[];
+      };
+      list_my_changes: {
+        Args: Record<string, never>;
+        Returns: ChangeRequest[];
+      };
+      list_all_changes: {
+        Args: Record<string, never>;
+        Returns: ChangeRequest[];
       };
       increment_resource_views: {
         Args: { p_resource_id: string };

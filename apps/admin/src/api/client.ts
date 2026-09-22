@@ -1,8 +1,10 @@
 import { supabase } from '../lib/supabase';
+import { shouldQueueForApproval, notifyApprovalQueued } from '../lib/approval';
 import type {
   Subject, ContentType, Week, Resource, ReportProblem, ReportStatus, AdSlot, DirectAd, Exam, ExamQuestion, SystemSetting, ExamWithQuestions, Notification,
   Permission, AdminRolePreset, AdminPermission, AdminUser, AdminRole,
   MyPermissions, PermissionEffect, PermissionScopeType,
+  ChangeRequest, ChangeRequestEntity, ChangeRequestAction,
 } from '@thanaya/types';
 
 // Mock initial data used when Supabase is not connected in development
@@ -166,6 +168,47 @@ let memoryNotifications: Notification[] = [...initialNotifications];
 
 const isConfigured = !!import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL !== 'https://your-project.supabase.co';
 
+// ====== سير اعتماد التعديلات: مساعدات التحويل إلى طابور الموافقات ======
+// أي كتابة على المحتوى من موظف (ليس super_admin) تتحول تلقائيًا إلى طلب تغيير
+// معلّق؛ الإنفاذ الفعلي في RLS + RPC، وهذه الطبقة للتحويل الشفاف في الواجهة.
+
+async function submitChange(input: {
+  entity: ChangeRequestEntity;
+  entityId: string | null;
+  action: ChangeRequestAction;
+  payload: Record<string, any>;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('submit_change_request' as any, {
+    p_entity: input.entity,
+    p_entity_id: input.entityId,
+    p_action: input.action,
+    p_payload: input.payload,
+  } as any);
+  if (error) throw error;
+  notifyApprovalQueued(input.entity, input.action);
+  return data as string;
+}
+
+function examPayloadFrom(exam: Exam, questions: ExamQuestion[]): Record<string, any> {
+  return {
+    id: exam.id,
+    title: exam.title,
+    subject_id: exam.subject_id,
+    time_limit_minutes: exam.time_limit_minutes,
+    is_published: exam.is_published,
+    is_coming_soon: exam.is_coming_soon,
+    coming_soon_message: exam.coming_soon_message ?? null,
+    questions: questions.map((q) => ({
+      id: q.id,
+      question_number: q.question_number,
+      question_text: q.question_text,
+      options: q.options,
+      correct_option_index: q.correct_option_index,
+      explanation: q.explanation ?? '',
+    })),
+  };
+}
+
 export const api = {
   isLive: isConfigured,
 
@@ -181,6 +224,12 @@ export const api = {
 
   async createSubject(subject: Omit<Subject, 'id' | 'created_at' | 'updated_at'>): Promise<Subject> {
     if (isConfigured) {
+      if (shouldQueueForApproval()) {
+        const id = crypto.randomUUID();
+        await submitChange({ entity: 'subjects', entityId: id, action: 'create', payload: { id, ...subject } });
+        const now = new Date().toISOString();
+        return { ...subject, id, created_at: now, updated_at: now } as Subject;
+      }
       const { data, error } = await (supabase.from('subjects') as any).insert(subject).select().single();
       if (error) throw error;
       return data as unknown as Subject;
@@ -197,6 +246,10 @@ export const api = {
 
   async updateSubject(id: string, updates: Partial<Subject>): Promise<Subject> {
     if (isConfigured) {
+      if (shouldQueueForApproval()) {
+        await submitChange({ entity: 'subjects', entityId: id, action: 'update', payload: { ...updates } });
+        return { id, ...updates } as Subject;
+      }
       const { data, error } = await (supabase.from('subjects') as any).update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data as unknown as Subject;
@@ -209,6 +262,10 @@ export const api = {
 
   async deleteSubject(id: string): Promise<void> {
     if (isConfigured) {
+      if (shouldQueueForApproval()) {
+        await submitChange({ entity: 'subjects', entityId: id, action: 'delete', payload: { id } });
+        return;
+      }
       const { error } = await supabase.from('subjects').delete().eq('id', id);
       if (error) throw error;
       return;
@@ -228,6 +285,12 @@ export const api = {
 
   async createContentType(contentType: Omit<ContentType, 'id' | 'created_at' | 'updated_at'>): Promise<ContentType> {
     if (isConfigured) {
+      if (shouldQueueForApproval()) {
+        const id = crypto.randomUUID();
+        await submitChange({ entity: 'content_types', entityId: id, action: 'create', payload: { id, ...contentType } });
+        const now = new Date().toISOString();
+        return { ...contentType, id, created_at: now, updated_at: now } as ContentType;
+      }
       const { data, error } = await (supabase.from('content_types') as any).insert(contentType).select().single();
       if (error) throw error;
       return data as unknown as ContentType;
@@ -244,6 +307,10 @@ export const api = {
 
   async updateContentType(id: string, updates: Partial<ContentType>): Promise<ContentType> {
     if (isConfigured) {
+      if (shouldQueueForApproval()) {
+        await submitChange({ entity: 'content_types', entityId: id, action: 'update', payload: { ...updates } });
+        return { id, ...updates } as ContentType;
+      }
       const { data, error } = await (supabase.from('content_types') as any).update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data as unknown as ContentType;
@@ -256,6 +323,10 @@ export const api = {
 
   async deleteContentType(id: string): Promise<void> {
     if (isConfigured) {
+      if (shouldQueueForApproval()) {
+        await submitChange({ entity: 'content_types', entityId: id, action: 'delete', payload: { id } });
+        return;
+      }
       const { error } = await supabase.from('content_types').delete().eq('id', id);
       if (error) throw error;
       return;
@@ -275,6 +346,11 @@ export const api = {
 
   async createWeek(week: Omit<Week, 'id' | 'created_at'>): Promise<Week> {
     if (isConfigured) {
+      if (shouldQueueForApproval()) {
+        const id = crypto.randomUUID();
+        await submitChange({ entity: 'weeks', entityId: id, action: 'create', payload: { id, ...week } });
+        return { ...week, id, created_at: new Date().toISOString() } as Week;
+      }
       const { data, error } = await (supabase.from('weeks') as any).insert(week).select().single();
       if (error) throw error;
       return data as unknown as Week;
@@ -290,6 +366,10 @@ export const api = {
 
   async updateWeek(id: string, week: Partial<Omit<Week, 'id' | 'created_at'>>): Promise<Week> {
     if (isConfigured) {
+      if (shouldQueueForApproval()) {
+        await submitChange({ entity: 'weeks', entityId: id, action: 'update', payload: { ...week } });
+        return { id, ...week } as Week;
+      }
       const { data, error } = await (supabase.from('weeks') as any)
         .update(week)
         .eq('id', id)
@@ -306,6 +386,10 @@ export const api = {
 
   async deleteWeek(id: string): Promise<void> {
     if (isConfigured) {
+      if (shouldQueueForApproval()) {
+        await submitChange({ entity: 'weeks', entityId: id, action: 'delete', payload: { id } });
+        return;
+      }
       const { error } = await supabase.from('weeks').delete().eq('id', id);
       if (error) throw error;
       return;
@@ -333,6 +417,19 @@ export const api = {
 
   async createResource(resource: Omit<Resource, 'id' | 'views_count' | 'downloads_count' | 'created_at' | 'updated_at' | 'subject' | 'content_type' | 'week'>): Promise<Resource> {
     if (isConfigured) {
+      if (shouldQueueForApproval()) {
+        const id = crypto.randomUUID();
+        await submitChange({ entity: 'resources', entityId: id, action: 'create', payload: { id, ...resource } });
+        const now = new Date().toISOString();
+        return {
+          ...resource,
+          id,
+          views_count: 0,
+          downloads_count: 0,
+          created_at: now,
+          updated_at: now,
+        } as Resource;
+      }
       const { data, error } = await (supabase.from('resources') as any).insert(resource).select().single();
       if (error) throw error;
       return data as unknown as Resource;
@@ -351,7 +448,15 @@ export const api = {
 
   async updateResource(id: string, updates: Partial<Resource>): Promise<Resource> {
     if (isConfigured) {
-      const { data, error } = await (supabase.from('resources') as any).update(updates).eq('id', id).select().single();
+      const allowedKeys = ['title', 'slug', 'description', 'subject_id', 'content_type_id', 'week_id', 'pdf_url', 'youtube_url', 'is_published', 'is_coming_soon', 'coming_soon_message', 'published_at'];
+      const sanitized = Object.fromEntries(
+        Object.entries(updates).filter(([key]) => allowedKeys.includes(key))
+      );
+      if (shouldQueueForApproval()) {
+        await submitChange({ entity: 'resources', entityId: id, action: 'update', payload: sanitized });
+        return { id, ...updates } as Resource;
+      }
+      const { data, error } = await (supabase.from('resources') as any).update(sanitized).eq('id', id).select().single();
       if (error) throw error;
       return data as unknown as Resource;
     }
@@ -363,6 +468,10 @@ export const api = {
 
   async deleteResource(id: string): Promise<void> {
     if (isConfigured) {
+      if (shouldQueueForApproval()) {
+        await submitChange({ entity: 'resources', entityId: id, action: 'delete', payload: { id } });
+        return;
+      }
       const { error } = await supabase.from('resources').delete().eq('id', id);
       if (error) throw error;
       return;
@@ -533,6 +642,38 @@ export const api = {
     questionsData: Omit<ExamQuestion, 'id' | 'exam_id' | 'created_at'>[]
   ): Promise<ExamWithQuestions> {
     if (isConfigured) {
+      if (shouldQueueForApproval()) {
+        const id = crypto.randomUUID();
+        const now = new Date().toISOString();
+        const examEcho: Exam = {
+          id,
+          title: examData.title,
+          subject_id: examData.subject_id,
+          time_limit_minutes: examData.time_limit_minutes,
+          is_published: examData.is_published,
+          is_coming_soon: examData.is_coming_soon ?? false,
+          coming_soon_message: examData.coming_soon_message ?? null,
+          created_at: now,
+          updated_at: now,
+        };
+        const questionsEcho: ExamQuestion[] = questionsData.map((q, idx) => ({
+          id: crypto.randomUUID(),
+          exam_id: id,
+          question_number: q.question_number || idx + 1,
+          question_text: q.question_text,
+          options: q.options,
+          correct_option_index: q.correct_option_index,
+          explanation: q.explanation || '',
+          created_at: now,
+        }));
+        await submitChange({
+          entity: 'exams',
+          entityId: id,
+          action: 'create',
+          payload: examPayloadFrom(examEcho, questionsEcho),
+        });
+        return { ...examEcho, questions: questionsEcho };
+      }
       const { data: newExam, error: examError } = await (supabase.from('exams') as any)
         .insert({
           title: examData.title,
@@ -608,6 +749,39 @@ export const api = {
     questionsData?: Omit<ExamQuestion, 'id' | 'exam_id' | 'created_at'>[]
   ): Promise<ExamWithQuestions> {
     if (isConfigured) {
+      if (shouldQueueForApproval()) {
+        const { data: currentExam, error: fetchError } = await supabase
+          .from('exams').select('*').eq('id', id).single();
+        if (fetchError) throw fetchError;
+
+        let mergedQuestions: ExamQuestion[];
+        if (questionsData) {
+          mergedQuestions = questionsData.map((q, idx) => ({
+            id: crypto.randomUUID(),
+            exam_id: id,
+            question_number: q.question_number || idx + 1,
+            question_text: q.question_text,
+            options: q.options,
+            correct_option_index: q.correct_option_index,
+            explanation: q.explanation || '',
+            created_at: new Date().toISOString(),
+          }));
+        } else {
+          const { data: existingQ, error: qErr } = await supabase
+            .from('exam_questions').select('*').eq('exam_id', id).order('question_number');
+          if (qErr) throw qErr;
+          mergedQuestions = (existingQ as unknown as ExamQuestion[]) || [];
+        }
+
+        const merged = { ...(currentExam as unknown as Exam), ...examUpdates };
+        await submitChange({
+          entity: 'exams',
+          entityId: id,
+          action: 'update',
+          payload: examPayloadFrom(merged, mergedQuestions),
+        });
+        return { ...merged, questions: mergedQuestions };
+      }
       const { data: updatedExam, error: examError } = await (supabase.from('exams') as any)
         .update(examUpdates)
         .eq('id', id)
@@ -685,6 +859,10 @@ export const api = {
 
   async deleteExam(id: string): Promise<void> {
     if (isConfigured) {
+      if (shouldQueueForApproval()) {
+        await submitChange({ entity: 'exams', entityId: id, action: 'delete', payload: { id } });
+        return;
+      }
       const { error } = await supabase.from('exams').delete().eq('id', id);
       if (error) throw error;
       return;
@@ -1002,5 +1180,59 @@ export const api = {
         subject_name: sub?.name || null,
       };
     });
+  },
+
+  // ====== سير اعتماد التعديلات (طلبات التغيير) ======
+
+  /** الموافقة أو الرفض — super_admin فقط؛ يمكن تمرير نسخة معدّلة تُطبَّق بدل الأصلية */
+  async reviewChangeRequest(
+    id: string,
+    decision: 'approved' | 'rejected',
+    note?: string,
+    modifiedPayload?: Record<string, any>
+  ): Promise<void> {
+    const { error } = await supabase.rpc('review_change_request' as any, {
+      p_id: id,
+      p_decision: decision,
+      p_note: note ?? null,
+      p_modified_payload: modifiedPayload ?? null,
+    } as any);
+    if (error) throw error;
+  },
+
+  /** إلغاء طلب معلّق (المقدّم نفسه أو المدير العام) */
+  async cancelChangeRequest(id: string): Promise<void> {
+    const { error } = await supabase.rpc('cancel_change_request' as any, { p_id: id } as any);
+    if (error) throw error;
+  },
+
+  /** الطلبات المعلّقة — للمدير العام */
+  async listPendingChanges(): Promise<ChangeRequest[]> {
+    if (isConfigured) {
+      const { data, error } = await supabase.rpc('list_pending_changes');
+      if (error) throw error;
+      return (data as ChangeRequest[]) || [];
+    }
+    return [];
+  },
+
+  /** أرشيف كل الطلبات — للمدير العام */
+  async listAllChanges(): Promise<ChangeRequest[]> {
+    if (isConfigured) {
+      const { data, error } = await supabase.rpc('list_all_changes');
+      if (error) throw error;
+      return (data as ChangeRequest[]) || [];
+    }
+    return [];
+  },
+
+  /** طلبات الموظف نفسه بكل حالاتها */
+  async listMyChanges(): Promise<ChangeRequest[]> {
+    if (isConfigured) {
+      const { data, error } = await supabase.rpc('list_my_changes');
+      if (error) throw error;
+      return (data as ChangeRequest[]) || [];
+    }
+    return [];
   },
 };

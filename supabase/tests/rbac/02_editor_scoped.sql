@@ -10,12 +10,12 @@ DECLARE
     n     INT;
     v_txt TEXT;
 BEGIN
-    -- T1: تعديل مورد داخل النطاق مسموح
+    -- T1: الكتابة المباشرة محجوبة عن الموظفين حتى داخل النطاق (تمرّ عبر طلبات التغيير — انظر 06)
     UPDATE public.resources SET title = 'فيزياء - مسودة (معدل)'
     WHERE id = 'd0000000-0000-0000-0000-000000000001';
     GET DIAGNOSTICS n = ROW_COUNT;
-    IF n <> 1 THEN RAISE EXCEPTION 'T1 FAIL: expected 1 row, got %', n; END IF;
-    RAISE NOTICE 'T1 PASS: تعديل مورد داخل النطاق';
+    IF n <> 0 THEN RAISE EXCEPTION 'T1 FAIL: direct write allowed (% rows)', n; END IF;
+    RAISE NOTICE 'T1 PASS: الكتابة المباشرة محجوبة — التعديل يتطلب طلب موافقة المدير العام';
 
     -- T2: تعديل مورد خارج النطاق ممنوع (حتى لو كان مرئيًا كمنشور)
     UPDATE public.resources SET title = 'hack'
@@ -24,22 +24,26 @@ BEGIN
     IF n <> 0 THEN RAISE EXCEPTION 'T2 FAIL: % rows updated outside scope', n; END IF;
     RAISE NOTICE 'T2 PASS: منع تعديل مورد خارج النطاق';
 
-    -- T3: النشر ممنوع
+    -- T3: النشر المباشر ممنوع (RLS تحجب الصف قبل الوصول لحارس الأعمدة)
     BEGIN
         UPDATE public.resources SET is_published = true
         WHERE id = 'd0000000-0000-0000-0000-000000000001';
-        RAISE EXCEPTION 'T3 FAIL: النشر سُمح به';
+        GET DIAGNOSTICS n = ROW_COUNT;
+        IF n <> 0 THEN RAISE EXCEPTION 'T3 FAIL: النشر سُمح به'; END IF;
+        RAISE NOTICE 'T3 PASS: منع النشر المباشر (RLS)';
     EXCEPTION WHEN insufficient_privilege THEN
-        RAISE NOTICE 'T3 PASS: منع النشر رغم صلاحية التعديل';
+        RAISE NOTICE 'T3 PASS: منع النشر المباشر (حارس الأعمدة)';
     END;
 
     -- T4: نقل المورد إلى مادة أخرى ممنوع
     BEGIN
         UPDATE public.resources SET subject_id = 'b0000000-0000-0000-0000-000000000002'
         WHERE id = 'd0000000-0000-0000-0000-000000000001';
-        RAISE EXCEPTION 'T4 FAIL: النقل سُمح به';
+        GET DIAGNOSTICS n = ROW_COUNT;
+        IF n <> 0 THEN RAISE EXCEPTION 'T4 FAIL: النقل سُمح به'; END IF;
+        RAISE NOTICE 'T4 PASS: منع نقل المورد بين المواد (RLS)';
     EXCEPTION WHEN insufficient_privilege THEN
-        RAISE NOTICE 'T4 PASS: منع نقل المورد بين المواد';
+        RAISE NOTICE 'T4 PASS: منع نقل المورد بين المواد (حارس الأعمدة)';
     END;
 
     -- T5: الحذف ممنوع
@@ -48,11 +52,15 @@ BEGIN
     IF n <> 0 THEN RAISE EXCEPTION 'T5 FAIL: الحذف سُمح به'; END IF;
     RAISE NOTICE 'T5 PASS: منع الحذف';
 
-    -- T6: الإنشاء داخل النطاق مسموح
-    INSERT INTO public.resources (title, slug, subject_id, content_type_id, pdf_url)
-    VALUES ('جديد فيزياء','new-ph','b0000000-0000-0000-0000-000000000001',
-            'c0000000-0000-0000-0000-000000000001','https://example.com/new.pdf');
-    RAISE NOTICE 'T6 PASS: الإنشاء داخل النطاق';
+    -- T6: الإنشاء المباشر محجوب أيضًا (يتحول تلقائيًا إلى طلب موافقة — انظر 06)
+    BEGIN
+        INSERT INTO public.resources (title, slug, subject_id, content_type_id, pdf_url)
+        VALUES ('جديد فيزياء','new-ph','b0000000-0000-0000-0000-000000000001',
+                'c0000000-0000-0000-0000-000000000001','https://example.com/new.pdf');
+        RAISE EXCEPTION 'T6 FAIL: الإنشاء المباشر سُمح به';
+    EXCEPTION WHEN insufficient_privilege THEN
+        RAISE NOTICE 'T6 PASS: الإنشاء المباشر محجوب عن الموظفين';
+    END;
 
     -- T7: الإنشاء خارج النطاق ممنوع
     BEGIN
@@ -90,14 +98,14 @@ BEGIN
     IF n <> 1 THEN RAISE EXCEPTION 'T11 FAIL: admins visible = %', n; END IF;
     RAISE NOTICE 'T11 PASS: لا يرى إلا سجل حسابه';
 
-    -- T12: الرؤية = مسودات الفيزياء + منشور الكيمياء فقط (وبلا مسودة الكيمياء)
+    -- T12: الرؤية = مسودة الفيزياء + منشور الكيمياء فقط (وبلا مسودة الكيمياء)
     SELECT count(*) INTO n FROM public.resources
-    WHERE slug IN ('ph-draft','ch-pub','new-ph');
-    IF n <> 3 THEN
-        RAISE EXCEPTION 'T12 FAIL: expected 3 accessible rows, got %', n;
+    WHERE slug IN ('ph-draft','ch-pub');
+    IF n <> 2 THEN
+        RAISE EXCEPTION 'T12 FAIL: expected 2 accessible rows, got %', n;
     END IF;
     SELECT count(*) INTO n FROM public.resources
-    WHERE slug NOT IN ('ph-draft','ch-pub','new-ph');
+    WHERE slug NOT IN ('ph-draft','ch-pub');
     IF n <> 0 THEN
         RAISE EXCEPTION 'T12 FAIL: unexpected rows visible (%)', n;
     END IF;

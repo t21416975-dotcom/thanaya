@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Layers, Calendar, FileText, Megaphone, Flag, BarChart3, LogOut, CheckCircle, HelpCircle, Sparkles, Menu, X, Bell, ShieldCheck } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { BookOpen, Layers, Calendar, FileText, Megaphone, Flag, BarChart3, LogOut, CheckCircle, HelpCircle, Sparkles, Menu, X, Bell, ShieldCheck, Inbox } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { usePermissions } from './lib/permissions';
+import { APPROVAL_QUEUED_EVENT } from './lib/approval';
+import { api } from './api/client';
 import { SubjectsManager } from './components/SubjectsManager';
 import { ContentTypesManager } from './components/ContentTypesManager';
 import { WeeksManager } from './components/WeeksManager';
@@ -13,6 +16,7 @@ import { AdsManager } from './components/AdsManager';
 import { AnalyticsView } from './components/AnalyticsView';
 import { NotificationsManager } from './components/NotificationsManager';
 import { StaffManager } from './components/StaffManager';
+import { ApprovalsManager } from './components/ApprovalsManager';
 import { SetPasswordModal } from './components/SetPasswordModal';
 import { AuthLogin } from './components/AuthLogin';
 
@@ -22,14 +26,42 @@ const ROLE_LABELS: Record<string, string> = {
   editor: 'محرر محتوى',
 };
 
-type TabId = 'resources' | 'exams' | 'notifications' | 'ai_settings' | 'subjects' | 'content_types' | 'weeks' | 'ads' | 'reports' | 'analytics' | 'staff';
+type TabId = 'resources' | 'exams' | 'notifications' | 'ai_settings' | 'subjects' | 'content_types' | 'weeks' | 'ads' | 'reports' | 'analytics' | 'staff' | 'approvals';
 
 export function App() {
+  const queryClient = useQueryClient();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('resources');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showSetPassword, setShowSetPassword] = useState(false);
+  const [queuedToast, setQueuedToast] = useState(0);
   const { permissions, can, isLoading: permsLoading } = usePermissions();
+
+  // عدّاد الطلبات المعلّقة (للمدير العام فقط) — يظهر كشارة على تبويب الموافقات
+  const { data: pendingChanges = [] } = useQuery({
+    queryKey: ['pending_changes'],
+    queryFn: () => api.listPendingChanges(),
+    enabled: permissions.is_super_admin,
+    refetchInterval: 30_000,
+  });
+
+  // تنبيه عند تحويل أي تعديل موظف إلى طلب موافقة
+  useEffect(() => {
+    const handler = () => {
+      setQueuedToast(Date.now());
+      queryClient.invalidateQueries({ queryKey: ['pending_changes'] });
+      queryClient.invalidateQueries({ queryKey: ['my_changes'] });
+    };
+    window.addEventListener(APPROVAL_QUEUED_EVENT, handler);
+    return () => window.removeEventListener(APPROVAL_QUEUED_EVENT, handler);
+  }, [queryClient]);
+
+  // إخفاء التنبيه تلقائيًا بعد 5 ثوانٍ
+  useEffect(() => {
+    if (!queuedToast) return;
+    const t = setTimeout(() => setQueuedToast(0), 5000);
+    return () => clearTimeout(t);
+  }, [queuedToast]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -56,21 +88,26 @@ export function App() {
     setIsAuthenticated(false);
   };
 
-  const navigation = [
-    { id: 'resources' as const,     name: 'الموارد والمحتوى',        icon: FileText,    perm: 'resources.view' },
-    { id: 'exams' as const,         name: 'الامتحانات التجريبية (MCQ)', icon: HelpCircle,  perm: 'exams.view' },
-    { id: 'notifications' as const, name: 'الإشعارات والتنبيهات',      icon: Bell,        perm: 'notifications.manage' },
-    { id: 'ai_settings' as const,   name: 'إعدادات الذكاء الاصطناعي (AI)', icon: Sparkles, perm: 'settings.manage' },
-    { id: 'subjects' as const,      name: 'المواد الدراسية',          icon: BookOpen,    perm: 'subjects.manage' },
-    { id: 'content_types' as const, name: 'أنواع المحتوى',            icon: Layers,      perm: 'content_types.manage' },
-    { id: 'weeks' as const,         name: 'الأسابيع',                icon: Calendar,    perm: 'weeks.manage' },
-    { id: 'reports' as const,       name: 'البلاغات',                icon: Flag,        perm: 'reports.view' },
-    { id: 'ads' as const,           name: 'الإعلانات',               icon: Megaphone,   perm: 'ads.manage' },
-    { id: 'analytics' as const,     name: 'الإحصائيات والتقارير',      icon: BarChart3,   perm: 'analytics.view' },
-    { id: 'staff' as const,         name: 'الفريق والصلاحيات',        icon: ShieldCheck, perm: 'staff.manage' },
+  const navigation: { id: TabId; name: string; icon: typeof FileText; perm: string | null; superOnly?: boolean }[] = [
+    { id: 'resources',     name: 'الموارد والمحتوى',           icon: FileText,    perm: 'resources.view' },
+    { id: 'exams',         name: 'الامتحانات التجريبية (MCQ)', icon: HelpCircle,  perm: 'exams.view' },
+    { id: 'approvals',     name: 'طلبات الموافقة',             icon: Inbox,       perm: null },
+    { id: 'notifications', name: 'الإشعارات والتنبيهات',       icon: Bell,        perm: 'notifications.manage', superOnly: true },
+    { id: 'ai_settings',   name: 'إعدادات الذكاء الاصطناعي (AI)', icon: Sparkles, perm: 'settings.manage', superOnly: true },
+    { id: 'subjects',      name: 'المواد الدراسية',            icon: BookOpen,    perm: 'subjects.manage' },
+    { id: 'content_types', name: 'أنواع المحتوى',              icon: Layers,      perm: 'content_types.manage' },
+    { id: 'weeks',         name: 'الأسابيع',                   icon: Calendar,    perm: 'weeks.manage' },
+    { id: 'reports',       name: 'البلاغات',                   icon: Flag,        perm: 'reports.view' },
+    { id: 'ads',           name: 'الإعلانات',                  icon: Megaphone,   perm: 'ads.manage', superOnly: true },
+    { id: 'analytics',     name: 'الإحصائيات والتقارير',       icon: BarChart3,   perm: 'analytics.view' },
+    { id: 'staff',         name: 'الفريق والصلاحيات',          icon: ShieldCheck, perm: 'staff.manage' },
   ];
 
-  const visibleNav = navigation.filter((n) => can(n.perm));
+  // تبويب الموافقات متاح لكل الطاقم (الموظف يرى طلباته، والمدير العام يرى الطابور).
+  // الإعلانات والإشعارات والإعدادات محصورة بالمدير العام (superOnly).
+  const visibleNav = navigation.filter(
+    (n) => (n.perm === null || can(n.perm)) && (!n.superOnly || permissions.is_super_admin)
+  );
 
   useEffect(() => {
     if (visibleNav.length > 0 && !visibleNav.some((n) => n.id === activeTab)) {
@@ -178,6 +215,11 @@ export function App() {
               >
                 <Icon className="w-5 h-5 shrink-0" />
                 <span className="truncate">{item.name}</span>
+                {item.id === 'approvals' && permissions.is_super_admin && pendingChanges.length > 0 && (
+                  <span className="mr-auto bg-rose-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center shrink-0">
+                    {pendingChanges.length}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -226,6 +268,7 @@ export function App() {
         <div className="p-3 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex-1">
           {activeTab === 'resources' && <ResourcesManager />}
           {activeTab === 'exams' && <ExamsManager />}
+          {activeTab === 'approvals' && <ApprovalsManager />}
           {activeTab === 'notifications' && <NotificationsManager />}
           {activeTab === 'ai_settings' && <AISettingsManager />}
           {activeTab === 'subjects' && <SubjectsManager />}
@@ -237,6 +280,16 @@ export function App() {
           {activeTab === 'staff' && <StaffManager />}
         </div>
       </main>
+
+      {queuedToast > 0 && (
+        <div
+          key={queuedToast}
+          className="fixed bottom-4 left-4 right-4 sm:right-auto z-[60] bg-emerald-600 text-white text-sm font-semibold px-4 py-3 rounded-2xl shadow-lg flex items-center gap-2 animate-slideUp"
+        >
+          <CheckCircle className="w-4 h-4 shrink-0" />
+          <span>أُرسل تعديلك لمراجعة المدير العام — سيظهر للمستخدمين بعد الاعتماد</span>
+        </div>
+      )}
 
       {showSetPassword && (
         <SetPasswordModal

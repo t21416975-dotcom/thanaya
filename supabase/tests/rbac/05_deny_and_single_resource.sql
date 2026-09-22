@@ -65,7 +65,7 @@ END $$;
 ROLLBACK;
 
 -- ============================================================================
--- 12) منحة على مورد واحد فقط (تعديل هذا المورد تحديدًا)
+-- 12) منحة على مورد واحد فقط: تخوّل تقديم طلب عليه، لكن الكتابة المباشرة محجوبة
 -- ============================================================================
 INSERT INTO public.admin_permissions (admin_id, permission_key, scope_type, scope_id)
 VALUES ('a0000000-0000-0000-0000-000000000004','resources.update','resource',
@@ -77,11 +77,12 @@ SELECT set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000004'
 DO $$
 DECLARE n INT;
 BEGIN
+    -- E1: الكتابة المباشرة محجوبة رغم المنحة — المنحة تخوّل تقديم طلب موافقة فقط (انظر 06)
     UPDATE public.resources SET title = 'كيمياء - مسودة (تعديل مورد واحد)'
     WHERE id = 'd0000000-0000-0000-0000-000000000003';
     GET DIAGNOSTICS n = ROW_COUNT;
-    IF n <> 1 THEN RAISE EXCEPTION 'E1 FAIL: grant on single resource not honored'; END IF;
-    RAISE NOTICE 'E1 PASS: تعديل مورد محدد مسموح';
+    IF n <> 0 THEN RAISE EXCEPTION 'E1 FAIL: direct write allowed with grant'; END IF;
+    RAISE NOTICE 'E1 PASS: الكتابة المباشرة محجوبة رغم منحة المورد الواحد';
 
     UPDATE public.resources SET title = 'hack'
     WHERE id = 'd0000000-0000-0000-0000-000000000002';

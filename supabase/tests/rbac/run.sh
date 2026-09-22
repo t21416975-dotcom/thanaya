@@ -30,7 +30,7 @@ for f in "$ROOT"/supabase/migrations/*.sql; do
 done
 
 echo "▶ 3/3 سيناريوهات الصلاحيات"
-for f in "$TESTS"/0[1-5]_*.sql; do
+for f in "$TESTS"/0[1-9]_*.sql; do
   echo "    - $(basename "$f")"
   "${PSQL[@]}" -f "$f"
 done

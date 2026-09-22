@@ -7,10 +7,11 @@ SELECT set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000003'
 DO $$
 DECLARE n INT;
 BEGIN
+    -- A1: حتى رتبة admin لا تكتب مباشرة — النشر يمرّ عبر طلب موافقة (انظر 06)
     UPDATE public.resources SET is_published = true WHERE id = 'd0000000-0000-0000-0000-000000000001';
     GET DIAGNOSTICS n = ROW_COUNT;
-    IF n <> 1 THEN RAISE EXCEPTION 'A1 FAIL: admin preset cannot publish'; END IF;
-    RAISE NOTICE 'A1 PASS: القالب يمنح النشر';
+    IF n <> 0 THEN RAISE EXCEPTION 'A1 FAIL: admin published directly'; END IF;
+    RAISE NOTICE 'A1 PASS: النشر المباشر محجوب عن admin — يتطلب اعتماد المدير العام';
 
     UPDATE public.admins SET role = 'admin' WHERE id = 'a0000000-0000-0000-0000-000000000002';
     GET DIAGNOSTICS n = ROW_COUNT;
@@ -21,8 +22,13 @@ BEGIN
     IF n <> 0 THEN RAISE EXCEPTION 'A3 FAIL: admin sees settings'; END IF;
     RAISE NOTICE 'A3 PASS: إعدادات النظام محجوبة عن admin';
 
-    INSERT INTO public.subjects (name, slug, order_index) VALUES ('مادة جديدة','new-subject',9);
-    RAISE NOTICE 'A4 PASS: إدارة المواد متاحة لرتبة admin';
+    -- A4: إدارة المواد المباشرة محجوبة عن admin (يقدّم طلب موافقة بدلًا منها)
+    BEGIN
+        INSERT INTO public.subjects (name, slug, order_index) VALUES ('مادة جديدة','new-subject',9);
+        RAISE EXCEPTION 'A4 FAIL: admin inserted subject directly';
+    EXCEPTION WHEN insufficient_privilege THEN
+        RAISE NOTICE 'A4 PASS: إنشاء المواد المباشر محجوب عن admin';
+    END;
 END $$;
 ROLLBACK;
 
