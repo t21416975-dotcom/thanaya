@@ -62,6 +62,10 @@ DROP POLICY IF EXISTS "Resource creators can insert resources" ON public.resourc
 DROP POLICY IF EXISTS "Resource editors can update resources"  ON public.resources;
 DROP POLICY IF EXISTS "Resource managers can delete resources" ON public.resources;
 
+DROP POLICY IF EXISTS "Super admins can insert resources" ON public.resources;
+DROP POLICY IF EXISTS "Super admins can update resources" ON public.resources;
+DROP POLICY IF EXISTS "Super admins can delete resources" ON public.resources;
+
 CREATE POLICY "Super admins can insert resources"
     ON public.resources FOR INSERT TO authenticated
     WITH CHECK (private.is_super_admin());
@@ -77,6 +81,10 @@ CREATE POLICY "Super admins can delete resources"
 DROP POLICY IF EXISTS "Exam managers can insert exams" ON public.exams;
 DROP POLICY IF EXISTS "Exam editors can update exams"  ON public.exams;
 DROP POLICY IF EXISTS "Exam managers can delete exams" ON public.exams;
+
+DROP POLICY IF EXISTS "Super admins can insert exams" ON public.exams;
+DROP POLICY IF EXISTS "Super admins can update exams" ON public.exams;
+DROP POLICY IF EXISTS "Super admins can delete exams" ON public.exams;
 
 CREATE POLICY "Super admins can insert exams"
     ON public.exams FOR INSERT TO authenticated
@@ -94,6 +102,10 @@ DROP POLICY IF EXISTS "Question editors can insert questions" ON public.exam_que
 DROP POLICY IF EXISTS "Question editors can update questions" ON public.exam_questions;
 DROP POLICY IF EXISTS "Question editors can delete questions" ON public.exam_questions;
 
+DROP POLICY IF EXISTS "Super admins can insert questions" ON public.exam_questions;
+DROP POLICY IF EXISTS "Super admins can update questions" ON public.exam_questions;
+DROP POLICY IF EXISTS "Super admins can delete questions" ON public.exam_questions;
+
 CREATE POLICY "Super admins can insert questions"
     ON public.exam_questions FOR INSERT TO authenticated
     WITH CHECK (private.is_super_admin());
@@ -107,6 +119,11 @@ CREATE POLICY "Super admins can delete questions"
 
 -- المواد الدراسية: سياسة FOR ALL السابقة كانت تشمل القراءة — نفصلها
 DROP POLICY IF EXISTS "Subject managers can manage subjects" ON public.subjects;
+
+DROP POLICY IF EXISTS "Subject managers can view subjects" ON public.subjects;
+DROP POLICY IF EXISTS "Super admins can insert subjects" ON public.subjects;
+DROP POLICY IF EXISTS "Super admins can update subjects" ON public.subjects;
+DROP POLICY IF EXISTS "Super admins can delete subjects" ON public.subjects;
 
 CREATE POLICY "Subject managers can view subjects"
     ON public.subjects FOR SELECT TO authenticated
@@ -125,6 +142,11 @@ CREATE POLICY "Super admins can delete subjects"
 -- أنواع المحتوى
 DROP POLICY IF EXISTS "Content type managers can manage content types" ON public.content_types;
 
+DROP POLICY IF EXISTS "Content type managers can view content types" ON public.content_types;
+DROP POLICY IF EXISTS "Super admins can insert content types" ON public.content_types;
+DROP POLICY IF EXISTS "Super admins can update content types" ON public.content_types;
+DROP POLICY IF EXISTS "Super admins can delete content types" ON public.content_types;
+
 CREATE POLICY "Content type managers can view content types"
     ON public.content_types FOR SELECT TO authenticated
     USING (private.has_permission('content_types.manage'));
@@ -141,6 +163,11 @@ CREATE POLICY "Super admins can delete content types"
 
 -- الأسابيع
 DROP POLICY IF EXISTS "Week managers can manage weeks" ON public.weeks;
+
+DROP POLICY IF EXISTS "Week managers can view weeks" ON public.weeks;
+DROP POLICY IF EXISTS "Super admins can insert weeks" ON public.weeks;
+DROP POLICY IF EXISTS "Super admins can update weeks" ON public.weeks;
+DROP POLICY IF EXISTS "Super admins can delete weeks" ON public.weeks;
 
 CREATE POLICY "Week managers can view weeks"
     ON public.weeks FOR SELECT TO authenticated
@@ -166,6 +193,8 @@ DROP POLICY IF EXISTS "Public can view active ad slots"  ON public.ad_slots;
 CREATE POLICY "Public can view active ad slots"
     ON public.ad_slots FOR SELECT TO anon, authenticated
     USING (is_active = true OR private.is_super_admin());
+DROP POLICY IF EXISTS "Super admins can manage ad slots" ON public.ad_slots;
+
 CREATE POLICY "Super admins can manage ad slots"
     ON public.ad_slots FOR ALL TO authenticated
     USING (private.is_super_admin())
@@ -180,6 +209,8 @@ CREATE POLICY "Public can view running direct ads"
         (is_active = true AND NOW() BETWEEN start_date AND end_date)
         OR private.is_super_admin()
     );
+DROP POLICY IF EXISTS "Super admins can manage direct ads" ON public.direct_ads;
+
 CREATE POLICY "Super admins can manage direct ads"
     ON public.direct_ads FOR ALL TO authenticated
     USING (private.is_super_admin())
@@ -192,6 +223,8 @@ CREATE POLICY "Public can view active notifications"
     ON public.notifications FOR SELECT TO anon, authenticated
     USING ((is_active = true AND (expires_at IS NULL OR expires_at > NOW()))
            OR private.is_super_admin());
+DROP POLICY IF EXISTS "Super admins can manage notifications" ON public.notifications;
+
 CREATE POLICY "Super admins can manage notifications"
     ON public.notifications FOR ALL TO authenticated
     USING (private.is_super_admin())
@@ -200,6 +233,9 @@ CREATE POLICY "Super admins can manage notifications"
 -- إعدادات النظام والذكاء الاصطناعي
 DROP POLICY IF EXISTS "Settings managers can view system settings"   ON public.system_settings;
 DROP POLICY IF EXISTS "Settings managers can manage system settings" ON public.system_settings;
+DROP POLICY IF EXISTS "Super admins can view system settings" ON public.system_settings;
+DROP POLICY IF EXISTS "Super admins can manage system settings" ON public.system_settings;
+
 CREATE POLICY "Super admins can view system settings"
     ON public.system_settings FOR SELECT TO authenticated
     USING (private.is_super_admin());
