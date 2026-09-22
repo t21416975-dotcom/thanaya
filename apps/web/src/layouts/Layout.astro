@@ -166,7 +166,17 @@ const navLinks = [
           ))}
         </nav>
 
-        <div class="flex items-center gap-1.5">
+        <div class="flex items-center gap-2">
+          <a
+            href="/exams"
+            class="hidden md:inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm"
+          >
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+            امتحن نفسك
+          </a>
           <NotificationBell notifications={notifications} />
 
           <!-- Mobile menu trigger -->
@@ -178,10 +188,14 @@ const navLinks = [
             aria-label="فتح قائمة التنقل"
             class="sm:hidden p-2 text-slate-600 hover:text-emerald-700 hover:bg-slate-100 rounded-xl transition cursor-pointer"
           >
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <svg id="mobile-nav-icon-open" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
               <line x1="4" y1="7" x2="20" y2="7"></line>
               <line x1="4" y1="12" x2="20" y2="12"></line>
               <line x1="4" y1="17" x2="20" y2="17"></line>
+            </svg>
+            <svg id="mobile-nav-icon-close" class="hidden w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
         </div>
@@ -191,7 +205,7 @@ const navLinks = [
       <nav
         id="mobile-nav-panel"
         aria-label="قائمة التنقل للجوال"
-        class="hidden sm:hidden border-t border-slate-100 bg-white"
+        class="hidden sm:hidden border-t border-slate-100 bg-white opacity-0 -translate-y-2 transition-all duration-200 ease-out"
       >
         <div class="max-w-5xl mx-auto px-4 py-2 flex flex-col">
           {navLinks.map((link) => (
@@ -278,21 +292,57 @@ const navLinks = [
       function initMobileNav() {
         const btn = document.getElementById('mobile-nav-btn');
         const panel = document.getElementById('mobile-nav-panel');
+        const iconOpen = document.getElementById('mobile-nav-icon-open');
+        const iconClose = document.getElementById('mobile-nav-icon-close');
         if (!btn || !panel || btn.dataset.bound === 'true') return;
         btn.dataset.bound = 'true';
 
-        btn.addEventListener('click', () => {
-          const willOpen = panel.classList.contains('hidden');
-          panel.classList.toggle('hidden', !willOpen);
-          btn.setAttribute('aria-expanded', String(willOpen));
-          btn.setAttribute('aria-label', willOpen ? 'إغلاق قائمة التنقل' : 'فتح قائمة التنقل');
+        const safeBtn: HTMLElement = btn;
+        const safePanel: HTMLElement = panel;
+
+        let closeTimer: ReturnType<typeof setTimeout> | null = null;
+        let isOpen = false;
+
+        function setIcons() {
+          if (iconOpen) iconOpen.classList.toggle('hidden', isOpen);
+          if (iconClose) iconClose.classList.toggle('hidden', !isOpen);
+        }
+
+        function openPanel() {
+          isOpen = true;
+          if (closeTimer) {
+            clearTimeout(closeTimer);
+            closeTimer = null;
+          }
+          safePanel.classList.remove('hidden');
+          // Force reflow so the transition runs from the collapsed state
+          void safePanel.offsetHeight;
+          safePanel.classList.remove('opacity-0', '-translate-y-2');
+          safePanel.classList.add('opacity-100', 'translate-y-0');
+          safeBtn.setAttribute('aria-expanded', 'true');
+          safeBtn.setAttribute('aria-label', 'إغلاق قائمة التنقل');
+          setIcons();
+        }
+
+        function closePanel() {
+          isOpen = false;
+          safePanel.classList.add('opacity-0', '-translate-y-2');
+          safePanel.classList.remove('opacity-100', 'translate-y-0');
+          safeBtn.setAttribute('aria-expanded', 'false');
+          safeBtn.setAttribute('aria-label', 'فتح قائمة التنقل');
+          setIcons();
+          closeTimer = setTimeout(() => {
+            if (!isOpen) safePanel.classList.add('hidden');
+          }, 220);
+        }
+
+        safeBtn.addEventListener('click', () => {
+          if (isOpen) closePanel();
+          else openPanel();
         });
 
-        panel.querySelectorAll('a').forEach((link) => {
-          link.addEventListener('click', () => {
-            panel.classList.add('hidden');
-            btn.setAttribute('aria-expanded', 'false');
-          });
+        safePanel.querySelectorAll('a').forEach((link) => {
+          link.addEventListener('click', () => closePanel());
         });
       }
 

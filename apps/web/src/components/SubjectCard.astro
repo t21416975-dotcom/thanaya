@@ -7,18 +7,6 @@ interface Props {
 
 const { subject } = Astro.props;
 
-// Deterministic muted accent per subject (same subject => same color everywhere)
-const palette = [
-  { bg: 'bg-emerald-50', text: 'text-emerald-700' },
-  { bg: 'bg-sky-50', text: 'text-sky-700' },
-  { bg: 'bg-amber-50', text: 'text-amber-700' },
-  { bg: 'bg-rose-50', text: 'text-rose-700' },
-  { bg: 'bg-violet-50', text: 'text-violet-700' },
-  { bg: 'bg-teal-50', text: 'text-teal-700' },
-];
-let hash = 0;
-for (const ch of subject.slug) hash = (hash * 31 + (ch.codePointAt(0) || 0)) >>> 0;
-const accent = palette[hash % palette.length];
 const initial = subject.name.trim().charAt(0);
 ---
 
@@ -28,7 +16,7 @@ const initial = subject.name.trim().charAt(0);
 >
   <span
     aria-hidden="true"
-    class={`w-10 h-10 rounded-xl ${accent.bg} ${accent.text} flex items-center justify-center shrink-0 text-lg font-bold select-none`}
+    class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white flex items-center justify-center shrink-0 text-lg font-bold select-none transition"
   >
     {initial}
   </span>

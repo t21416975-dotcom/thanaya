@@ -78,7 +78,7 @@ const searchIndexJson = JSON.stringify(searchIndex).replace(/</g, '\\u003c');
           aria-label="نتائج البحث"
           class="hidden absolute z-30 mt-2 w-full max-h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg divide-y divide-slate-100 text-right"
         ></div>
-        <p class="mt-2 text-[11px] text-slate-500">مثال: «تقييم الأسبوع الرابع» أو اسم المادة</p>
+        <p class="mt-2 text-[11px] text-slate-500">مثال: «تقييم الأسبوع الرابع» أو اسم المادة — والبحث يتغاضى عن الأخطاء الإملائية</p>
       </div>
 
       <script is:inline type="application/json" id="home-search-data" set:html={searchIndexJson}></script>
@@ -126,7 +126,7 @@ const searchIndexJson = JSON.stringify(searchIndex).replace(/</g, '\\u003c');
     </section>
   </div>
 
-  {/* Instant search logic (client-side, forgiving Arabic matching) */}
+  {/* Fuzzy instant search: typo-tolerant Arabic matching with ranked results */}
   <script is:inline>
     (function () {
       const dataEl = document.getElementById('home-search-data');
@@ -145,16 +145,82 @@ const searchIndexJson = JSON.stringify(searchIndex).replace(/</g, '\\u003c');
       let activeIdx = -1;
       let debounceTimer = null;
 
-      // Normalize Arabic for forgiving search: strip tashkeel/tatweel, unify alef/haa/ya forms
+      // Deep Arabic normalization: strip tashkeel/tatweel/shadda, unify hamza/alef/waw/ya/taa forms
       function normalize(str) {
         return (str || '')
           .toString()
           .toLowerCase()
-          .replace(/[ً-ْـ]/g, '')
+          .replace(/[ً-ْـّ]/g, '')
           .replace(/[أإآٱ]/g, 'ا')
+          .replace(/ؤ/g, 'و')
+          .replace(/ئ/g, 'ي')
+          .replace(/ء/g, '')
           .replace(/ة/g, 'ه')
           .replace(/ى/g, 'ي');
       }
+
+      // Drop the definite article for fairer comparison (الفيزياء == فيزياء)
+      function stemToken(t) {
+        return t.length > 3 && t.indexOf('ال') === 0 ? t.slice(2) : t;
+      }
+
+      // Damerau-Levenshtein distance: tolerates missing/extra/swapped/substituted letters
+      function editDistance(a, b) {
+        if (a === b) return 0;
+        const la = a.length;
+        const lb = b.length;
+        if (!la) return lb;
+        if (!lb) return la;
+        const dp = [];
+        for (let i = 0; i <= la; i++) dp.push([i]);
+        for (let j = 0; j <= lb; j++) dp[0][j] = j;
+        for (let i = 1; i <= la; i++) {
+          for (let j = 1; j <= lb; j++) {
+            const cost = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+            dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+            if (i > 1 && j > 1 && a.charAt(i - 1) === b.charAt(j - 2) && a.charAt(i - 2) === b.charAt(j - 1)) {
+              dp[i][j] = Math.min(dp[i][j], dp[i - 2][j - 2] + cost);
+            }
+          }
+        }
+        return dp[la][lb];
+      }
+
+      function allowedErrors(token) {
+        if (token.length >= 7) return 2;
+        if (token.length >= 4) return 1;
+        return 0;
+      }
+
+      // Score an item against query tokens; -1 = not a match. Every query token must match something.
+      function scoreItem(item, qTokens) {
+        const hay = normalize(item.title + ' ' + (item.meta || ''));
+        const hayTokens = hay.split(/\s+/).filter(Boolean);
+        let total = 0;
+        for (let qi = 0; qi < qTokens.length; qi++) {
+          const q = stemToken(qTokens[qi]);
+          if (!q) continue;
+          let best = -1;
+          if (hay.indexOf(q) !== -1) {
+            best = 100; // exact substring
+          } else {
+            for (let hi = 0; hi < hayTokens.length; hi++) {
+              const h = stemToken(hayTokens[hi]);
+              if (!h) continue;
+              if (h.indexOf(q) === 0 || q.indexOf(h) === 0) {
+                best = Math.max(best, 80); // prefix match
+                continue;
+              }
+              const d = editDistance(q, h);
+              if (d <= allowedErrors(q)) best = Math.max(best, 60 - d * 10); // fuzzy typo match
+            }
+          }
+          if (best < 0) return -1;
+          total += best;
+        }
+        return total;
+      }
+
 
       function escapeHtml(s) {
         return String(s)
@@ -208,16 +274,26 @@ const searchIndexJson = JSON.stringify(searchIndex).replace(/</g, '\\u003c');
       }
 
       function runSearch() {
-        const q = normalize(input.value.trim());
-        if (q.length < 2) {
+        const qRaw = normalize(input.value.trim());
+        if (qRaw.length < 2) {
           closeResults();
           return;
         }
+        const qTokens = qRaw.split(/\s+/).filter(Boolean);
         matches = index
-          .filter(function (item) {
-            return normalize(item.title + ' ' + (item.meta || '')).indexOf(q) !== -1;
+          .map(function (item) {
+            return { item: item, score: scoreItem(item, qTokens) };
           })
-          .slice(0, 8);
+          .filter(function (r) {
+            return r.score > 0;
+          })
+          .sort(function (a, b) {
+            return b.score - a.score;
+          })
+          .slice(0, 8)
+          .map(function (r) {
+            return r.item;
+          });
         activeIdx = matches.length ? 0 : -1;
         render();
       }
