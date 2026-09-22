@@ -197,6 +197,33 @@ function buildSubjectCollectionSchema(subject: Subject, contentTypes?: ContentTy
   return schema;
 }
 
+function buildSubjectListingSchema(subjects: Subject[]): JsonLd {
+  const pageUrl = absoluteUrl('/subjects');
+  const schema: JsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    '@id': `${pageUrl}#collection`,
+    url: pageUrl,
+    name: 'المواد الدراسية',
+    description: `قائمة المواد الدراسية المتاحة لطلاب ${EDUCATIONAL_LEVEL} على ${PLATFORM_NAME}.`,
+    inLanguage: LOCALE,
+    isPartOf: websiteRef(),
+    provider: organizationRef(),
+  };
+
+  if (subjects.length > 0) {
+    schema.hasPart = subjects.map((subject) => ({
+      '@type': 'CollectionPage',
+      '@id': `${subjectUrl(subject.slug)}#collection`,
+      name: subject.name,
+      url: subjectUrl(subject.slug),
+      ...(subject.description ? { description: subject.description } : {}),
+    }));
+  }
+
+  return schema;
+}
+
 function buildContentTypeCollectionSchema(
   subject: Subject,
   contentType: ContentType,
@@ -385,6 +412,7 @@ function buildAboutSchema(): JsonLd {
 
 export type GeoPageInput =
   | { pageType: 'home'; resources: Resource[] }
+  | { pageType: 'subjectListing'; subjects: Subject[] }
   | { pageType: 'subject'; subject: Subject; contentTypes?: ContentType[] }
   | { pageType: 'contentTypeListing'; subject: Subject; contentType: ContentType; resources: Resource[] }
   | { pageType: 'resource'; resource: Resource; description?: string }
@@ -400,6 +428,9 @@ export function buildPageSchema(input: GeoPageInput): JsonLd[] {
   switch (input.pageType) {
     case 'home':
       return [buildHomeSchema(input.resources)];
+
+    case 'subjectListing':
+      return [buildSubjectListingSchema(input.subjects), buildBreadcrumbList([{ name: 'المواد الدراسية' }])];
 
     case 'subject':
       return [

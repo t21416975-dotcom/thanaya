@@ -43,7 +43,7 @@ const notifications = await publicApi.getActiveNotifications();
 const currentPath = Astro.url.pathname;
 const navLinks = [
   { href: '/', label: 'الرئيسية', isActive: currentPath === '/' },
-  { href: '/#subjects', label: 'المواد الدراسية', isActive: currentPath.startsWith('/subjects') },
+  { href: '/subjects', label: 'المواد الدراسية', isActive: currentPath.startsWith('/subjects') },
   { href: '/exams', label: 'الامتحانات التفاعلية', isActive: currentPath.startsWith('/exams') },
 ];
 ---
@@ -167,9 +167,20 @@ const navLinks = [
         </nav>
 
         <div class="flex items-center gap-2">
+          <!-- Primary CTA: compact on mobile, full label from sm up -->
           <a
             href="/exams"
-            class="hidden md:inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm"
+            aria-label="امتحن نفسك — الامتحانات التفاعلية"
+            class="sm:hidden inline-flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+          </a>
+          <a
+            href="/exams"
+            class="hidden sm:inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm"
           >
             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M9 11l3 3L22 4"></path>
@@ -222,6 +233,18 @@ const navLinks = [
               {link.label}
             </a>
           ))}
+
+          <!-- Primary CTA inside the mobile panel -->
+          <a
+            href="/exams"
+            class="mt-1 mb-2 inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-3 rounded-xl transition shadow-sm"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+            <span>امتحن نفسك</span>
+          </a>
         </div>
       </nav>
     </header>

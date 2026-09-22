@@ -1,0 +1,98 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import SubjectCard from '../../components/SubjectCard.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import { publicApi } from '../../lib/api';
+import { buildPageSchema, EDUCATIONAL_LEVEL } from '../../lib/geo';
+
+const subjects = await publicApi.getActiveSubjects();
+
+const jsonLd = buildPageSchema({ pageType: 'subjectListing', subjects });
+
+const pageTitle = 'المواد الدراسية | التقييمات والمذكرات لكل مادة - منصة ثنايا';
+const pageDescription = `تصفح جميع المواد الدراسية لطلاب ${EDUCATIONAL_LEVEL} — التقييمات الأسبوعية وحلولها والمذكرات والامتحانات التفاعلية لكل مادة في مكان واحد.`;
+---
+
+<Layout title={pageTitle} description={pageDescription} jsonLd={jsonLd}>
+  <div class="space-y-8">
+    <Breadcrumb
+      items={[
+        { label: 'الرئيسية', href: '/' },
+        { label: 'المواد الدراسية' },
+      ]}
+    />
+
+    <!-- Header Card -->
+    <header class="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
+      <div class="space-y-2 max-w-2xl">
+        <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-100 px-3 py-1 rounded-full text-xs font-bold">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          <span>{subjects.length} مادة دراسية</span>
+        </span>
+        <h1 class="text-2xl sm:text-3xl font-bold text-slate-900">
+          المواد الدراسية
+        </h1>
+        <p class="text-sm text-slate-600 leading-relaxed">
+          كل مادة فيها تقييماتها الأسبوعية وحلولها ونماذج الامتحانات والمذكرات، مرتبة حتى تصل لما
+          تحتاجه في أقل عدد من الخطوات.
+        </p>
+      </div>
+    </header>
+
+    <!-- Ad Slot -->
+    <AdSlot position="subject_page" />
+
+    <!-- Subjects Grid -->
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">اختر المادة للبدء</h2>
+          <p class="text-xs text-slate-500">اضغط على أي مادة لتصفح أقسام المحتوى والملفات الخاصة بها</p>
+        </div>
+        <span class="text-xs text-slate-500 shrink-0">إجمالي: {subjects.length} مادة</span>
+      </div>
+
+      {subjects.length > 0 ? (
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {subjects.map((subj) => (
+            <SubjectCard subject={subj} />
+          ))}
+        </div>
+      ) : (
+        <div class="bg-white rounded-2xl border border-slate-200 p-10 text-center space-y-2">
+          <p class="text-sm font-bold text-slate-800">لم تُضف المواد الدراسية بعد</p>
+          <p class="text-xs text-slate-500">
+            يتم تجهيز المواد وأقسامها حاليًا، وستظهر هنا مباشرة بعد إضافتها.
+          </p>
+          <a href="/" class="inline-block mt-2 text-xs font-semibold text-emerald-700 hover:underline">
+            العودة للصفحة الرئيسية
+          </a>
+        </div>
+      )}
+    </section>
+
+    <!-- Cross-link to exams -->
+    <section class="bg-emerald-50 rounded-2xl border border-emerald-100 p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="text-center sm:text-right">
+        <p class="text-sm font-bold text-slate-800">جاهز تختبر مستواك؟</p>
+        <p class="text-xs text-slate-600 mt-0.5">
+          امتحانات تفاعلية اختيار من متعدد مع مؤقت زمني وتصحيح وتفسير فوري.
+        </p>
+      </div>
+      <a
+        href="/exams"
+        class="shrink-0 inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition shadow-sm"
+      >
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 11l3 3L22 4"></path>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+        </svg>
+        <span>امتحن نفسك</span>
+      </a>
+    </section>
+  </div>
+</Layout>

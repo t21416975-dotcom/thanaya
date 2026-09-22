@@ -78,7 +78,7 @@ const searchIndexJson = JSON.stringify(searchIndex).replace(/</g, '\\u003c');
           aria-label="نتائج البحث"
           class="hidden absolute z-30 mt-2 w-full max-h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg divide-y divide-slate-100 text-right"
         ></div>
-        <p class="mt-2 text-[11px] text-slate-500">مثال: «تقييم الأسبوع الرابع» أو اسم المادة — والبحث يتغاضى عن الأخطاء الإملائية</p>
+        <p class="mt-2 text-[11px] text-slate-500">مثال: «تقييم الأسبوع الرابع» أو اسم المادة</p>
       </div>
 
       <script is:inline type="application/json" id="home-search-data" set:html={searchIndexJson}></script>
