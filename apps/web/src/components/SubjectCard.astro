@@ -6,25 +6,52 @@ interface Props {
 }
 
 const { subject } = Astro.props;
+
+// Deterministic muted accent per subject (same subject => same color everywhere)
+const palette = [
+  { bg: 'bg-emerald-50', text: 'text-emerald-700' },
+  { bg: 'bg-sky-50', text: 'text-sky-700' },
+  { bg: 'bg-amber-50', text: 'text-amber-700' },
+  { bg: 'bg-rose-50', text: 'text-rose-700' },
+  { bg: 'bg-violet-50', text: 'text-violet-700' },
+  { bg: 'bg-teal-50', text: 'text-teal-700' },
+];
+let hash = 0;
+for (const ch of subject.slug) hash = (hash * 31 + (ch.codePointAt(0) || 0)) >>> 0;
+const accent = palette[hash % palette.length];
+const initial = subject.name.trim().charAt(0);
 ---
 
 <a
   href={`/subjects/${subject.slug}`}
-  class="group block bg-white rounded-2xl border border-slate-200 p-5 hover:border-emerald-500 hover:shadow-md transition duration-150"
+  class="group flex items-start gap-3.5 bg-white rounded-2xl border border-slate-200 p-5 hover:border-emerald-500 hover:shadow-md transition duration-150"
 >
-  <div class="flex items-start justify-between">
-    <div class="space-y-1.5">
-      <h3 class="font-bold text-slate-900 group-hover:text-emerald-700 transition text-base">
-        {subject.name}
-      </h3>
-      {subject.description && (
-        <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-          {subject.description}
-        </p>
-      )}
-    </div>
-    <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition">
-      <span class="text-sm font-bold">←</span>
-    </div>
+  <span
+    aria-hidden="true"
+    class={`w-10 h-10 rounded-xl ${accent.bg} ${accent.text} flex items-center justify-center shrink-0 text-lg font-bold select-none`}
+  >
+    {initial}
+  </span>
+  <div class="flex-1 min-w-0 space-y-1.5">
+    <h3 class="font-bold text-slate-900 group-hover:text-emerald-700 transition text-base">
+      {subject.name}
+    </h3>
+    {subject.description && (
+      <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+        {subject.description}
+      </p>
+    )}
   </div>
+  <svg
+    aria-hidden="true"
+    class="w-4 h-4 text-slate-300 group-hover:text-emerald-600 group-hover:-translate-x-0.5 transition shrink-0 mt-1"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M15 18l-6-6 6-6"></path>
+  </svg>
 </a>

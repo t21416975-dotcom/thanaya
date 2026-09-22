@@ -21,6 +21,15 @@ const previewUrl = getPdfPreviewUrl(resource.pdf_url);
 const downloadUrl = getPdfDownloadUrl(resource.pdf_url);
 const fullViewUrl = getPdfFullViewUrl(resource.pdf_url);
 
+// Trust metadata: publish date + engagement counters (already tracked by the platform)
+const rawDate = resource.published_at || resource.created_at;
+const dateObj = rawDate ? new Date(rawDate) : null;
+const publishedDate =
+  dateObj && !Number.isNaN(dateObj.getTime())
+    ? new Intl.DateTimeFormat('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' }).format(dateObj)
+    : null;
+const formatCount = (n: number) => new Intl.NumberFormat('ar-EG').format(n || 0);
+
 // Fetch related resources (cached)
 const relatedResources = await publicApi.getPublishedResources({
   subjectId: resource.subject_id,
@@ -84,7 +93,7 @@ const jsonLd = buildPageSchema({ pageType: 'resource', resource, description: pa
         </div>
 
         {/* Title */}
-        <h1 class="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">
+        <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
           {resource.title}
         </h1>
 
@@ -94,6 +103,36 @@ const jsonLd = buildPageSchema({ pageType: 'resource', resource, description: pa
             {resource.description}
           </p>
         )}
+
+        {/* Trust metadata: publish date, views, downloads */}
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2 text-xs text-slate-500">
+          {publishedDate && (
+            <span class="inline-flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              <span>نُشر في {publishedDate}</span>
+            </span>
+          )}
+          <span class="inline-flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <span>{formatCount(resource.views_count)} مشاهدة</span>
+          </span>
+          <span class="inline-flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>{formatCount(resource.downloads_count)} تحميل</span>
+          </span>
+        </div>
       </div>
 
       {/* Prominent Action Bar */}
@@ -174,7 +213,11 @@ const jsonLd = buildPageSchema({ pageType: 'resource', resource, description: pa
               class="text-xs font-semibold text-emerald-700 hover:underline flex items-center gap-1"
             >
               <span>فتح في نافذة كاملة</span>
-              <span>↗</span>
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
             </a>
           </div>
 

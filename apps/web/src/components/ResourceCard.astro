@@ -7,50 +7,53 @@ interface Props {
 
 const { resource } = Astro.props;
 const isComingSoon = resource.is_coming_soon && !resource.is_published;
+
+// Real metadata builds trust: publish date + engagement counters (already tracked by the platform)
+const rawDate = resource.published_at || resource.created_at;
+const dateObj = rawDate ? new Date(rawDate) : null;
+const publishedDate =
+  dateObj && !Number.isNaN(dateObj.getTime())
+    ? new Intl.DateTimeFormat('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' }).format(dateObj)
+    : null;
+const formatCount = (n: number) => new Intl.NumberFormat('ar-EG').format(n || 0);
 ---
 
 {isComingSoon ? (
   <div
     class="block bg-slate-50 rounded-xl border border-slate-200 p-4 opacity-60 cursor-not-allowed select-none"
+    data-resource-week={resource.week_id || 'none'}
   >
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-      <div class="space-y-1">
-        <div class="flex items-center gap-2 flex-wrap">
-          <span class="bg-slate-200 text-slate-500 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
-            قريباً
+    <div class="space-y-1">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="bg-slate-200 text-slate-500 text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+          قريباً
+        </span>
+        {resource.content_type && (
+          <span class="bg-slate-100 text-slate-400 text-[11px] font-medium px-2.5 py-0.5 rounded-full">
+            {resource.content_type.name}
           </span>
-          {resource.content_type && (
-            <span class="bg-slate-100 text-slate-400 text-[11px] font-medium px-2.5 py-0.5 rounded-full">
-              {resource.content_type.name}
-            </span>
-          )}
-        </div>
-
-        <h4 class="font-bold text-slate-400 text-sm sm:text-base pt-1">
-          {resource.title}
-        </h4>
-
-        {resource.coming_soon_message && (
-          <p class="text-xs text-slate-400 italic">
-            {resource.coming_soon_message}
-          </p>
         )}
       </div>
 
-      <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
-        <span class="bg-slate-100 text-slate-400 text-xs font-semibold px-3 py-1.5 rounded-lg">
-          قريباً
-        </span>
-      </div>
+      <h4 class="font-bold text-slate-400 text-sm sm:text-base pt-1">
+        {resource.title}
+      </h4>
+
+      {resource.coming_soon_message && (
+        <p class="text-xs text-slate-400 italic">
+          {resource.coming_soon_message}
+        </p>
+      )}
     </div>
   </div>
 ) : (
   <a
     href={`/resources/${resource.slug}`}
     class="group block bg-white rounded-xl border border-slate-200 p-4 hover:border-emerald-500 hover:shadow-sm transition"
+    data-resource-week={resource.week_id || 'none'}
   >
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-      <div class="space-y-1">
+      <div class="space-y-1 min-w-0">
         <div class="flex items-center gap-2 flex-wrap">
           {resource.week && (
             <span class="bg-emerald-50 text-emerald-800 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border border-emerald-100">
@@ -78,6 +81,36 @@ const isComingSoon = resource.is_coming_soon && !resource.is_published;
             {resource.description}
           </p>
         )}
+
+        {/* Trust metadata: publish date, views, downloads */}
+        <div class="flex flex-wrap items-center gap-x-3.5 gap-y-1 pt-1 text-[11px] text-slate-500">
+          {publishedDate && (
+            <span class="inline-flex items-center gap-1">
+              <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              {publishedDate}
+            </span>
+          )}
+          <span class="inline-flex items-center gap-1">
+            <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            {formatCount(resource.views_count)} مشاهدة
+          </span>
+          <span class="inline-flex items-center gap-1">
+            <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            {formatCount(resource.downloads_count)} تحميل
+          </span>
+        </div>
       </div>
 
       <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
@@ -87,7 +120,7 @@ const isComingSoon = resource.is_coming_soon && !resource.is_published;
           </span>
         )}
         <span class="bg-emerald-50 text-emerald-700 text-xs font-semibold px-3 py-1.5 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition">
-          عرض الملف ←
+          عرض الملف
         </span>
       </div>
     </div>

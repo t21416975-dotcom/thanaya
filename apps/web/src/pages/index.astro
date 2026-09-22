@@ -9,6 +9,26 @@ import { buildPageSchema } from '../lib/geo';
 const subjects = await publicApi.getActiveSubjects();
 const latestAssessments = await publicApi.getPublishedResources({ limit: 6 });
 const jsonLd = buildPageSchema({ pageType: 'home', resources: latestAssessments });
+
+// Lightweight client-side search index: subjects + latest published resources
+const searchableResources = await publicApi.getPublishedResources({ limit: 60 });
+const searchIndex = [
+  ...subjects.map((s) => ({
+    type: 'subject',
+    title: s.name,
+    url: `/subjects/${s.slug}`,
+    meta: 'مادة دراسية',
+  })),
+  ...searchableResources
+    .filter((r) => r.is_published)
+    .map((r) => ({
+      type: 'resource',
+      title: r.title,
+      url: `/resources/${r.slug}`,
+      meta: [r.subject?.name, r.content_type?.name, r.week?.title].filter(Boolean).join('، '),
+    })),
+];
+const searchIndexJson = JSON.stringify(searchIndex).replace(/</g, '\\u003c');
 ---
 
 <Layout
@@ -16,8 +36,8 @@ const jsonLd = buildPageSchema({ pageType: 'home', resources: latestAssessments 
   jsonLd={jsonLd}
 >
   <div class="space-y-10">
-    {/* Hero Section */}
-    <section class="text-center py-10 bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+    {/* Hero Section with Instant Search */}
+    <section class="text-center py-10 bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
       <div class="inline-flex items-center gap-2 bg-emerald-50 text-emerald-800 text-xs px-3.5 py-1.5 rounded-full font-bold mb-4 border border-emerald-100 shadow-sm">
         <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
@@ -25,20 +45,50 @@ const jsonLd = buildPageSchema({ pageType: 'home', resources: latestAssessments 
         </svg>
         <span>دفعة تانية بكالوريا</span>
       </div>
-      <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+      <h1 class="text-3xl sm:text-4xl font-bold text-slate-900">
         التقييمات كلها في مكان واحد
       </h1>
       <p class="mt-3 text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
         تصفح وتحميل مباشر وسريع للتقييمات الأسبوعية، نماذج الإجابة، الامتحانات التجريبية، والمذكرات
         بدون إعلانات مزعجة وبأعلى سرعة ممكنة.
       </p>
+
+      {/* Instant client-side search */}
+      <div class="relative max-w-xl mx-auto mt-6 text-right" id="home-search">
+        <label for="home-search-input" class="sr-only">ابحث عن تقييم أو حل أو مذكرة</label>
+        <div class="relative">
+          <svg class="w-5 h-5 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            id="home-search-input"
+            type="search"
+            autocomplete="off"
+            role="combobox"
+            aria-expanded="false"
+            aria-controls="home-search-results"
+            placeholder="ابحث عن تقييم، حل، مذكرة، أو مادة…"
+            class="w-full rounded-2xl border border-slate-300 bg-slate-50 pr-11 pl-4 py-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition"
+          />
+        </div>
+        <div
+          id="home-search-results"
+          role="listbox"
+          aria-label="نتائج البحث"
+          class="hidden absolute z-30 mt-2 w-full max-h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg divide-y divide-slate-100 text-right"
+        ></div>
+        <p class="mt-2 text-[11px] text-slate-500">مثال: «تقييم الأسبوع الرابع» أو اسم المادة</p>
+      </div>
+
+      <script is:inline type="application/json" id="home-search-data" set:html={searchIndexJson}></script>
     </section>
 
     {/* Top Ad Slot */}
     <AdSlot position="homepage_top" />
 
     {/* Subjects Section */}
-    <section class="space-y-4">
+    <section id="subjects" class="space-y-4 scroll-mt-24">
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-xl font-bold text-slate-900">المواد الدراسية</h2>
@@ -68,11 +118,149 @@ const jsonLd = buildPageSchema({ pageType: 'home', resources: latestAssessments 
           <ResourceCard resource={res} />
         ))}
         {latestAssessments.length === 0 && (
-          <div class="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400">
+          <div class="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-500">
             جاري إضافة الموارد والتقييمات قريبًا.
           </div>
         )}
       </div>
     </section>
   </div>
+
+  {/* Instant search logic (client-side, forgiving Arabic matching) */}
+  <script is:inline>
+    (function () {
+      const dataEl = document.getElementById('home-search-data');
+      const input = document.getElementById('home-search-input');
+      const resultsEl = document.getElementById('home-search-results');
+      if (!dataEl || !input || !resultsEl) return;
+
+      let index = [];
+      try {
+        index = JSON.parse(dataEl.textContent || '[]');
+      } catch (e) {
+        index = [];
+      }
+
+      let matches = [];
+      let activeIdx = -1;
+      let debounceTimer = null;
+
+      // Normalize Arabic for forgiving search: strip tashkeel/tatweel, unify alef/haa/ya forms
+      function normalize(str) {
+        return (str || '')
+          .toString()
+          .toLowerCase()
+          .replace(/[ً-ْـ]/g, '')
+          .replace(/[أإآٱ]/g, 'ا')
+          .replace(/ة/g, 'ه')
+          .replace(/ى/g, 'ي');
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function closeResults() {
+        resultsEl.classList.add('hidden');
+        input.setAttribute('aria-expanded', 'false');
+        activeIdx = -1;
+      }
+
+      function render() {
+        if (matches.length === 0) {
+          resultsEl.innerHTML =
+            '<div class="px-4 py-6 text-center text-xs text-slate-500">لا توجد نتائج مطابقة — جرّب اسم المادة أو عنوان الملف.</div>';
+        } else {
+          resultsEl.innerHTML = matches
+            .map(function (item, i) {
+              const badge =
+                item.type === 'subject'
+                  ? '<span class="shrink-0 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">مادة</span>'
+                  : '<span class="shrink-0 text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">ملف</span>';
+              return (
+                '<a href="' +
+                item.url +
+                '" role="option" aria-selected="' +
+                (i === activeIdx) +
+                '" class="flex items-center gap-3 px-4 py-3 transition ' +
+                (i === activeIdx ? 'bg-emerald-50/70' : 'hover:bg-slate-50') +
+                '">' +
+                badge +
+                '<span class="flex-1 min-w-0">' +
+                '<span class="block text-sm font-semibold text-slate-900 truncate">' +
+                escapeHtml(item.title) +
+                '</span>' +
+                (item.meta
+                  ? '<span class="block text-[11px] text-slate-500 truncate mt-0.5">' + escapeHtml(item.meta) + '</span>'
+                  : '') +
+                '</span></a>'
+              );
+            })
+            .join('');
+        }
+        resultsEl.classList.remove('hidden');
+        input.setAttribute('aria-expanded', 'true');
+      }
+
+      function runSearch() {
+        const q = normalize(input.value.trim());
+        if (q.length < 2) {
+          closeResults();
+          return;
+        }
+        matches = index
+          .filter(function (item) {
+            return normalize(item.title + ' ' + (item.meta || '')).indexOf(q) !== -1;
+          })
+          .slice(0, 8);
+        activeIdx = matches.length ? 0 : -1;
+        render();
+      }
+
+      input.addEventListener('input', function () {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(runSearch, 120);
+      });
+
+      input.addEventListener('focus', function () {
+        if (input.value.trim().length >= 2) runSearch();
+      });
+
+      input.addEventListener('keydown', function (e) {
+        if (resultsEl.classList.contains('hidden')) return;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (!matches.length) return;
+          activeIdx =
+            e.key === 'ArrowDown' ? (activeIdx + 1) % matches.length : (activeIdx - 1 + matches.length) % matches.length;
+          render();
+        } else if (e.key === 'Enter') {
+          if (activeIdx >= 0 && matches[activeIdx]) {
+            e.preventDefault();
+            window.location.href = matches[activeIdx].url;
+          }
+        } else if (e.key === 'Escape') {
+          closeResults();
+        }
+      });
+
+      // One-time delegated outside-click closer (survives ClientRouter swaps)
+      if (!window.__thanayaSearchCloserBound) {
+        window.__thanayaSearchCloserBound = true;
+        document.addEventListener('click', function (e) {
+          const r = document.getElementById('home-search-results');
+          const i = document.getElementById('home-search-input');
+          if (r && i && !r.contains(e.target) && e.target !== i) {
+            r.classList.add('hidden');
+            i.setAttribute('aria-expanded', 'false');
+          }
+        });
+      }
+    })();
+  </script>
 </Layout>

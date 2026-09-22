@@ -18,6 +18,13 @@ const resources = await publicApi.getPublishedResources({ subjectId: subject.id 
 const subjectExams = await publicApi.getPublishedExams(subject.id);
 
 const jsonLd = buildPageSchema({ pageType: 'subject', subject, contentTypes });
+
+// Unique weeks present in this subject's resources, ordered (for quick week filtering)
+const weekMap = new Map<string, { id: string; title: string; week_number: number }>();
+resources.forEach((r) => {
+  if (r.week && !weekMap.has(r.week.id)) weekMap.set(r.week.id, r.week);
+});
+const subjectWeeks = [...weekMap.values()].sort((a, b) => a.week_number - b.week_number);
 ---
 
 <Layout
@@ -34,7 +41,7 @@ const jsonLd = buildPageSchema({ pageType: 'subject', subject, contentTypes });
         <span class="text-xs bg-emerald-50 text-emerald-800 font-bold px-3 py-1 rounded-full border border-emerald-100">
           مادة دراسية
         </span>
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">{subject.name}</h1>
+        <h1 class="text-2xl sm:text-3xl font-bold text-slate-900">{subject.name}</h1>
         {subject.description && (
           <p class="text-sm text-slate-600 max-w-2xl">{subject.description}</p>
         )}
@@ -69,7 +76,7 @@ const jsonLd = buildPageSchema({ pageType: 'subject', subject, contentTypes });
               <div class="pt-4 mt-2 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span class="text-slate-400 font-medium">{typeCount} ملف</span>
                 <span class="text-emerald-600 font-bold group-hover:translate-x-[-4px] transition">
-                  تصفح القسم ←
+                  تصفح القسم
                 </span>
               </div>
             </a>
@@ -136,7 +143,7 @@ const jsonLd = buildPageSchema({ pageType: 'subject', subject, contentTypes });
                     {!examComingSoon && (
                       <div class="text-xs text-slate-500 flex items-center gap-2">
                         <span class="font-semibold text-slate-700">{exam.questions.length} سؤال</span>
-                        <span>•</span>
+                        <span class="w-px h-3 bg-slate-200" aria-hidden="true"></span>
                         <span class="text-emerald-700 font-medium">شرح تفصيلي للحل</span>
                       </div>
                     )}
@@ -145,14 +152,14 @@ const jsonLd = buildPageSchema({ pageType: 'subject', subject, contentTypes });
                   <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
                     {examComingSoon ? (
                       <>
-                        <span class="text-xs text-slate-400">قريباً</span>
+                        <span></span>
                         <span class="inline-flex items-center gap-1.5 bg-slate-200 text-slate-400 px-4 py-2 rounded-xl text-xs font-bold">
                           قريباً
                         </span>
                       </>
                     ) : (
                       <>
-                        <span class="text-xs text-slate-400">تصحيح فوري</span>
+                        <span class="text-xs text-slate-500">تصحيح فوري</span>
                         <a
                           href={`/exams/${exam.id}`}
                           class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm"
@@ -180,8 +187,40 @@ const jsonLd = buildPageSchema({ pageType: 'subject', subject, contentTypes });
           <h2 class="text-lg font-bold text-slate-900">جميع تقييمات وملفات {subject.name}</h2>
           <p class="text-xs text-slate-500">مرتبة من الأحدث إلى الأقدم</p>
         </div>
-        <span class="text-xs text-slate-400">إجمالي: {resources.length} مورد</span>
+        <span class="text-xs text-slate-500">إجمالي: {resources.length} مورد</span>
       </div>
+
+      {/* Week quick filter */}
+      {subjectWeeks.length > 1 && (
+        <div
+          id="week-filter"
+          role="group"
+          aria-label="فلترة الملفات حسب الأسبوع"
+          class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none"
+        >
+          <button
+            type="button"
+            data-week-filter="all"
+            aria-pressed="true"
+            class="px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition bg-emerald-600 text-white shadow-sm cursor-pointer"
+          >
+            كل الأسابيع ({resources.length})
+          </button>
+          {subjectWeeks.map((w) => {
+            const count = resources.filter((r) => r.week_id === w.id).length;
+            return (
+              <button
+                type="button"
+                data-week-filter={w.id}
+                aria-pressed="false"
+                class="px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 cursor-pointer"
+              >
+                {w.title} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div class="space-y-3">
         {resources.map((res, index) => (
@@ -193,11 +232,44 @@ const jsonLd = buildPageSchema({ pageType: 'subject', subject, contentTypes });
           </>
         ))}
         {resources.length === 0 && (
-          <div class="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400 text-sm">
+          <div class="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-500 text-sm">
             لا توجد ملفات منشورة لهذه المادة حاليًا.
           </div>
         )}
       </div>
     </section>
   </div>
+
+  {/* Week filter logic */}
+  <script>
+    function initWeekFilter() {
+      const rail = document.getElementById('week-filter');
+      if (!rail || rail.dataset.bound === 'true') return;
+      rail.dataset.bound = 'true';
+
+      const activeClasses = ['bg-emerald-600', 'text-white', 'shadow-sm'];
+      const idleClasses = ['bg-white', 'text-slate-600', 'hover:bg-slate-100', 'border', 'border-slate-200'];
+
+      rail.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest('[data-week-filter]') as HTMLElement | null;
+        if (!btn) return;
+        const week = btn.getAttribute('data-week-filter');
+
+        rail.querySelectorAll('[data-week-filter]').forEach((b) => {
+          const isActive = b === btn;
+          b.classList.remove(...(isActive ? idleClasses : activeClasses));
+          b.classList.add(...(isActive ? activeClasses : idleClasses));
+          b.setAttribute('aria-pressed', String(isActive));
+        });
+
+        document.querySelectorAll('[data-resource-week]').forEach((card) => {
+          const show = week === 'all' || card.getAttribute('data-resource-week') === week;
+          card.classList.toggle('hidden', !show);
+        });
+      });
+    }
+
+    initWeekFilter();
+    document.addEventListener('astro:page-load', initWeekFilter);
+  </script>
 </Layout>

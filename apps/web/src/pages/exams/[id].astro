@@ -31,12 +31,12 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
     />
 
     <!-- PHASE 1: Welcome & Setup Screen -->
-    <section id="exam-welcome" data-time-limit={exam.time_limit_minutes} class="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 shadow-sm text-center space-y-8 animate-fadeIn">
+    <section id="exam-welcome" data-time-limit={exam.time_limit_minutes} data-exam-id={exam.id} class="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 shadow-sm text-center space-y-8 animate-fadeIn">
       <div class="max-w-xl mx-auto space-y-3">
         <span class="inline-flex items-center px-3.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
           {exam.subject?.name || 'مادة دراسية'}
         </span>
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-tight">
+        <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
           {exam.title}
         </h1>
         <p class="text-sm text-slate-500 leading-relaxed">
@@ -47,15 +47,15 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
       <!-- Exam Key Stats Grid -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-lg mx-auto">
         <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center">
-          <div class="text-2xl font-black text-slate-900">{exam.questions.length}</div>
+          <div class="text-2xl font-bold text-slate-900">{exam.questions.length}</div>
           <div class="text-xs font-bold text-slate-500 mt-1">عدد الأسئلة</div>
         </div>
         <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center">
-          <div class="text-2xl font-black text-emerald-700">{exam.time_limit_minutes}</div>
+          <div class="text-2xl font-bold text-emerald-700">{exam.time_limit_minutes}</div>
           <div class="text-xs font-bold text-slate-500 mt-1">المدة (بالدقائق)</div>
         </div>
         <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-center">
-          <div class="text-2xl font-black text-emerald-700">فوري</div>
+          <div class="text-2xl font-bold text-emerald-700">فوري</div>
           <div class="text-xs font-bold text-slate-500 mt-1">التصحيح والتفسير</div>
         </div>
       </div>
@@ -78,13 +78,22 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
         </ul>
       </div>
 
+      <!-- Resume previous attempt notice (revealed by JS when saved progress exists) -->
+      <div id="resume-notice" class="hidden max-w-md mx-auto bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-900 space-y-2">
+        <p class="font-bold text-sm">لديك محاولة سابقة غير مكتملة في هذا الامتحان</p>
+        <p class="leading-relaxed">يمكنك الاستئناف من حيث توقفت بنفس إجاباتك ووقتك المتبقي، أو البدء من جديد.</p>
+        <button id="discard-progress-btn" type="button" class="underline font-semibold hover:text-amber-950 transition cursor-pointer">
+          بدء من جديد وحذف المحاولة السابقة
+        </button>
+      </div>
+
       <div class="pt-2">
         <button
           id="start-exam-btn"
           type="button"
-          class="inline-flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-3.5 rounded-2xl text-base font-extrabold transition shadow-sm hover:shadow-md transform active:scale-95 cursor-pointer"
+          class="inline-flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-3.5 rounded-2xl text-base font-bold transition shadow-sm hover:shadow-md transform active:scale-95 cursor-pointer"
         >
-          <span>بدء الامتحان الآن</span>
+          <span id="start-exam-label">بدء الامتحان الآن</span>
           <svg class="w-5 h-5 rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M5 12h14M12 5l7 7-7 7"></path>
           </svg>
@@ -97,7 +106,7 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
       <!-- Sticky Live Header with Timer & Progress -->
       <div class="sticky top-16 z-30 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-3">
-          <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-100 font-black text-sm flex items-center justify-center">
+          <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-100 font-bold text-sm flex items-center justify-center">
             <span id="current-q-index-badge">1</span>
           </span>
           <div>
@@ -108,7 +117,8 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
 
         <!-- Countdown Timer -->
         <div class="flex items-center gap-4">
-          <div id="timer-box" class="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-mono font-bold shadow-inner">
+          <div id="timer-announcer" class="sr-only" aria-live="polite"></div>
+          <div id="timer-box" role="timer" aria-label="الوقت المتبقي للامتحان" class="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-mono font-bold shadow-inner">
             <svg class="w-4 h-4 text-emerald-400 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
@@ -151,7 +161,7 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
       <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
         <div class="space-y-2">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+            <span class="text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
               السؤال رقم <span id="q-number-text">1</span>
             </span>
             <span id="q-status-badge" class="text-xs font-medium text-slate-400">لم تتم الإجابة</span>
@@ -202,20 +212,20 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
       <!-- Score Summary Card -->
       <div class="bg-white rounded-3xl border border-slate-200 p-8 sm:p-10 shadow-sm text-center space-y-6">
         <div class="space-y-2">
-          <span id="result-badge" class="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200">
+          <span id="result-badge" class="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
             تم إنهاء الامتحان بنجاح
           </span>
-          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900">نتيجة الامتحان</h2>
+          <h2 class="text-2xl sm:text-3xl font-bold text-slate-900">نتيجة الامتحان</h2>
           <p class="text-xs text-slate-500">{exam.title}</p>
         </div>
 
         <!-- Big Score Display -->
         <div class="inline-flex flex-col items-center justify-center p-6 rounded-3xl bg-slate-50 border border-slate-200 min-w-[220px]">
-          <div class="text-5xl sm:text-6xl font-black tracking-tight text-slate-900 flex items-baseline justify-center gap-1">
+          <div class="text-5xl sm:text-6xl font-bold tracking-tight text-slate-900 flex items-baseline justify-center gap-1">
             <span id="score-earned">0</span>
             <span class="text-2xl text-slate-400 font-bold">/ {exam.questions.length}</span>
           </div>
-          <div id="score-percentage" class="text-lg font-extrabold text-emerald-600 mt-1">0%</div>
+          <div id="score-percentage" class="text-lg font-bold text-emerald-600 mt-1">0%</div>
           <div id="score-assessment" class="text-xs text-slate-600 mt-1 font-semibold">--</div>
         </div>
 
@@ -318,6 +328,55 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
       const answeredCountText = document.getElementById('answered-count-text');
       const navButtons = document.querySelectorAll('.q-nav-btn');
 
+      // Attempt persistence: a refresh should never lose exam progress
+      const examId = (welcomeSection && welcomeSection.getAttribute('data-exam-id')) || 'unknown';
+      const storageKey = 'thanaya_exam_progress_' + examId;
+      let restoredProgress = null;
+
+      function saveProgress() {
+        if (isSubmitted) return;
+        try {
+          sessionStorage.setItem(
+            storageKey,
+            JSON.stringify({ a: userAnswers, i: currentQuestionIndex, r: remainingSeconds, s: timeSpentSeconds })
+          );
+        } catch (e) { /* storage unavailable */ }
+      }
+
+      function loadProgress() {
+        try {
+          const raw = sessionStorage.getItem(storageKey);
+          if (!raw) return null;
+          const d = JSON.parse(raw);
+          if (!d || typeof d !== 'object' || typeof d.r !== 'number' || d.r <= 15) return null;
+          return d;
+        } catch (e) { return null; }
+      }
+
+      function clearProgress() {
+        try { sessionStorage.removeItem(storageKey); } catch (e) { /* ignore */ }
+      }
+
+      // Resume UI
+      const resumeNotice = document.getElementById('resume-notice');
+      const discardProgressBtn = document.getElementById('discard-progress-btn');
+      const startExamLabel = document.getElementById('start-exam-label');
+      const timerAnnouncer = document.getElementById('timer-announcer');
+
+      restoredProgress = loadProgress();
+      if (restoredProgress && restoredProgress.r < timeLimitSeconds) {
+        if (resumeNotice) resumeNotice.classList.remove('hidden');
+        if (startExamLabel) startExamLabel.textContent = 'استئناف الامتحان';
+      }
+      if (discardProgressBtn) {
+        discardProgressBtn.addEventListener('click', () => {
+          clearProgress();
+          restoredProgress = null;
+          if (resumeNotice) resumeNotice.classList.add('hidden');
+          if (startExamLabel) startExamLabel.textContent = 'بدء الامتحان الآن';
+        });
+      }
+
       const optionLetters = ['أ', 'ب', 'ج', 'د'];
 
       // Sanitization helpers to prevent XSS from database content
@@ -346,13 +405,22 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
         resultsSection.classList.add('hidden');
         liveSection.classList.remove('hidden');
 
-        currentQuestionIndex = 0;
-        userAnswers = {};
-        remainingSeconds = timeLimitSeconds;
-        timeSpentSeconds = 0;
+        if (restoredProgress) {
+          // Resume previous unfinished attempt
+          userAnswers = restoredProgress.a && typeof restoredProgress.a === 'object' ? restoredProgress.a : {};
+          currentQuestionIndex = Math.min(Math.max(0, restoredProgress.i || 0), questions.length - 1);
+          remainingSeconds = Math.min(restoredProgress.r, timeLimitSeconds);
+          timeSpentSeconds = restoredProgress.s || 0;
+          restoredProgress = null;
+        } else {
+          currentQuestionIndex = 0;
+          userAnswers = {};
+          remainingSeconds = timeLimitSeconds;
+          timeSpentSeconds = 0;
+        }
         isSubmitted = false;
 
-        renderQuestion(0);
+        renderQuestion(currentQuestionIndex);
         updateNavGrid();
         startTimer();
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -367,6 +435,16 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
           remainingSeconds--;
           timeSpentSeconds++;
           updateTimerDisplay();
+
+          // Persist attempt every 5 seconds
+          if (remainingSeconds % 5 === 0) saveProgress();
+
+          // Polite screen-reader announcements at key time thresholds
+          if (timerAnnouncer) {
+            if (remainingSeconds === 600) timerAnnouncer.textContent = 'تبقى 10 دقائق على انتهاء الامتحان';
+            else if (remainingSeconds === 300) timerAnnouncer.textContent = 'تبقى 5 دقائق على انتهاء الامتحان';
+            else if (remainingSeconds === 60) timerAnnouncer.textContent = 'تبقى دقيقة واحدة على انتهاء الامتحان';
+          }
 
           if (remainingSeconds <= 0) {
             clearInterval(timerInterval);
@@ -438,7 +516,7 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
             }">
               ${isSelected ? '<div class="w-2 h-2 rounded-full bg-white"></div>' : ''}
             </div>
-            <span class="w-7 h-7 rounded-lg bg-white border border-slate-200 text-xs font-extrabold text-slate-700 flex items-center justify-center shrink-0 shadow-sm">
+            <span class="w-7 h-7 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 flex items-center justify-center shrink-0 shadow-sm">
               ${escapeHtml(optionLetters[optIdx] || String(optIdx + 1))}
             </span>
             <span class="text-sm font-semibold text-slate-800 flex-1 leading-relaxed">${escapeHtml(optText)}</span>
@@ -462,6 +540,7 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
         }
 
         updateNavGrid();
+        saveProgress();
       }
 
       function updateNavGrid() {
@@ -497,6 +576,7 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
 
         clearInterval(timerInterval);
         isSubmitted = true;
+        clearProgress();
 
         // Calculate score
         let correctCount = 0;
@@ -530,19 +610,19 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
         if (percentage >= 85) {
           assessmentEl.textContent = '🌟 ممتاز! أداء استثنائي وفهم عميق للمنهج';
           badgeEl.textContent = 'ممتاز - أحسنت!';
-          badgeEl.className = 'inline-flex items-center px-4 py-1.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200';
+          badgeEl.className = 'inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200';
         } else if (percentage >= 70) {
           assessmentEl.textContent = '👍 جيد جداً! مستوى قوي مع فرصة لمراجعة النقاط غير المكتملة';
           badgeEl.textContent = 'جيد جداً';
-          badgeEl.className = 'inline-flex items-center px-4 py-1.5 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-800 border border-emerald-200';
+          badgeEl.className = 'inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200';
         } else if (percentage >= 50) {
           assessmentEl.textContent = '📖 مقبول. نوصي بمراجعة التفسير والشروحات الموضحة أدناه';
           badgeEl.textContent = 'ناجح - يحتاج لمراجعة';
-          badgeEl.className = 'inline-flex items-center px-4 py-1.5 rounded-full text-xs font-extrabold bg-amber-50 text-amber-800 border border-amber-200';
+          badgeEl.className = 'inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200';
         } else {
           assessmentEl.textContent = '⚠️ دون المستوى المطلوب. راجع الشروحات النموذجية وأعد المحاولة';
           badgeEl.textContent = 'بحاجة لمزيد من التدريب';
-          badgeEl.className = 'inline-flex items-center px-4 py-1.5 rounded-full text-xs font-extrabold bg-rose-50 text-rose-800 border border-rose-200';
+          badgeEl.className = 'inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200';
         }
 
         // Render Comprehensive Review List
@@ -614,7 +694,7 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
           const safeReviewImg = sanitizeImageUrl(q.image_url);
           card.innerHTML = `
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-              <span class="text-xs font-extrabold text-slate-900 bg-slate-100 px-3 py-1 rounded-full">
+              <span class="text-xs font-bold text-slate-900 bg-slate-100 px-3 py-1 rounded-full">
                 السؤال رقم ${idx + 1}
               </span>
               ${statusTag}
@@ -649,6 +729,14 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
           const index = parseInt(btn.getAttribute('data-nav-index') || '0', 10);
           renderQuestion(index);
         });
+      });
+
+      // Warn before accidental refresh/close while an attempt is in progress
+      window.addEventListener('beforeunload', (e) => {
+        if (!isSubmitted && liveSection && !liveSection.classList.contains('hidden')) {
+          e.preventDefault();
+          e.returnValue = '';
+        }
       });
     })();
   </script>
