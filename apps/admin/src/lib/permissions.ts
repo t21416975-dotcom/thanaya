@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from './supabase';
 import { setCurrentPermissions } from './approval';
+import { useSession } from './session';
 import type { MyPermissions, PermissionScopeType } from '@thanaya/types';
 
 export const EMPTY_PERMISSIONS: MyPermissions = {
@@ -28,9 +29,12 @@ export async function fetchMyPermissions(): Promise<MyPermissions> {
  * لا نضع الصلاحيات في الـJWT: تُقرأ من الدالة عند كل تغيير، فيسري السحب/المنح فورًا.
  */
 export function usePermissions() {
+  const { isAuthenticated } = useSession();
   const query = useQuery({
     queryKey: ['my_permissions'],
     queryFn: fetchMyPermissions,
+    // دور anon لا يملك EXECUTE على الدالة (منع مقصود في القاعدة) — فلا نناديها بلا جلسة
+    enabled: isAuthenticated,
     staleTime: 30_000,
     retry: 1,
   });

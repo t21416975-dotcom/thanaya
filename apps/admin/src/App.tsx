@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Layers, Calendar, FileText, Megaphone, Flag, BarChart3, LogOut, CheckCircle, HelpCircle, Sparkles, Menu, X, Bell, ShieldCheck, Inbox } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { usePermissions } from './lib/permissions';
-import { APPROVAL_QUEUED_EVENT } from './lib/approval';
+import { APPROVAL_QUEUED_EVENT, setCurrentPermissions } from './lib/approval';
+import { useSession, isSupabaseConfigured } from './lib/session';
 import { api } from './api/client';
 import { SubjectsManager } from './components/SubjectsManager';
 import { ContentTypesManager } from './components/ContentTypesManager';
@@ -30,7 +31,8 @@ type TabId = 'resources' | 'exams' | 'notifications' | 'ai_settings' | 'subjects
 
 export function App() {
   const queryClient = useQueryClient();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  // حقيقة الجلسة من مكان واحد (تدعم تسجيل الدخول والخروج والانتهاء تلقائيًا)
+  const { isReady: sessionReady, isAuthenticated } = useSession();
   const [activeTab, setActiveTab] = useState<TabId>('resources');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showSetPassword, setShowSetPassword] = useState(false);
@@ -41,7 +43,7 @@ export function App() {
   const { data: pendingChanges = [] } = useQuery({
     queryKey: ['pending_changes'],
     queryFn: () => api.listPendingChanges(),
-    enabled: permissions.is_super_admin,
+    enabled: isAuthenticated && permissions.is_super_admin,
     refetchInterval: 30_000,
   });
 
@@ -63,29 +65,22 @@ export function App() {
     return () => clearTimeout(t);
   }, [queuedToast]);
 
+  // روابط الدعوة/الاستعادة تفتح نافذة تعيين كلمة المرور
   useEffect(() => {
-    const checkAuth = async () => {
-      if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL !== 'https://your-project.supabase.co') {
-        const { data } = await supabase.auth.getSession();
-        setIsAuthenticated(!!data.session);
-
-        const hash = window.location.hash;
-        if (hash && (hash.includes('type=invite') || hash.includes('type=recovery'))) {
-          setShowSetPassword(true);
-        }
-      } else {
-        setIsAuthenticated(false);
-      }
-    };
-    checkAuth();
+    const hash = window.location.hash;
+    if (hash && (hash.includes('type=invite') || hash.includes('type=recovery'))) {
+      setShowSetPassword(true);
+    }
   }, []);
 
   const handleLogout = async () => {
-    if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL !== 'https://your-project.supabase.co') {
+    if (isSupabaseConfigured) {
       await supabase.auth.signOut();
     }
     localStorage.removeItem('thanaya_admin_session');
-    setIsAuthenticated(false);
+    // لا نترك بيانات أو صلاحيات المستخدم السابق في الكاش
+    setCurrentPermissions(null);
+    queryClient.clear();
   };
 
   const navigation: { id: TabId; name: string; icon: typeof FileText; perm: string | null; superOnly?: boolean }[] = [
@@ -115,7 +110,7 @@ export function App() {
     }
   }, [permissions.admin_id, visibleNav.length, activeTab]);
 
-  if (isAuthenticated === null) {
+  if (!sessionReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900 text-slate-400 text-sm">
         جاري فحص الجلسة...
@@ -124,7 +119,15 @@ export function App() {
   }
 
   if (!isAuthenticated) {
-    return <AuthLogin onSuccess={() => setIsAuthenticated(true)} />;
+    return (
+      <AuthLogin
+        onSuccess={() => {
+          // الجلسة تُلتقط تلقائيًا عبر useSession، ونعيد جلب الصلاحيات للمستخدم الجديد
+          queryClient.removeQueries({ queryKey: ['my_permissions'] });
+          queryClient.invalidateQueries({ queryKey: ['my_permissions'] });
+        }}
+      />
+    );
   }
 
   if (!permsLoading && !permissions.is_staff) {
