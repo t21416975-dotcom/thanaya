@@ -829,12 +829,12 @@ $$;
 -- ---------------------------------------------------------------------------
 -- 7.5) منح التنفيذ وتضييق السطح
 -- ---------------------------------------------------------------------------
-REVOKE EXECUTE ON FUNCTION public.submit_change_request(TEXT, UUID, TEXT, JSONB) FROM anon;
-REVOKE EXECUTE ON FUNCTION public.review_change_request(UUID, TEXT, TEXT, JSONB) FROM anon;
-REVOKE EXECUTE ON FUNCTION public.cancel_change_request(UUID) FROM anon;
-REVOKE EXECUTE ON FUNCTION public.list_pending_changes() FROM anon;
-REVOKE EXECUTE ON FUNCTION public.list_my_changes() FROM anon;
-REVOKE EXECUTE ON FUNCTION public.list_all_changes() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.submit_change_request(TEXT, UUID, TEXT, JSONB) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.review_change_request(UUID, TEXT, TEXT, JSONB) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.cancel_change_request(UUID) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.list_pending_changes() FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.list_my_changes() FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.list_all_changes() FROM PUBLIC, anon;
 
 GRANT EXECUTE ON FUNCTION public.submit_change_request(TEXT, UUID, TEXT, JSONB) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.review_change_request(UUID, TEXT, TEXT, JSONB) TO authenticated;
