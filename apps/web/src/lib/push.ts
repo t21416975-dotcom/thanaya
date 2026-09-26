@@ -1,6 +1,6 @@
 import webpush from 'web-push';
 
-function getEnv(key: string, fallback: string): string {
+function getEnv(key: string): string {
   try {
     if (typeof process !== 'undefined' && process.env && process.env[key]) {
       return process.env[key]!;
@@ -11,20 +11,25 @@ function getEnv(key: string, fallback: string): string {
       return import.meta.env[key];
     }
   } catch {}
-  return fallback;
+  return '';
 }
 
-export const VAPID_PUBLIC_KEY = getEnv(
-  'PUBLIC_VAPID_PUBLIC_KEY',
-  'BIMOH53wqewI3MEItUAb8oXIL1i8PdlpW1VmXJl-Lacaal2_u152b5do_GlNQgm6hbw0LgbXAgu7RKNfXSWdCfY'
-);
+// لا fallback مكتوب في الكود أبدًا — أي مفتاح هنا يُعتبر مكشوفًا في Git history.
+// يجب أن تأتي المفاتيح من متغيرات البيئة فقط (Vercel / .env.local).
+function requireEnv(key: string): string {
+  const value = getEnv(key).trim();
+  if (!value) {
+    throw new Error(
+      `[WebPush] متغير البيئة ${key} غير مضبوط. ` +
+        `ولّد زوج مفاتيح جديدًا ثم اضبط ${key} في متغيرات بيئة النشر.`
+    );
+  }
+  return value;
+}
 
-export const VAPID_PRIVATE_KEY = getEnv(
-  'VAPID_PRIVATE_KEY',
-  'ajK3alhuvx--eADREiHSmNRxeHlIVEvzjMzSffKCvM0'
-);
-
-export const VAPID_SUBJECT = getEnv('VAPID_SUBJECT', 'mailto:admin@thanaya.com');
+export const VAPID_PUBLIC_KEY = requireEnv('PUBLIC_VAPID_PUBLIC_KEY');
+export const VAPID_PRIVATE_KEY = requireEnv('VAPID_PRIVATE_KEY');
+export const VAPID_SUBJECT = getEnv('VAPID_SUBJECT') || 'mailto:admin@thanaya.com';
 
 // Initialize web-push details
 try {

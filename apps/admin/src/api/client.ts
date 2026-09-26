@@ -992,11 +992,24 @@ export const api = {
   }> {
     const webBaseUrl = import.meta.env.VITE_WEB_URL || 'http://localhost:4321';
     try {
+      // الخادم يفحص الأدمن عبر هذه التوكن — بدونها يعيد 401
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        return { success: false, message: 'انتهت الجلسة. يرجى تسجيل الدخول مجددًا.' };
+      }
+
       const res = await fetch(`${webBaseUrl}/api/push-send`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify(payload),
       });
+      if (res.status === 401) {
+        return { success: false, message: 'غير مصرح. يرجى تسجيل الدخول كمسؤول.' };
+      }
       return await res.json();
     } catch (err: any) {
       console.warn('Could not connect to Web Push API endpoint:', err.message);

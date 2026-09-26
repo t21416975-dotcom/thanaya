@@ -130,7 +130,69 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 10) الحراس (Triggers) موجودة فعلاً بعد الترحيل
+-- 10) الزائر (anon) لا يقرأ اشتراكات الـPush ولا البلاغات
+--     (يعتمد على migration: 20260926000000_revoke_anon_select.sql)
+--     بينما يظل قادرًا على الإرسال والإلغاء.
+-- ============================================================================
+INSERT INTO public.push_subscriptions (endpoint, p256dh, auth)
+VALUES ('https://fcm.googleapis.com/fcm/send/test-endpoint','pubkey','authtoken');
+
+BEGIN;
+SET LOCAL ROLE anon;
+
+DO $$
+DECLARE
+    v_blocked BOOLEAN := FALSE;
+BEGIN
+    BEGIN
+        PERFORM 1 FROM public.push_subscriptions;
+    EXCEPTION WHEN insufficient_privilege THEN
+        v_blocked := TRUE;
+    END;
+    IF NOT v_blocked THEN
+        RAISE EXCEPTION 'A1 FAIL: anon can read push_subscriptions';
+    END IF;
+    RAISE NOTICE 'A1 PASS: anon لا يقرأ اشتراكات الـPush';
+
+    BEGIN
+        PERFORM 1 FROM public.reports;
+    EXCEPTION WHEN insufficient_privilege THEN
+        v_blocked := TRUE;
+    END;
+    IF NOT v_blocked THEN
+        RAISE EXCEPTION 'A2 FAIL: anon can read reports';
+    END IF;
+    RAISE NOTICE 'A2 PASS: anon لا يقرأ البلاغات';
+END $$;
+
+-- الإدراج (إرسال بلاغ) ما زال مسموحًا للزائر
+INSERT INTO public.reports (resource_id, issue_type, details)
+VALUES ('d0000000-0000-0000-0000-000000000001', 'broken_link', 'بلاغ من زائر');
+
+-- إلغاء اشتراك Push (DELETE) ما زال مسموحًا للزائر
+DELETE FROM public.push_subscriptions
+WHERE endpoint = 'https://fcm.googleapis.com/fcm/send/test-endpoint';
+
+DO $$
+BEGIN
+    RAISE NOTICE 'A3/A4 PASS: الزائر يستطيع الإرسال والإلغاء دون قراءة';
+END $$;
+ROLLBACK;
+
+-- الأدمن ما زال يقرأ (للتأكد أن السحب لم يمسّه)
+BEGIN;
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','a0000000-0000-0000-0000-000000000001', true);
+DO $$
+DECLARE n INT;
+BEGIN
+    SELECT count(*) INTO n FROM public.push_subscriptions;
+    RAISE NOTICE 'A5 PASS: الأدمن (% rows) يقرأ الاشتراكات', n;
+END $$;
+ROLLBACK;
+
+-- ============================================================================
+-- 11) الحراس (Triggers) موجودة فعلاً بعد الترحيل
 -- ============================================================================
 SELECT tgname AS trigger_name, relname AS table_name
 FROM pg_trigger tg
