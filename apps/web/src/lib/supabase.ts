@@ -18,6 +18,13 @@ function getEnv(key: string): string {
 const rawUrl = getEnv('PUBLIC_SUPABASE_URL');
 const rawKey = getEnv('PUBLIC_SUPABASE_ANON_KEY');
 
+/**
+ * القيم الخام — يستوردها src/lib/auth-server.ts لبناء عميل @supabase/ssr.
+ * تبقى غير مُصدَّرة كـ PUBLIC_* لتفادي تسرّبها إلى حزمة العميل.
+ */
+export const rawSupabaseUrl = rawUrl;
+export const rawSupabaseKey = rawKey;
+
 function isValidHttpUrl(str: string): boolean {
   try {
     const parsed = new URL(str);

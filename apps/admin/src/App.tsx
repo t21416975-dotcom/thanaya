@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, Layers, Calendar, FileText, Megaphone, Flag, BarChart3, LogOut, CheckCircle, HelpCircle, Sparkles, Menu, X, Bell, ShieldCheck, Inbox } from 'lucide-react';
+import { BookOpen, Layers, Calendar, FileText, Megaphone, Flag, BarChart3, LogOut, CheckCircle, HelpCircle, Sparkles, Menu, X, Bell, ShieldCheck, Inbox, GraduationCap, Activity, Lightbulb } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { usePermissions } from './lib/permissions';
 import { APPROVAL_QUEUED_EVENT, setCurrentPermissions } from './lib/approval';
@@ -20,6 +20,9 @@ import { StaffManager } from './components/StaffManager';
 import { ApprovalsManager } from './components/ApprovalsManager';
 import { SetPasswordModal } from './components/SetPasswordModal';
 import { AuthLogin } from './components/AuthLogin';
+import { StudentsManager } from './components/StudentsManager';
+import { AttemptsManager } from './components/AttemptsManager';
+import { QuestionAnalytics } from './components/QuestionAnalytics';
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: 'مدير عام',
@@ -27,7 +30,22 @@ const ROLE_LABELS: Record<string, string> = {
   editor: 'محرر محتوى',
 };
 
-type TabId = 'resources' | 'exams' | 'notifications' | 'ai_settings' | 'subjects' | 'content_types' | 'weeks' | 'ads' | 'reports' | 'analytics' | 'staff' | 'approvals';
+type TabId =
+  | 'resources'
+  | 'exams'
+  | 'notifications'
+  | 'ai_settings'
+  | 'subjects'
+  | 'content_types'
+  | 'weeks'
+  | 'ads'
+  | 'reports'
+  | 'analytics'
+  | 'staff'
+  | 'approvals'
+  | 'students'
+  | 'attempts'
+  | 'question_analytics';
 
 export function App() {
   const queryClient = useQueryClient();
@@ -95,6 +113,10 @@ export function App() {
     { id: 'reports',       name: 'البلاغات',                   icon: Flag,        perm: 'reports.view' },
     { id: 'ads',           name: 'الإعلانات',                  icon: Megaphone,   perm: 'ads.manage', superOnly: true },
     { id: 'analytics',     name: 'الإحصائيات والتقارير',       icon: BarChart3,   perm: 'analytics.view' },
+    // ★ بيانات الطلبة: المفاتيح خارج قوالب الأدمن عمدًا (بيانات شخصية)
+    { id: 'students',      name: 'الطلاب',                     icon: GraduationCap, perm: 'students.view' },
+    { id: 'attempts',      name: 'الامتحانات والنتائج',         icon: Activity,     perm: 'attempts.view' },
+    { id: 'question_analytics', name: 'تحليل الأسئلة',            icon: Lightbulb,    perm: 'analytics.view' },
     { id: 'staff',         name: 'الفريق والصلاحيات',          icon: ShieldCheck, perm: 'staff.manage' },
   ];
 
@@ -280,6 +302,9 @@ export function App() {
           {activeTab === 'reports' && <ReportsManager />}
           {activeTab === 'ads' && <AdsManager />}
           {activeTab === 'analytics' && <AnalyticsView />}
+          {activeTab === 'students' && <StudentsManager />}
+          {activeTab === 'attempts' && <AttemptsManager />}
+          {activeTab === 'question_analytics' && <QuestionAnalytics />}
           {activeTab === 'staff' && <StaffManager />}
         </div>
       </main>

@@ -1,0 +1,318 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import { getStudentSession, createServerSupabase } from '../../lib/auth-server';
+import { isSupabaseConfigured } from '../../lib/supabase';
+import { publicApi } from '../../lib/api';
+import type { MySubjectSummary } from '@thanaya/types';
+
+export const prerender = false;
+
+const session = await getStudentSession(Astro);
+
+// middleware يعيد التوجيه أصلًا، لكن هذا حارس احتياطي إن تغيّرت المسارات
+if (!session.isSignedIn || !session.student) {
+  return Astro.redirect(`/auth/login?returnTo=${encodeURIComponent('/review')}`, 302);
+}
+
+const supabaseConfigured = isSupabaseConfigured;
+
+// المواد التي لدينا فيها أخطاء — العدد الدقيق من question_performance
+let subjectStats: (MySubjectSummary & { wrong_available: number })[] = [];
+let loadError = '';
+
+if (supabaseConfigured) {
+  const supabase = createServerSupabase(Astro);
+  const { data: dash, error: dashError } = await supabase.rpc('get_my_dashboard');
+
+  if (dashError) {
+    loadError = 'تعذّر تحميل إحصاءاتك. حدّث الصفحة للمحاولة مرة أخرى.';
+  } else {
+    const dashboard = (Array.isArray(dash) ? dash[0] : dash) as
+      | { subjects?: MySubjectSummary[] }
+      | null;
+    subjectStats = (dashboard?.subjects || [])
+      .filter((s) => (s.wrong_questions_count ?? 0) > 0)
+      .map((s) => ({ ...s, wrong_available: s.wrong_questions_count ?? 0 }));
+  }
+}
+
+const totalWrong = subjectStats.reduce((sum, s) => sum + s.wrong_available, 0);
+const minCount = 5;
+const maxCount = 30;
+const defaultCount = 10;
+const effectiveMax = Math.min(maxCount, Math.max(minCount, totalWrong + 20));
+const effectiveDefault = Math.min(defaultCount, Math.max(minCount, effectiveMax));
+---
+
+<Layout
+  title="امتحان أخطائك | منصة ثنايا"
+  description="أنشئ امتحانًا من الأسئلة التي أخطأت فيها سابقًا في أي مادة، بعدد يناسبك."
+>
+  <div class="mx-auto max-w-4xl px-4 py-10 space-y-6">
+    <Breadcrumb
+      items={[
+        { label: 'الرئيسية', href: '/' },
+        { label: 'حسابي', href: '/account' },
+        { label: 'امتحان أخطائك' },
+      ]}
+    />
+
+    <header class="space-y-3">
+      <h1 class="text-3xl font-bold text-slate-900">امتحان أخطائك</h1>
+      <p class="text-slate-600 leading-relaxed max-w-2xl">
+        نختار لك الأسئلة التي أخطأت فيها في الامتحانات السابقة، مرتّبة بالأحدث
+        والأكثر تكرارًا. السؤال يخرج من القائمة بعد إجابتين صحيحتين متتاليتين —
+        أي أنه لا يعود إلا إذا نسيته من جديد.
+      </p>
+    </header>
+
+    {loadError && (
+      <div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+        {loadError}
+      </div>
+    )}
+
+    {
+      totalWrong === 0 ? (
+        <div class="rounded-3xl border border-emerald-200 bg-emerald-50 p-8 sm:p-10 text-center space-y-4">
+          <div class="text-5xl" aria-hidden="true">🎉</div>
+          <h2 class="text-xl font-bold text-emerald-900">لا توجد أسئلة خطأ بعد</h2>
+          <p class="text-emerald-800/80 text-sm leading-relaxed max-w-md mx-auto">
+            لم تسجّل أي إجابة خاطئة حتى الآن. أكمل امتحانات جديدة وستظهر أخطاؤك هنا
+            لتتدرّب عليها.
+          </p>
+          <a
+            href="/exams"
+            class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+          >
+            تصفّح الامتحانات
+          </a>
+        </div>
+      ) : (
+        <div class="space-y-6">
+          <form id="review-form" class="space-y-6">
+            <!-- اختيار المادة -->
+            <fieldset class="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-4">
+              <legend class="text-base font-bold text-slate-900 px-2">1) اختر المادة</legend>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="subject-grid">
+                {subjectStats.map((s, i) => (
+                  <label
+                    class="relative flex items-center gap-3 rounded-2xl border-2 border-slate-200 p-4 cursor-pointer transition hover:border-emerald-300 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50/60"
+                  >
+                    <input
+                      type="radio"
+                      name="subject_id"
+                      value={s.subject_id}
+                      class="h-4 w-4 accent-emerald-600"
+                      checked={i === 0}
+                      data-wrong={s.wrong_available}
+                    />
+                    <span class="flex-1 min-w-0">
+                      <span class="block font-semibold text-slate-900 text-sm truncate">{s.subject_name}</span>
+                      <span class="block text-xs text-slate-500 mt-0.5">
+                        {s.wrong_available} سؤال خطأ · دقة {s.accuracy ?? 0}%
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <!-- عدد الأسئلة -->
+            <fieldset class="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-5">
+              <legend class="text-base font-bold text-slate-900 px-2">2) كم سؤالًا تريد؟</legend>
+
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-slate-600">عدد الأسئلة</span>
+                  <output id="count-output" class="text-2xl font-bold text-emerald-700 tabular-nums">
+                    {effectiveDefault}
+                  </output>
+                </div>
+                <input
+                  type="range"
+                  id="count-input"
+                  name="count"
+                  min={minCount}
+                  max={effectiveMax}
+                  value={effectiveDefault}
+                  step="1"
+                  class="w-full accent-emerald-600"
+                />
+                <div class="flex justify-between text-xs text-slate-400">
+                  <span>{minCount}</span>
+                  <span>{effectiveMax}</span>
+                </div>
+              </div>
+
+              <div class="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                <label class="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="include-unseen"
+                    class="mt-1 h-4 w-4 accent-emerald-600"
+                  />
+                  <span class="text-sm">
+                    <span class="block font-semibold text-slate-800">
+                      أضف أسئلة لم تُحاول بعد
+                    </span>
+                    <span class="block text-xs text-slate-500 mt-0.5 leading-relaxed">
+                      إن قلّت أسئلة خطأك عن العدد المطلوب، نُكمل من أسئلة جديدة في
+                      نفس المادة حتى لا يقلّ الامتحان.
+                    </span>
+                  </span>
+                </label>
+              </div>
+
+              <div
+                id="review-warning"
+                class="hidden rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+              >
+              </div>
+            </fieldset>
+
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <button
+                type="submit"
+                id="review-submit"
+                class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span id="review-submit-text">ابدأ امتحان أخطائك</span>
+              </button>
+              <a
+                href="/account/wrong-questions"
+                class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                عرض الأسئلة الخاطئة
+              </a>
+            </div>
+          </form>
+
+          <div id="review-error" class="hidden rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"></div>
+        </div>
+      )
+    }
+
+    <AdSlot position="homepage_middle" />
+  </div>
+</Layout>
+
+<script is:inline>
+  (function () {
+    const form = document.getElementById('review-form');
+    if (!form) return;
+
+    const countInput = document.getElementById('count-input');
+    const countOutput = document.getElementById('count-output');
+    const includeUnseen = document.getElementById('include-unseen');
+    const warning = document.getElementById('review-warning');
+    const errorBox = document.getElementById('review-error');
+    const submitBtn = document.getElementById('review-submit');
+    const submitText = document.getElementById('review-submit-text');
+    const subjectGrid = document.getElementById('subject-grid');
+
+    if (countInput && countOutput) {
+      countInput.addEventListener('input', function () {
+        countOutput.textContent = countInput.value;
+        updateWarning();
+      });
+    }
+
+    if (subjectGrid) {
+      subjectGrid.addEventListener('change', updateWarning);
+    }
+
+    function selectedWrong() {
+      const checked = subjectGrid && subjectGrid.querySelector('input[name="subject_id"]:checked');
+      return checked ? Number(checked.getAttribute('data-wrong') || '0') : 0;
+    }
+
+    function updateWarning() {
+      if (!warning || !countInput) return;
+      const wrong = selectedWrong();
+      const want = Number(countInput.value);
+      const extra = includeUnseen && includeUnseen.checked;
+
+      warning.classList.remove('hidden');
+      if (wrong === 0) {
+        warning.textContent = 'لا توجد أسئلة خطأ في هذه المادة. فعّل «أضف أسئلة لم تُحاول» للبدء.';
+        return;
+      }
+      if (wrong >= want) {
+        warning.textContent = 'سنستخدم ' + want + ' من أسئلتك الخاطئة.';
+        return;
+      }
+      if (extra) {
+        warning.textContent = 'لديك ' + wrong + ' سؤال خطأ فقط، وسنُكمل بـ ' + (want - wrong) + ' من أسئلة لم تُحاول.';
+        return;
+      }
+      warning.innerHTML =
+        'لديك <strong>' + wrong + '</strong> سؤال خطأ فقط في هذه المادة. ' +
+        'فعّل <strong>«أضف أسئلة لم تُحاول»</strong> للوصول إلى ' + want + ' سؤال، أو اختر عددًا أصغر.';
+    }
+
+    if (includeUnseen) {
+      includeUnseen.addEventListener('change', updateWarning);
+    }
+    updateWarning();
+
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      if (errorBox) {
+        errorBox.classList.add('hidden');
+        errorBox.textContent = '';
+      }
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitText.textContent = 'جارٍ التحضير…';
+      }
+
+      const checked = subjectGrid && subjectGrid.querySelector('input[name="subject_id"]:checked');
+      if (!checked) {
+        showError('اختر مادة أولًا.');
+        resetSubmit();
+        return;
+      }
+
+      try {
+        const resp = await fetch('/api/exams/review/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject_id: checked.value,
+            count: countInput ? Number(countInput.value) : null,
+            include_unseen: includeUnseen ? includeUnseen.checked : false,
+          }),
+        });
+
+        const data = await resp.json().catch(function () { return {}; });
+
+        if (!resp.ok) {
+          showError(data.error || 'تعذّر إنشاء امتحان الأخطاء');
+          resetSubmit();
+          return;
+        }
+
+        submitText.textContent = 'جارٍ الانتقال…';
+        window.location.href = '/review/attempt/' + data.attempt_id;
+      } catch (err) {
+        showError('تعذّر الاتصال بالخادم. تحقّق من اتصالك وحاول مرة أخرى.');
+        resetSubmit();
+      }
+    });
+
+    function resetSubmit() {
+      if (submitBtn) submitBtn.disabled = false;
+      if (submitText) submitText.textContent = 'ابدأ امتحان أخطائك';
+    }
+
+    function showError(message) {
+      if (!errorBox) return;
+      errorBox.textContent = message;
+      errorBox.classList.remove('hidden');
+      errorBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  })();
+</script>

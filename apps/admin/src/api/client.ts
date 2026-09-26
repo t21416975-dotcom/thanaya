@@ -12,6 +12,9 @@ import { notificationsApi } from './notifications';
 import { pushApi } from './push';
 import { staffApi } from './staff';
 import { approvalsApi } from './approvals';
+import { studentsApi } from './students';
+import { attemptsApi } from './attempts';
+import { questionAnalyticsApi } from './questionAnalytics';
 import { isConfigured } from './_shared';
 
 export const api = {
@@ -28,6 +31,9 @@ export const api = {
   ...pushApi,
   ...staffApi,
   ...approvalsApi,
+  ...studentsApi,
+  ...attemptsApi,
+  ...questionAnalyticsApi,
 };
 
 export type Api = typeof api;

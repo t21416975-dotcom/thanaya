@@ -1,0 +1,282 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import { getStudentSession, createServerSupabase } from '../../lib/auth-server';
+import { isSupabaseConfigured } from '../../lib/supabase';
+import type { MyWrongQuestionsResult } from '@thanaya/types';
+
+export const prerender = false;
+
+const session = await getStudentSession(Astro);
+if (!session.isSignedIn || !session.student) {
+  return Astro.redirect(
+    `/auth/login?returnTo=${encodeURIComponent('/account/wrong-questions')}`,
+    302
+  );
+}
+
+const PAGE_SIZE = 20;
+
+const subjectParam = Astro.url.searchParams.get('subject');
+const pageParam = Number(Astro.url.searchParams.get('page') || '1');
+const page = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
+const offset = (page - 1) * PAGE_SIZE;
+
+let result: MyWrongQuestionsResult | null = null;
+let loadError = '';
+let subjectOptions: { id: string; name: string; count: number }[] = [];
+
+if (!isSupabaseConfigured) {
+  loadError = 'تسجيل الدخول غير مُفعّل على هذا الخادم.';
+} else {
+  const supabase = createServerSupabase(Astro);
+
+  // ★ الـ RPC يقبل subject_id كـ UUID — نتحقق قبل التمرير (لا نمرر slug).
+  const subjectId =
+    subjectParam && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(subjectParam)
+      ? subjectParam
+      : null;
+
+  const { data, error } = await supabase.rpc('get_my_wrong_questions', {
+    p_subject_id: subjectId,
+    p_limit: PAGE_SIZE,
+    p_offset: offset,
+  });
+
+  if (error) {
+    loadError =
+      error.message.includes('معطّل')
+        ? 'حسابك معطّل. يرجى التواصل مع الإدارة.'
+        : 'تعذّر تحميل الأسئلة. حدّث الصفحة وحاول مجددًا.';
+  } else {
+    result = (Array.isArray(data) ? data[0] : data) as MyWrongQuestionsResult | null;
+  }
+
+  // قائمة المواد من لوحة الحساب (لتبويب التصفية)
+  const { data: dash } = await supabase.rpc('get_my_dashboard');
+  const dashboard = (Array.isArray(dash) ? dash[0] : dash) as
+    | { subjects?: { subject_id: string; subject_name: string; wrong_questions_count: number }[] }
+    | null;
+  subjectOptions = (dashboard?.subjects || [])
+    .filter((s) => (s.wrong_questions_count ?? 0) > 0)
+    .map((s) => ({ id: s.subject_id, name: s.subject_name, count: s.wrong_questions_count }));
+}
+
+const items = result?.items ?? [];
+const total = result?.total ?? 0;
+const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+const formatDate = (iso?: string | null) => {
+  if (!iso) return '—';
+  try {
+    return new Intl.DateTimeFormat('ar-EG', { day: 'numeric', month: 'short' }).format(new Date(iso));
+  } catch {
+    return '—';
+  }
+};
+
+const buildUrl = (subjectId: string | null, pageNum: number) => {
+  const params = new URLSearchParams();
+  if (subjectId) params.set('subject', subjectId);
+  if (pageNum > 1) params.set('page', String(pageNum));
+  const qs = params.toString();
+  return `/account/wrong-questions${qs ? `?${qs}` : ''}`;
+};
+---
+
+<Layout
+  title="الأسئلة التي أخطأت فيها | منصة ثنايا"
+  description="قائمة بالأسئلة التي أخطأت فيها سابقًا، مرتّبة حسب تكرار الخطأ."
+>
+  <div class="mx-auto max-w-4xl px-4 py-10 space-y-6">
+    <Breadcrumb
+      items={[
+        { label: 'الرئيسية', href: '/' },
+        { label: 'حسابي', href: '/account' },
+        { label: 'الأسئلة الخاطئة' },
+      ]}
+    />
+
+    <header class="space-y-3">
+      <h1 class="text-3xl font-bold text-slate-900">الأسئلة التي أخطأت فيها</h1>
+      <p class="text-slate-600 leading-relaxed max-w-2xl">
+        مرتّبة بالأحدث. السؤال يخرج من هذه القائمة تلقائيًا بعد إجابته صحيحًا
+        مرتين متتاليتين.
+      </p>
+    </header>
+
+    {loadError && (
+      <div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+        {loadError}
+      </div>
+    )}
+
+    {/* فلتر المادة */}
+    {
+      subjectOptions.length > 0 && (
+        <nav class="flex flex-wrap gap-2" aria-label="تصفية حسب المادة">
+          <a
+            href={buildUrl(null, 1)}
+            class={`rounded-full px-4 py-2 text-xs font-bold transition ${
+              subjectParam
+                ? 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'
+                : 'bg-slate-900 text-white'
+            }`}
+          >
+            الكل ({total})
+          </a>
+          {subjectOptions.map((s) => (
+            <a
+              href={buildUrl(s.id, 1)}
+              class={`rounded-full px-4 py-2 text-xs font-bold transition ${
+                subjectParam === s.id
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'
+              }`}
+            >
+              {s.name} ({s.count})
+            </a>
+          ))}
+        </nav>
+      )
+    }
+
+    {
+      total === 0 ? (
+        <div class="rounded-3xl border border-emerald-200 bg-emerald-50 p-8 sm:p-10 text-center space-y-4">
+          <div class="text-5xl" aria-hidden="true">✨</div>
+          <h2 class="text-xl font-bold text-emerald-900">لا توجد أسئلة خاطئة</h2>
+          <p class="text-emerald-900/80 text-sm leading-relaxed max-w-md mx-auto">
+            {subjectParam
+              ? 'لا توجد أسئلة خطأ في هذه المادة تحديدًا. جرّب مادة أخرى.'
+              : 'لم تسجّل أي إجابة خاطئة. أتقنت كل ما حاولته حتى الآن.'}
+          </p>
+          <a
+            href="/exams"
+            class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+          >
+            خُذ امتحانًا جديدًا
+          </a>
+        </div>
+      ) : (
+        <>
+          <div class="flex items-center justify-between text-sm text-slate-500">
+            <span>
+              {offset + 1}–{Math.min(offset + PAGE_SIZE, total)} من {total}
+            </span>
+            {subjectParam && (
+              <a href="/account/wrong-questions" class="underline hover:text-slate-700">
+                إزالة التصفية
+              </a>
+            )}
+          </div>
+
+          <div class="space-y-4">
+            {items.map((q) => (
+              <details class="group rounded-2xl border border-rose-200 bg-white p-5 shadow-sm">
+                <summary class="cursor-pointer list-none space-y-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                      <p class="text-sm font-semibold leading-relaxed text-slate-900">
+                        {q.text}
+                      </p>
+                      <p class="mt-1.5 text-xs text-slate-500">
+                        {q.subject_name} · أخطأت {q.times_wrong} مرة من {q.times_seen} · آخر مرة{' '}
+                        {formatDate(q.last_wrong_at)}
+                      </p>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-2">
+                      {q.consecutive_wrong > 1 && (
+                        <span class="rounded-full bg-rose-100 px-2.5 py-1 text-[10px] font-bold text-rose-700">
+                          {q.consecutive_wrong} متتالية
+                        </span>
+                      )}
+                      <svg
+                        class="h-4 w-4 shrink-0 text-slate-400 transition group-open:rotate-180"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        aria-hidden="true"
+                      >
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      class="h-full rounded-full bg-amber-400"
+                      style={`width: ${Math.round((q.mastery_confidence ?? 0) * 100)}%`}
+                    />
+                  </div>
+                </summary>
+
+                <div class="mt-4 space-y-2 border-t border-slate-100 pt-4">
+                  {(q.options || []).map((opt, i) => (
+                    <div class="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+                      <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white text-[11px] font-bold text-slate-600">
+                        {['أ', 'ب', 'ج', 'د'][i] ?? i + 1}
+                      </span>
+                      <span class="leading-relaxed text-slate-700">{opt}</span>
+                    </div>
+                  ))}
+                  {
+                    q.image_url && (
+                      <img
+                        src={q.image_url}
+                        alt=""
+                        loading="lazy"
+                        class="mt-2 rounded-xl border border-slate-200"
+                        referrerpolicy="no-referrer"
+                      />
+                    )
+                  }
+                  <p class="pt-2 text-xs text-slate-400">
+                    دقة الإتقان الحالية: {Math.round((q.mastery_confidence ?? 0) * 100)}%
+                  </p>
+                </div>
+              </details>
+            ))}
+          </div>
+
+          {/* ترقيم الصفحات */}
+          {totalPages > 1 && (
+            <nav class="flex items-center justify-center gap-2 pt-4" aria-label="ترقيم الصفحات">
+              {page > 1 ? (
+                <a
+                  href={buildUrl(subjectParam, page - 1)}
+                  class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  السابق
+                </a>
+              ) : null}
+              <span class="px-3 text-sm text-slate-500 tabular-nums">
+                {page} / {totalPages}
+              </span>
+              {page < totalPages ? (
+                <a
+                  href={buildUrl(subjectParam, page + 1)}
+                  class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  التالي
+                </a>
+              ) : null}
+            </nav>
+          )}
+
+          <div class="pt-4">
+            <a
+              href="/review"
+              class="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
+            >
+              🎯 ابنِ امتحانًا من هذه الأسئلة
+            </a>
+          </div>
+        </>
+      )
+    }
+
+    <AdSlot position="homepage_middle" />
+  </div>
+</Layout>

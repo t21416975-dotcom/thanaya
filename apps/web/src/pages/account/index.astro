@@ -1,0 +1,336 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import AdSlot from '../../components/AdSlot.astro';
+import { getStudentSession, createServerSupabase } from '../../lib/auth-server';
+import { isSupabaseConfigured } from '../../lib/supabase';
+import { smartCache } from '../../lib/cache';
+import type { MyDashboard } from '@thanaya/types';
+
+export const prerender = false;
+
+const session = await getStudentSession(Astro);
+if (!session.isSignedIn || !session.student) {
+  return Astro.redirect(`/auth/login?returnTo=${encodeURIComponent('/account')}`, 302);
+}
+
+let dashboard: MyDashboard | null = null;
+let loadError = '';
+let logoutFormError = '';
+
+if (!isSupabaseConfigured) {
+  loadError = 'تسجيل الدخول غير مُفعّل على هذا الخادم.';
+} else {
+  // ★ نستخدم نفس الذاكرة المؤقتة العامة (smartCache) لبيانات الطالب:
+  //   عملية قراءة واحدة لـ RPC (أغلى من استعلام REST).
+  const cacheKey = `student_dashboard:${session.student.id}`;
+  const fresh = smartCache.get<MyDashboard>(cacheKey);
+
+  if (fresh) {
+    dashboard = fresh;
+  } else {
+    const supabase = createServerSupabase(Astro);
+    const { data, error } = await supabase.rpc('get_my_dashboard');
+    if (error) {
+      loadError = error.message.includes('معطّل')
+        ? 'حسابك معطّل. يرجى التواصل مع الإدارة.'
+        : 'تعذّر تحميل بياناتك. حدّث الصفحة وحاول مجددًا.';
+    } else {
+      dashboard = (Array.isArray(data) ? data[0] : data) as MyDashboard | null;
+      // 60 ثانية: كافية لتحديث لوحة فورية دون استدعاء في كل تنقّل
+      if (dashboard) smartCache.set(cacheKey, dashboard, 60);
+    }
+  }
+}
+
+const d = dashboard;
+const summary = d?.summary;
+const hasData = (summary?.attempts ?? 0) > 0;
+
+const gradeLabels: Record<string, string> = {
+  third: 'الصف الثالث الثانوي',
+  second: 'الصف الثاني الثانوي',
+  first: 'الصف الأول الثانوي',
+};
+
+const modeLabels: Record<string, string> = {
+  exam: 'امتحان',
+  review: 'امتحان أخطاء',
+  mock: 'تدريب',
+};
+
+const formatDate = (iso?: string | null) => {
+  if (!iso) return '—';
+  try {
+    return new Intl.DateTimeFormat('ar-EG', {
+      day: 'numeric', month: 'short', year: 'numeric',
+    }).format(new Date(iso));
+  } catch {
+    return '—';
+  }
+};
+
+const scoreTone = (score?: number | null) => {
+  if (score === null || score === undefined) return 'text-slate-500';
+  if (score >= 85) return 'text-emerald-700';
+  if (score >= 70) return 'text-emerald-600';
+  if (score >= 50) return 'text-amber-600';
+  return 'text-rose-600';
+};
+---
+
+<Layout
+  title="حسابي | منصة ثنايا"
+  description="سجل امتحاناتك، إحصاءاتك حسب المادة، وامتحان أخطائك."
+>
+  <div class="mx-auto max-w-5xl px-4 py-10 space-y-8">
+    <Breadcrumb items={[{ label: 'الرئيسية', href: '/' }, { label: 'حسابي' }]} />
+
+    {/* ---------- بطاقة الهوية ---------- */}
+    <section class="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
+      <div class="flex flex-col sm:flex-row sm:items-center gap-5">
+        {
+          d?.student.avatar_url ? (
+            <img
+              src={d.student.avatar_url}
+              alt=""
+              width="64"
+              height="64"
+              loading="lazy"
+              referrerpolicy="no-referrer"
+              class="h-16 w-16 rounded-2xl object-cover border border-slate-200"
+            />
+          ) : (
+            <div
+              class="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-600 text-2xl font-bold text-white"
+              aria-hidden="true"
+            >
+              {(d?.student.full_name || d?.student.email || '؟').charAt(0)}
+            </div>
+          )
+        }
+
+        <div class="flex-1 min-w-0">
+          <h1 class="text-2xl font-bold text-slate-900 truncate">
+            {d?.student.full_name || 'طالب'}
+          </h1>
+          <p class="text-sm text-slate-500 truncate">{d?.student.email}</p>
+          <div class="mt-2 flex flex-wrap gap-2">
+            {
+              d?.student.grade && (
+                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                  {gradeLabels[d.student.grade] ?? d.student.grade}
+                </span>
+              )
+            }
+            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+              {d?.student.provider === 'google' ? 'حساب Google' : 'حساب بريد'}
+            </span>
+            {
+              d?.student.email_verified ? (
+                <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                  بريد موثّق
+                </span>
+              ) : (
+                <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+                  بريد غير موثّق
+                </span>
+              )
+            }
+          </div>
+        </div>
+
+        <form method="post" action="/api/auth/google" class="shrink-0">
+          <button
+            type="submit"
+            class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          >
+            تسجيل الخروج
+          </button>
+        </form>
+      </div>
+    </section>
+
+    {loadError && (
+      <div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+        {loadError}
+      </div>
+    )}
+
+    {
+      d && !hasData ? (
+        /* ---------- لا بيانات بعد ---------- */
+        <section class="rounded-3xl border border-emerald-200 bg-emerald-50 p-8 sm:p-10 text-center space-y-4">
+          <div class="text-5xl" aria-hidden="true">📚</div>
+          <h2 class="text-xl font-bold text-emerald-900">ابدأ رحلتك</h2>
+          <p class="text-emerald-900/80 text-sm leading-relaxed max-w-md mx-auto">
+            بعد أول امتحان ستظهر هنا نتائجك، وإحصاءاتك حسب المادة، وتستطيع إنشاء
+            «امتحان أخطائك» من الأسئلة التي أخطأت فيها.
+          </p>
+          <a
+            href="/exams"
+            class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+          >
+            تصفّح الامتحانات
+          </a>
+        </section>
+      ) : null
+    }
+
+    {
+      d && hasData && (
+        <>
+          {/* ---------- ملخص عام ---------- */}
+          <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm">
+              <div class="text-3xl font-bold text-slate-900 tabular-nums">{summary?.attempts ?? 0}</div>
+              <div class="mt-1 text-xs font-medium text-slate-500">امتحان منجز</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm">
+              <div class="text-3xl font-bold text-slate-900 tabular-nums">{summary?.questions ?? 0}</div>
+              <div class="mt-1 text-xs font-medium text-slate-500">سؤال حُلّ</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm">
+              <div class={`text-3xl font-bold tabular-nums ${scoreTone(summary?.accuracy)}`}>
+                {summary?.accuracy ?? 0}%
+              </div>
+              <div class="mt-1 text-xs font-medium text-slate-500">نسبة الإتقان</div>
+            </div>
+            <div class="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-center shadow-sm">
+              <div class="text-3xl font-bold text-rose-700 tabular-nums">
+                {summary?.wrong_questions ?? 0}
+              </div>
+              <div class="mt-1 text-xs font-medium text-rose-700">سؤال خطأ</div>
+            </div>
+          </section>
+
+          {/* ---------- دعوة امتحان الأخطاء ---------- */}
+          {(summary?.wrong_questions ?? 0) > 0 && (
+            <section class="rounded-3xl border border-emerald-200 bg-gradient-to-l from-emerald-50 to-white p-6 sm:p-8 shadow-sm flex flex-col sm:flex-row sm:items-center gap-5">
+              <div class="text-4xl" aria-hidden="true">🎯</div>
+              <div class="flex-1">
+                <h2 class="text-lg font-bold text-emerald-950">
+                  لديك {summary?.wrong_questions} سؤال ما زلت تخطئ فيه
+                </h2>
+                <p class="mt-1 text-sm text-emerald-900/70 leading-relaxed">
+                  وأتقنت {summary?.mastered_questions ?? 0} سؤالًا. ابنِ امتحانًا من
+                  أخطائك وحدّد عدد الأسئلة الذي تريده.
+                </p>
+              </div>
+              <a
+                href="/review"
+                class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
+              >
+                امتحان أخطائك
+              </a>
+            </section>
+          )}
+
+          {/* ---------- حسب المادة ---------- */}
+          {(d.subjects?.length ?? 0) > 0 && (
+            <section class="space-y-4">
+              <h2 class="text-xl font-bold text-slate-900">أداؤك حسب المادة</h2>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {d.subjects.map((s) => (
+                  <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <h3 class="font-bold text-slate-900 truncate">{s.subject_name}</h3>
+                        <p class="text-xs text-slate-500 mt-0.5">
+                          {s.attempts_count} امتحان · آخر مرة {formatDate(s.last_attempt_at)}
+                        </p>
+                      </div>
+                      <div class={`text-2xl font-bold tabular-nums shrink-0 ${scoreTone(s.accuracy)}`}>
+                        {s.accuracy ?? 0}%
+                      </div>
+                    </div>
+
+                    <div class="h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        class={`h-full rounded-full ${
+                          (s.accuracy ?? 0) >= 70 ? 'bg-emerald-500' : (s.accuracy ?? 0) >= 50 ? 'bg-amber-500' : 'bg-rose-500'
+                        }`}
+                        style={`width: ${Math.max(0, Math.min(100, s.accuracy ?? 0))}%`}
+                      />
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                      <div class="rounded-xl bg-slate-50 p-2">
+                        <div class="text-sm font-bold text-slate-900 tabular-nums">{s.avg_score ?? 0}%</div>
+                        <div class="text-[10px] text-slate-500">المتوسط</div>
+                      </div>
+                      <div class="rounded-xl bg-slate-50 p-2">
+                        <div class="text-sm font-bold text-emerald-700 tabular-nums">{s.mastered_questions_count}</div>
+                        <div class="text-[10px] text-slate-500">متقن</div>
+                      </div>
+                      <div class="rounded-xl bg-rose-50 p-2">
+                        <div class="text-sm font-bold text-rose-700 tabular-nums">{s.wrong_questions_count}</div>
+                        <div class="text-[10px] text-rose-600">خطأ</div>
+                      </div>
+                    </div>
+
+                    {s.wrong_questions_count > 0 && (
+                      <a
+                        href={`/review`}
+                        class="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100"
+                      >
+                        امتحان أخطائي في {s.subject_name}
+                      </a>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ---------- آخر الامتحانات ---------- */}
+          {(d.recent_attempts?.length ?? 0) > 0 && (
+            <section class="space-y-4">
+              <h2 class="text-xl font-bold text-slate-900">آخر الامتحانات</h2>
+              <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <table class="w-full text-right text-sm">
+                  <thead class="bg-slate-50 text-slate-600">
+                    <tr>
+                      <th class="px-4 py-3 font-semibold">التاريخ</th>
+                      <th class="px-4 py-3 font-semibold">المادة</th>
+                      <th class="px-4 py-3 font-semibold">النوع</th>
+                      <th class="px-4 py-3 font-semibold">النتيجة</th>
+                      <th class="px-4 py-3 font-semibold">صحيح / خطأ</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    {d.recent_attempts.map((a) => (
+                      <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 text-slate-600 whitespace-nowrap">{formatDate(a.submitted_at)}</td>
+                        <td class="px-4 py-3 font-medium text-slate-900">
+                          {a.exam_title || a.subject_name}
+                        </td>
+                        <td class="px-4 py-3">
+                          <span
+                            class={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                              a.mode === 'review' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            {modeLabels[a.mode] ?? a.mode}
+                          </span>
+                        </td>
+                        <td class={`px-4 py-3 font-bold tabular-nums ${scoreTone(a.score_percentage)}`}>
+                          {a.score_percentage ?? 0}%
+                        </td>
+                        <td class="px-4 py-3 text-slate-600 tabular-nums">
+                          {a.correct_count} / {a.wrong_count}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+        </>
+      )
+    }
+
+    <AdSlot position="homepage_middle" />
+  </div>
+</Layout>

@@ -1,0 +1,637 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import Breadcrumb from '../../../components/Breadcrumb.astro';
+import AdSlot from '../../../components/AdSlot.astro';
+import { getStudentSession, createServerSupabase } from '../../../lib/auth-server';
+import { isSupabaseConfigured } from '../../../lib/supabase';
+import type { AttemptQuestionsResult } from '@thanaya/types';
+
+export const prerender = false;
+
+const { id } = Astro.params;
+
+const session = await getStudentSession(Astro);
+if (!session.isSignedIn || !session.student) {
+  return Astro.redirect(`/auth/login?returnTo=${encodeURIComponent(`/review/attempt/${id}`)}`, 302);
+}
+
+let attempt: AttemptQuestionsResult | null = null;
+let loadError = '';
+
+if (!isSupabaseConfigured) {
+  loadError = 'تسجيل الدخول غير مُفعّل على هذا الخادم.';
+} else if (!id) {
+  loadError = 'محاولة غير محدّدة.';
+} else {
+  const supabase = createServerSupabase(Astro);
+  const { data, error } = await supabase.rpc('get_attempt_questions', { p_attempt_id: id });
+
+  if (error) {
+    loadError = error.message.includes('غير مصرح')
+      ? 'هذه المحاولة لا تخصّك.'
+      : error.message.includes('غير موجودة')
+        ? 'المحاولة غير موجودة.'
+        : 'تعذّر تحميل المحاولة. حدّث الصفحة وحاول مجددًا.';
+  } else {
+    attempt = (Array.isArray(data) ? data[0] : data) as AttemptQuestionsResult | null;
+  }
+}
+
+const isOpen = attempt?.status === 'in_progress';
+
+const questionsJson = attempt ? JSON.stringify(attempt.questions).replace(/</g, '\\u003c') : '[]';
+
+// الوقت المتبقي محسوب على الخادم (المصدر الموثوق) — نمرّر نقطة النهاية
+// للواجهة حتى لا تعيد بناء المؤقت من.value الصفرية بعد إعادة التحميل.
+const remainingSeconds = isOpen && attempt?.expires_at
+  ? Math.max(0, Math.floor((new Date(attempt.expires_at).getTime() - Date.now()) / 1000))
+  : 0;
+
+// ★ نحسب الشروط في الـ frontmatter: محلل Astro يتعامل مع '<' داخل تعبير
+//   القالب كبداية وسم، فيخطئ عند كتابة 'remainingSeconds <= 0' هناك.
+const showError = Boolean(loadError);
+const showSubmitted = !loadError && attempt !== null && !isOpen;
+const timeExpired = !loadError && attempt !== null && isOpen && remainingSeconds <= 0;
+const showRunner = !loadError && attempt !== null && isOpen && remainingSeconds > 0;
+
+// نسخة مُنمَّطة: تضمن غير-null داخل الفروع المشروطة أعلاه
+const a = attempt as AttemptQuestionsResult;
+---
+
+<Layout
+  title={attempt ? `امتحان أخطائك — ${attempt.subject_name ?? 'مادة'}` : 'امتحان أخطائك | منصة ثنايا'}
+  description="امتحان مبني على الأسئلة التي أخطأت فيها سابقًا، بعدد تختاره أنت."
+>
+  <div class="mx-auto max-w-4xl px-4 py-10 space-y-6">
+    <Breadcrumb
+      items={[
+        { label: 'الرئيسية', href: '/' },
+        { label: 'حسابي', href: '/account' },
+        { label: 'امتحان أخطائك', href: '/review' },
+        ...(attempt ? [{ label: attempt.subject_name ?? 'المحاولة' }] : []),
+      ]}
+    />
+
+    {/*
+      بيانات المحاولة للواجهة. ★ نضعها خارج الشروط porque <script> داخل
+      تعبير شرطي غير مدعوم في Astro — والسكربت نفسه يحترم غياب العنصر.
+    */}
+    {
+      attempt && (
+        <script
+          is:inline
+          type="application/json"
+          id="review-data"
+          set:html={JSON.stringify({
+            attempt_id: a.attempt_id,
+            answer_token: attempt.answer_token,
+            remaining_seconds: remainingSeconds,
+            questions: attempt.questions,
+          }).replace(/</g, '\\u003c')}
+        />
+      )
+    }
+
+    {/* خطأ في التحميل */}
+    {
+      showError && (
+        <div class="rounded-3xl border border-rose-200 bg-rose-50 p-8 text-center space-y-4">
+          <h1 class="text-xl font-bold text-rose-900">تعذّر فتح الامتحان</h1>
+          <p class="text-sm text-rose-800/80">{loadError}</p>
+          <a
+            href="/review"
+            class="inline-flex items-center rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700"
+          >
+            العودة لصفحة امتحان أخطائك
+          </a>
+        </div>
+      )
+    }
+
+    {/* محاولة مسلَّمة سابقًا — نعرض نتيجتها فقط */}
+    {
+      showSubmitted && (
+        <div class="rounded-3xl border border-slate-200 bg-white p-8 text-center space-y-4 shadow-sm">
+          <p class="text-sm text-slate-500">تم تسليم هذه المحاولة</p>
+          <div class="text-5xl font-bold text-slate-900 tabular-nums">
+            {a.score_percentage ?? 0}%
+          </div>
+          <p class="text-sm text-slate-600">
+            {a.correct_count} صحيح · {a.wrong_count} خطأ · {a.blank_count} بلا إجابة
+          </p>
+          <div class="flex flex-wrap justify-center gap-3 pt-2">
+            <a
+              href="/account/wrong-questions"
+              class="inline-flex items-center rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              الأسئلة الخاطئة المتبقية
+            </a>
+            <a
+              href="/account"
+              class="inline-flex items-center rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            >
+              العودة إلى حسابي
+            </a>
+          </div>
+        </div>
+      )
+    }
+
+    {/* انتهى وقت المحاولة */}
+    {
+      timeExpired && (
+        <div class="rounded-3xl border border-amber-200 bg-amber-50 p-8 text-center space-y-4">
+          <h1 class="text-xl font-bold text-amber-900">انتهى وقت هذه المحاولة</h1>
+          <p class="text-sm text-amber-800/80">
+            امتحان الأخطاء له زمن محدد. أنشئ محاولة جديدة لاختيار أسئلة جديدة.
+          </p>
+          <a
+            href="/review"
+            class="inline-flex items-center rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700"
+          >
+            إنشاء امتحان أخطاء جديد
+          </a>
+        </div>
+      )
+    }
+
+    {/* المحاولة الجارية */}
+    {
+      showRunner && (
+        <section class="space-y-6">
+          <header class="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 space-y-2">
+            <h1 class="text-2xl font-bold text-emerald-950">امتحان أخطائك</h1>
+            <p class="text-sm text-emerald-900/80 leading-relaxed">
+              {a.total_questions} سؤال في {a.subject_name} — كلّها من الأسئلة التي أخطأت فيها سابقًا.
+              إجابة سؤال صحيحًا مرتين تُخرجه من المرشحين مستقبلًا.
+            </p>
+          </header>
+
+          <!-- المؤقت -->
+          <div class="sticky top-2 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/95 px-5 py-3 shadow-sm backdrop-blur">
+            <div class="flex items-center gap-3">
+              <span id="q-badge" class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-sm font-bold text-white tabular-nums">
+                1
+              </span>
+              <span id="answered-count" class="text-sm text-slate-500">0 من 0 تمت الإجابة</span>
+            </div>
+            <div
+              id="timer-box"
+              class="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3.5 py-2 text-sm font-bold text-slate-700 tabular-nums"
+              role="timer"
+              aria-live="off"
+            >
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span id="timer">--:--</span>
+            </div>
+            <button
+              id="submit-btn"
+              type="button"
+              class="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700"
+            >
+              تسليم الامتحان
+            </button>
+          </div>
+
+          <!-- شبكة التنقل -->
+          <div id="nav-grid" class="flex flex-wrap gap-1.5"></div>
+
+          <!-- السؤال -->
+          <div class="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-xs font-bold text-slate-400">السؤال <span id="q-number"></span></span>
+              <span id="q-status" class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                لم تتم الإجابة
+              </span>
+            </div>
+            <p id="q-text" class="text-lg font-semibold leading-relaxed text-slate-900"></p>
+            <div id="q-image"></div>
+            <div id="q-options" class="space-y-3"></div>
+          </div>
+
+          <!-- التنقل -->
+          <div class="flex items-center justify-between gap-3">
+            <button
+              id="prev-btn"
+              type="button"
+              class="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              السابق
+            </button>
+            <button
+              id="next-btn"
+              type="button"
+              class="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              التالي
+            </button>
+          </div>
+
+          <div id="save-status" class="text-center text-xs text-slate-500"></div>
+
+          <!-- النتائج -->
+          <div id="results" class="hidden space-y-6">
+            <div class="rounded-3xl border border-slate-200 bg-white p-8 text-center space-y-3 shadow-sm">
+              <div id="result-badge" class="inline-flex rounded-full px-4 py-1.5 text-xs font-bold"></div>
+              <div class="flex items-baseline justify-center gap-3">
+                <span id="score" class="text-5xl font-bold text-slate-900 tabular-nums">0%</span>
+              </div>
+              <p id="score-detail" class="text-sm text-slate-600"></p>
+              <p id="score-assessment" class="text-sm font-semibold text-slate-800"></p>
+              <div class="flex flex-wrap justify-center gap-3 pt-2">
+                <a
+                  href="/account/wrong-questions"
+                  id="still-wrong-link"
+                  class="hidden items-center rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  الأسئلة التي ما زالت خاطئة
+                </a>
+                <a
+                  href="/review"
+                  class="inline-flex items-center rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                >
+                  امتحان أخطاء جديد
+                </a>
+                <a
+                  href="/account"
+                  class="inline-flex items-center rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  حسابي
+                </a>
+              </div>
+            </div>
+
+            <div id="review-list" class="space-y-4"></div>
+          </div>
+
+          <AdSlot position="resource_after_meta" />
+        </section>
+      )
+    }
+  </div>
+</Layout>
+
+<script is:inline>
+  (function () {
+    const dataEl = document.getElementById('review-data');
+    if (!dataEl) return;
+
+    const cfg = JSON.parse(dataEl.textContent || '{}');
+    const questions = cfg.questions || [];
+    if (questions.length === 0) return;
+
+    const attemptId = cfg.attempt_id;
+    const answerToken = cfg.answer_token;
+
+    const LETTERS = ['أ', 'ب', 'ج', 'د'];
+
+    let idx = 0;
+    let answers = {};
+    let remaining = Number(cfg.remaining_seconds) || 0;
+    let elapsed = 0;
+    let timer = null;
+    let submitted = false;
+    const seenAt = {};
+
+    const el = {
+      badge: document.getElementById('q-badge'),
+      answered: document.getElementById('answered-count'),
+      timer: document.getElementById('timer'),
+      timerBox: document.getElementById('timer-box'),
+      qNumber: document.getElementById('q-number'),
+      qStatus: document.getElementById('q-status'),
+      qText: document.getElementById('q-text'),
+      qImage: document.getElementById('q-image'),
+      qOptions: document.getElementById('q-options'),
+      navGrid: document.getElementById('nav-grid'),
+      prev: document.getElementById('prev-btn'),
+      next: document.getElementById('next-btn'),
+      submit: document.getElementById('submit-btn'),
+      results: document.getElementById('results'),
+      reviewList: document.getElementById('review-list'),
+      saveStatus: document.getElementById('save-status'),
+    };
+
+    function escapeHtml(value) {
+      if (value === null || value === undefined) return '';
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function safeImageUrl(url) {
+      if (!url || typeof url !== 'string') return null;
+      const trimmed = url.trim();
+      if (/^https?:\/\//i.test(trimmed)) return escapeHtml(trimmed);
+      return null;
+    }
+
+    function formatTime(total) {
+      const m = Math.floor(total / 60);
+      const s = total % 60;
+      return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+
+    function updateTimer() {
+      if (!el.timer) return;
+      el.timer.textContent = formatTime(Math.max(0, remaining));
+      if (el.timerBox) {
+        const tone = remaining <= 60 ? 'bg-rose-100 text-rose-800' : remaining <= 180 ? 'bg-amber-100 text-amber-900' : 'bg-slate-100 text-slate-700';
+        el.timerBox.className = 'inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-bold tabular-nums ' + tone;
+      }
+      if (remaining <= 0 && !submitted) {
+        clearInterval(timer);
+        submitExam(true);
+      }
+    }
+
+    function startTimer() {
+      clearInterval(timer);
+      updateTimer();
+      timer = setInterval(function () {
+        remaining -= 1;
+        elapsed += 1;
+        updateTimer();
+      }, 1000);
+    }
+
+    function renderNav() {
+      if (!el.navGrid) return;
+      el.navGrid.innerHTML = '';
+      questions.forEach(function (_q, i) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        const answered = answers[i] !== undefined;
+        btn.textContent = String(i + 1);
+        btn.className =
+          'h-9 w-9 rounded-xl text-xs font-bold border transition ' +
+          (i === idx
+            ? 'bg-emerald-600 text-white border-emerald-600'
+            : answered
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+              : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300');
+        btn.addEventListener('click', function () { goTo(i); });
+        el.navGrid.appendChild(btn);
+      });
+      if (el.answered) {
+        const count = Object.keys(answers).length;
+        el.answered.textContent = count + ' من ' + questions.length + ' تمت الإجابة';
+      }
+    }
+
+    function renderQuestion() {
+      const q = questions[idx];
+      if (!q) return;
+      if (seenAt[idx] === undefined) seenAt[idx] = Date.now();
+
+      if (el.badge) el.badge.textContent = String(idx + 1);
+      if (el.qNumber) el.qNumber.textContent = String(idx + 1);
+      if (el.qText) el.qText.textContent = q.text || '';
+
+      const answered = answers[idx] !== undefined;
+      if (el.qStatus) {
+        el.qStatus.textContent = answered ? 'تمت الإجابة' : 'لم تتم الإجابة';
+        el.qStatus.className =
+          'text-xs font-bold px-3 py-1 rounded-full ' +
+          (answered ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500');
+      }
+
+      if (el.qImage) {
+        el.qImage.innerHTML = '';
+        const url = safeImageUrl(q.image_url);
+        if (url) {
+          const wrap = document.createElement('div');
+          wrap.className = 'mt-3 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50';
+          wrap.innerHTML = '<img src="' + url + '" alt="صورة السؤال" class="w-full max-h-72 object-contain" onerror="this.parentElement.style.display=\'none\'" />';
+          el.qImage.appendChild(wrap);
+        }
+      }
+
+      if (el.qOptions) {
+        el.qOptions.innerHTML = '';
+        (q.options || []).forEach(function (opt, optIdx) {
+          const selected = answers[idx] === optIdx;
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className =
+            'w-full flex items-start gap-3 rounded-2xl border-2 p-4 text-right transition ' +
+            (selected
+              ? 'border-emerald-500 bg-emerald-50/70 ring-1 ring-emerald-500'
+              : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50');
+          card.innerHTML =
+            '<span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold ' +
+            (selected ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600') +
+            '">' + LETTERS[optIdx] + '</span>' +
+            '<span class="text-sm leading-relaxed text-slate-800">' + escapeHtml(opt) + '</span>';
+          card.addEventListener('click', function () { select(optIdx); });
+          el.qOptions.appendChild(card);
+        });
+      }
+
+      if (el.prev) el.prev.disabled = idx === 0;
+      if (el.next) el.next.disabled = idx === questions.length - 1;
+      renderNav();
+    }
+
+    function goTo(i) {
+      idx = Math.min(Math.max(0, i), questions.length - 1);
+      renderQuestion();
+    }
+
+    function select(optIdx) {
+      answers[idx] = optIdx;
+      saveAnswer(optIdx);
+      renderQuestion();
+    }
+
+    function saveAnswer(optIdx) {
+      const q = questions[idx];
+      if (!q || !attemptId) return;
+      const seen = seenAt[idx];
+      const body = JSON.stringify({
+        attempt_id: attemptId,
+        question_id: q.id,
+        selected_index: optIdx,
+        time_taken: seen ? Math.round((Date.now() - seen) / 1000) : null,
+      });
+      try {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon('/api/exams/attempt/answer', new Blob([body], { type: 'application/json' }));
+        } else {
+          fetch('/api/exams/attempt/answer', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true,
+          }).catch(function () {});
+        }
+      } catch (err) { /* غير حرج */ }
+    }
+
+    async function submitExam(auto) {
+      if (submitted) return;
+      const count = Object.keys(answers).length;
+      if (!auto && count < questions.length) {
+        const left = questions.length - count;
+        if (!confirm('لديك ' + left + ' أسئلة بلا إجابة. هل تريد التسليم الآن؟')) return;
+      }
+      submitted = true;
+      clearInterval(timer);
+      if (el.submit) el.submit.disabled = true;
+      if (el.saveStatus) el.saveStatus.textContent = 'جارٍ التصحيح…';
+
+      // نرفع كل الإجابات (المصدر الأضمن) ثم نطلب التصحيح
+      const payload = [];
+      Object.keys(answers).forEach(function (i) {
+        const q = questions[i];
+        if (q) payload.push({ question_id: q.id, selected_index: answers[i] });
+      });
+
+      try {
+        const resp = await fetch('/api/exams/attempt/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            attempt_id: attemptId,
+            answer_token: answerToken,
+            answers: payload,
+            time_spent: elapsed,
+          }),
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(function () { return {}; });
+          throw new Error(err.error || 'تعذّر التسليم');
+        }
+        const result = await resp.json();
+        renderResults(result);
+      } catch (err) {
+        if (el.saveStatus) {
+          el.saveStatus.textContent = (err && err.message) || 'تعذّر التسليم';
+          el.saveStatus.className = 'text-center text-xs font-semibold text-rose-700';
+        }
+        if (el.submit) el.submit.disabled = false;
+        submitted = false;
+      }
+    }
+
+    function renderResults(result) {
+      const list = result.answers || [];
+      const score = Number(result.score_percentage || 0);
+
+      const scoreEl = document.getElementById('score');
+      if (scoreEl) scoreEl.textContent = score + '%';
+
+      const detail = document.getElementById('score-detail');
+      if (detail) {
+        detail.textContent =
+          result.correct_count + ' صحيح · ' + result.wrong_count + ' خطأ · ' + result.blank_count + ' بلا إجابة';
+      }
+
+      const assessment = document.getElementById('score-assessment');
+      const badge = document.getElementById('result-badge');
+      if (assessment && badge) {
+        if (score >= 85) {
+          badge.textContent = 'ممتاز';
+          badge.className = 'inline-flex rounded-full px-4 py-1.5 text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200';
+          assessment.textContent = '🌟 أداء ممتاز — أتقنت هذه الأسئلة.';
+        } else if (score >= 70) {
+          badge.textContent = 'جيد جدًا';
+          badge.className = 'inline-flex rounded-full px-4 py-1.5 text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200';
+          assessment.textContent = '👍 جيد جدًا — راجع ما تبقى.';
+        } else if (score >= 50) {
+          badge.textContent = 'مقبول';
+          badge.className = 'inline-flex rounded-full px-4 py-1.5 text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200';
+          assessment.textContent = '📖 مقبول — أعد الامتحان بعد مراجعة الشروحات.';
+        } else {
+          badge.textContent = 'يحتاج مراجعة';
+          badge.className = 'inline-flex rounded-full px-4 py-1.5 text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200';
+          assessment.textContent = '⚠️ راجع الشرح بالتفصيل ثم أعد المحاولة.';
+        }
+      }
+
+      const stillWrong = (result.still_wrong || []).length;
+      const stillLink = document.getElementById('still-wrong-link');
+      if (stillLink) {
+        if (stillWrong > 0) {
+          stillLink.classList.remove('hidden');
+          stillLink.classList.add('inline-flex');
+          stillLink.textContent = 'الأسئلة التي ما زالت خاطئة (' + stillWrong + ')';
+        } else {
+          stillLink.classList.add('hidden');
+        }
+      }
+
+      // قائمة المراجعة
+      const container = document.getElementById('review-list');
+      if (container) {
+        container.innerHTML = '';
+        list.forEach(function (g, i) {
+          const card = document.createElement('div');
+          const tone = g.is_correct ? 'border-emerald-200' : g.is_blank ? 'border-slate-200' : 'border-rose-200';
+          card.className = 'bg-white rounded-3xl border p-6 space-y-4 shadow-sm ' + tone;
+
+          let optionsHtml = '';
+          (g.options || []).forEach(function (opt, oi) {
+            const isCorrect = oi === g.correct_index;
+            const isChosen = oi === g.selected_index;
+            let cls = 'border-slate-200 bg-slate-50 text-slate-700';
+            let tag = '';
+            if (isCorrect) {
+              cls = 'border-emerald-500 bg-emerald-50 text-emerald-950 font-bold';
+              tag = ' <span class="text-[10px] text-emerald-700">✓الصحيحة</span>';
+            } else if (isChosen) {
+              cls = 'border-rose-300 bg-rose-50 text-rose-900';
+              tag = ' <span class="text-[10px] text-rose-700">✗إجابتك</span>';
+            }
+            optionsHtml +=
+              '<div class="flex items-start gap-3 rounded-xl border-2 p-3 text-sm ' + cls + '">' +
+              '<span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/70 text-[11px] font-bold">' +
+              LETTERS[oi] + '</span><span class="leading-relaxed">' + escapeHtml(opt) + tag + '</span></div>';
+          });
+
+          const status = g.is_correct
+            ? '<span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">✓ إجابة صحيحة</span>'
+            : g.is_blank
+              ? '<span class="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">لم تتم الإجابة</span>'
+              : '<span class="text-xs font-bold text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">✗ إجابة خاطئة</span>';
+
+          const img = safeImageUrl(g.image_url);
+          const imgHtml = img
+            ? '<div class="rounded-2xl overflow-hidden border border-slate-200 bg-slate-50"><img src="' + img + '" alt="صورة السؤال" class="w-full max-h-64 object-contain" onerror="this.parentElement.style.display=\'none\'" /></div>'
+            : '';
+
+          const expl = g.explanation
+            ? '<div class="rounded-2xl bg-slate-50 border border-slate-200 p-4 text-sm leading-relaxed text-slate-700">' +
+              '<span class="block font-bold text-slate-800 mb-1">الشرح</span>' + escapeHtml(g.explanation) + '</div>'
+            : '';
+
+          card.innerHTML =
+            '<div class="flex items-center justify-between gap-3"><span class="text-xs text-slate-400">السؤال ' + (i + 1) + '</span>' + status + '</div>' +
+            '<h4 class="text-sm font-bold leading-relaxed text-slate-900">' + escapeHtml(g.text) + '</h4>' +
+            imgHtml +
+            '<div class="space-y-2">' + optionsHtml + '</div>' +
+            expl;
+          container.appendChild(card);
+        });
+      }
+
+      // إخفاء أداة الامتحان وإظهار النتائج
+      const wrap = document.querySelector('section');
+      const hidden = [el.badge, el.answered, el.timerBox, el.submit, el.navGrid, el.prev, el.next].filter(Boolean);
+      hidden.forEach(function (n) { if (n.style) n.style.display = 'none'; });
+      if (el.results) el.results.classList.remove('hidden');
+      if (el.saveStatus) el.saveStatus.textContent = 'حُفظت نتيجتك في حسابك ✓';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    if (el.prev) el.prev.addEventListener('click', function () { goTo(idx - 1); });
+    if (el.next) el.next.addEventListener('click', function () { goTo(idx + 1); });
+    if (el.submit) el.submit.addEventListener('click', function () { submitExam(false); });
+
+    renderQuestion();
+    startTimer();
+  })();
+</script>

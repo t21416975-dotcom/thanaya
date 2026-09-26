@@ -3,6 +3,7 @@ import { notifyApprovalQueued } from '../lib/approval';
 import type {
   Subject, ContentType, Week, Resource, ReportProblem, AdSlot, DirectAd, Exam, ExamQuestion, SystemSetting, Notification,
   ChangeRequestEntity, ChangeRequestAction,
+  AdminStudentRow, AdminAttemptRow,
 } from '@thanaya/types';
 
 // Mock initial data used when Supabase is not connected in development
@@ -141,6 +142,130 @@ export const initialNotifications: Notification[] = [
   },
 ];
 
+
+// ── بيانات معاينة للطلبة (وضع عدم الاتصال فقط) ────────────────────────────
+const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+
+export const initialStudents: AdminStudentRow[] = [
+  {
+    id: 'stu-1',
+    email: 'sara@student.test',
+    full_name: 'سارة أحمد',
+    avatar_url: null,
+    grade: 'third',
+    provider: 'google',
+    email_verified: true,
+    is_active: true,
+    attempts: 4,
+    questions: 24,
+    correct: 17,
+    wrong: 7,
+    accuracy: 70.8,
+    wrong_questions: 5,
+    created_at: daysAgo(40),
+    last_seen_at: daysAgo(1),
+  },
+  {
+    id: 'stu-2',
+    email: 'omar@student.test',
+    full_name: 'عمر علي',
+    avatar_url: null,
+    grade: 'third',
+    provider: 'email',
+    email_verified: false,
+    is_active: true,
+    attempts: 2,
+    questions: 12,
+    correct: 5,
+    wrong: 7,
+    accuracy: 41.7,
+    wrong_questions: 6,
+    created_at: daysAgo(21),
+    last_seen_at: daysAgo(3),
+  },
+  {
+    id: 'stu-3',
+    email: 'nour@student.test',
+    full_name: 'نور حسن',
+    avatar_url: null,
+    grade: 'second',
+    provider: 'google',
+    email_verified: true,
+    is_active: false,
+    attempts: 1,
+    questions: 6,
+    correct: 1,
+    wrong: 5,
+    accuracy: 16.7,
+    wrong_questions: 5,
+    created_at: daysAgo(60),
+    last_seen_at: daysAgo(45),
+  },
+];
+
+export const initialAttempts: AdminAttemptRow[] = [
+  {
+    id: 'att-1',
+    student_id: 'stu-1',
+    student_name: 'سارة أحمد',
+    student_email: 'sara@student.test',
+    subject_name: 'الفيزياء',
+    exam_title: 'امتحان الفيزياء الموحّد',
+    mode: 'exam',
+    status: 'submitted',
+    score_percentage: 75,
+    correct_count: 3,
+    wrong_count: 1,
+    blank_count: 0,
+    total_questions: 4,
+    time_spent_seconds: 620,
+    flagged_suspicious: false,
+    flag_reason: null,
+    started_at: daysAgo(1),
+    submitted_at: daysAgo(1),
+  },
+  {
+    id: 'att-2',
+    student_id: 'stu-1',
+    student_name: 'سارة أحمد',
+    student_email: 'sara@student.test',
+    subject_name: 'الفيزياء',
+    exam_title: null,
+    mode: 'review',
+    status: 'submitted',
+    score_percentage: 50,
+    correct_count: 2,
+    wrong_count: 2,
+    blank_count: 0,
+    total_questions: 4,
+    time_spent_seconds: 300,
+    flagged_suspicious: false,
+    flag_reason: null,
+    started_at: daysAgo(1),
+    submitted_at: daysAgo(1),
+  },
+  {
+    id: 'att-3',
+    student_id: 'stu-2',
+    student_name: 'عمر علي',
+    student_email: 'omar@student.test',
+    subject_name: 'الكيمياء',
+    exam_title: 'امتحان الكيمياء',
+    mode: 'exam',
+    status: 'submitted',
+    score_percentage: 25,
+    correct_count: 1,
+    wrong_count: 3,
+    blank_count: 0,
+    total_questions: 4,
+    time_spent_seconds: 480,
+    flagged_suspicious: true,
+    flag_reason: 'وقت إجابة أقل من المتوسط بشكل غير معتاد',
+    started_at: daysAgo(3),
+    submitted_at: daysAgo(3),
+  },
+];
+
 // Local state for offline / preview mode fallback
 // مخزن واحد كائن حتى تتمكن ملفات الكيانات من إعادة إسناد المصفوفات
 // (مثل memory.resources = memory.resources.filter(...)) بنفس سلوك الملف الواحد.
@@ -165,6 +290,8 @@ export const memory = {
   examQuestions: [...initialExamQuestions] as ExamQuestion[],
   systemSettings: [...initialSystemSettings] as SystemSetting[],
   notifications: [...initialNotifications] as Notification[],
+  students: [...initialStudents] as AdminStudentRow[],
+  attempts: [...initialAttempts] as AdminAttemptRow[],
 };
 
 export const isConfigured = !!import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_URL !== 'https://your-project.supabase.co';

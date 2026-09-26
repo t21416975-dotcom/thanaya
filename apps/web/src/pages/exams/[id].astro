@@ -4,6 +4,7 @@ import Breadcrumb from '../../components/Breadcrumb.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import { publicApi } from '../../lib/api';
 import { buildPageSchema } from '../../lib/geo';
+import { getStudentSession } from '../../lib/auth-server';
 
 const { id } = Astro.params;
 const exam = id ? await publicApi.getExamById(id) : null;
@@ -17,7 +18,30 @@ const jsonLd = buildPageSchema({ pageType: 'exam', exam });
 const pageTitle = `${exam.title} - امتحان تجريبي تفاعلي | منصة ثنايا`;
 const pageDescription = `امتحان تفاعلي في ${exam.subject?.name || 'البكالوريا'} يحتوي على ${exam.questions.length} سؤال MCQ مع مؤقت زمني وتصحيح وشرح فوري.`;
 
-const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
+// ─────────────────────────────────────────────────────────────────────────────
+// ★ الأمان: الطالب المسجّل لا يحصل على مفتاح الإجابة في HTML
+//
+// الزائر غير المسجّل: نُبقي السلوك القديم 100% (تصحيح في المتصفح) — لأن
+//   تحويله لإلزامي يكسر التحويل ويمنع الزوار من تجربة المنصة.
+//
+// الطالب المسجّل: نُسقط correct_option_index و explanation قبل التسريب.
+//   التصحيح يتم على السيرفر عبر submit_exam_attempt، والواجهة تعرض
+//   ما يرجّعه. لهذا نحتاج isSignedIn في وقت البناء (SSR) لا في المتصفح.
+// ─────────────────────────────────────────────────────────────────────────────
+const session = await getStudentSession(Astro);
+const isSignedIn = session.isSignedIn && session.student !== null;
+
+const examQuestions = isSignedIn
+  ? exam.questions.map((q) => ({
+      id: q.id,
+      question_number: q.question_number,
+      question_text: q.question_text,
+      options: q.options,
+      image_url: q.image_url,
+    }))
+  : exam.questions;
+
+const questionsJson = JSON.stringify(examQuestions).replace(/</g, '\\u003c');
 ---
 
 <Layout title={pageTitle} description={pageDescription} jsonLd={jsonLd}>
@@ -31,7 +55,13 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
     />
 
     <!-- PHASE 1: Welcome & Setup Screen -->
-    <section id="exam-welcome" data-time-limit={exam.time_limit_minutes} data-exam-id={exam.id} class="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 shadow-sm text-center space-y-8 animate-fadeIn">
+    <section
+      id="exam-welcome"
+      data-time-limit={exam.time_limit_minutes}
+      data-exam-id={exam.id}
+      data-signed-in={isSignedIn ? '1' : '0'}
+      class="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 shadow-sm text-center space-y-8 animate-fadeIn"
+    >
       <div class="max-w-xl mx-auto space-y-3">
         <span class="inline-flex items-center px-3.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">
           {exam.subject?.name || 'مادة دراسية'}
@@ -85,6 +115,35 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
         <button id="discard-progress-btn" type="button" class="underline font-semibold hover:text-amber-950 transition cursor-pointer">
           بدء من جديد وحذف المحاولة السابقة
         </button>
+      </div>
+
+      <!-- Sign-in prompt: explains the trade-off to a guest (only for anonymous) -->
+      {
+        !isSignedIn && (
+          <div class="max-w-md mx-auto bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs text-slate-600 space-y-2">
+            <p class="font-bold text-sm text-slate-800">سجّل دخولك لحفظ نتيجتك</p>
+            <p class="leading-relaxed">
+              بدون تسجيل الدخول لن تظهر نتيجتك في سجل امتحاناتك، ولن تستطيع إنشاء
+              «امتحان أخطائك» لاحقًا. التصحيح يعمل في كلتا الحالتين.
+            </p>
+            <a
+              href={`/auth/login?returnTo=${encodeURIComponent(`/exams/${exam.id}`)}`}
+              class="inline-flex items-center gap-1.5 font-semibold text-emerald-700 hover:text-emerald-900 transition"
+            >
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                <polyline points="10 17 15 12 10 7"></polyline>
+                <line x1="15" y1="12" x2="3" y2="12"></line>
+              </svg>
+              تسجيل الدخول بحساب Google
+            </a>
+          </div>
+        )
+      }
+
+      <!-- Save status (signed-in only; populated by JS) -->
+      <div id="save-status" class="hidden max-w-md mx-auto text-xs text-slate-500 flex items-center justify-center gap-1.5">
+        <span id="save-status-text"></span>
       </div>
 
       <div class="pt-2">
@@ -212,6 +271,10 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
       <!-- Score Summary Card -->
       <div class="bg-white rounded-3xl border border-slate-200 p-8 sm:p-10 shadow-sm text-center space-y-6">
         <div class="space-y-2">
+          <span id="result-saved-badge" class="hidden inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-sky-50 text-sky-800 border border-sky-200">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            محفوظة في حسابك
+          </span>
           <span id="result-badge" class="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
             تم إنهاء الامتحان بنجاح
           </span>
@@ -304,6 +367,15 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
       let isSubmitted = false;
       let timeSpentSeconds = 0;
 
+      // ── حالة المحاولة على السيرفر (للطالب المسجّل فقط) ───────────────────
+      // attemptId / answerToken ي.null للزائر — عندها كل المنطق أدناه
+      // يتخطّى بهدوء ويتصرف الملف كأن لا نظام طالب قائمًا.
+      const IS_SIGNED_IN = (document.getElementById('exam-welcome')?.getAttribute('data-signed-in') || '0') === '1';
+      let attemptId = null;
+      let answerToken = null;
+      const questionIdAt = {}; // { [qIndex]: questionId }
+      const questionSeenAt = {}; // { [qIndex]: timestamp of first view }
+
       // DOM Elements
       const welcomeSection = document.getElementById('exam-welcome');
       const liveSection = document.getElementById('exam-live');
@@ -312,6 +384,19 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
       const startExamBtn = document.getElementById('start-exam-btn');
       const timerDisplay = document.getElementById('timer-display');
       const timerBox = document.getElementById('timer-box');
+
+      const saveStatus = document.getElementById('save-status');
+      const saveStatusText = document.getElementById('save-status-text');
+
+      function setSaveStatus(text, tone) {
+        if (!IS_SIGNED_IN || !saveStatus || !saveStatusText) return;
+        saveStatus.classList.remove('hidden');
+        saveStatusText.textContent = text;
+        saveStatusText.className =
+          tone === 'ok' ? 'text-emerald-700 font-medium'
+          : tone === 'error' ? 'text-rose-700 font-medium'
+          : 'text-slate-500';
+      }
 
       const currentQBadge = document.getElementById('current-q-index-badge');
       const qNumberText = document.getElementById('q-number-text');
@@ -424,8 +509,96 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
         updateNavGrid();
         startTimer();
         window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // ── طالب مسجّل: ننشئ المحاولة على السيرفر ───────────────────────────
+        // ★ لا نعطّل البداية على هذا الطلب: لو فشل يبقى التصحيح المحلي يعمل
+        //   (نفس سلوك الزائر) ونعرض رسالة فقط — لا نمنع الطالب من الامتحان.
+        if (IS_SIGNED_IN) startServerAttempt();
       }
 
+      // إنشاء المحاولة على السيرفر + ربط الأسئلة المحلية بمعرّفاتها
+      async function startServerAttempt() {
+        setSaveStatus('جارٍ حفظ المحاولة…', 'pending');
+        try {
+          const resp = await fetch('/api/exams/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ exam_id: examId })
+          });
+          if (!resp.ok) throw new Error('start failed');
+          const data = await resp.json();
+          attemptId = data.attempt_id;
+          answerToken = data.answer_token;
+
+          // نربط ترتيبنا المحلي بمعرّفات السيرفر.
+          // نقارن بالمعرّف أولًا، ثم بالمحتوى (نص + خيارات) احتياطًا.
+          const localById = {};
+          questions.forEach(function (q, i) { if (q.id) localById[q.id] = i; });
+
+          let matchedAll = true;
+          (data.questions || []).forEach(function (sq) {
+            let idx = localById[sq.id];
+            if (idx === undefined) {
+              const found = questions.findIndex(function (q) {
+                return q.question_text === sq.text
+                  && JSON.stringify(q.options || []) === JSON.stringify(sq.options || []);
+              });
+              idx = found >= 0 ? found : undefined;
+            }
+            if (idx === undefined) { matchedAll = false; return; }
+            questionIdAt[idx] = sq.id;
+          });
+
+          if (matchedAll && data.questions.length === questions.length) {
+            // ★ استئناف حقيقي: نرفع إجابات الاستئناف المحلي إلى السيرفر
+            if (Object.keys(userAnswers).length > 0) await replayAnswers();
+            setSaveStatus('محاولتك محفوظة ✓', 'ok');
+          } else {
+            // مجموعات مختلفة (أسئلة نُسخت/حُذفت): نُبطل الاستئناف المحلي
+            setSaveStatus('تم بدء محاولة جديدة', 'ok');
+          }
+        } catch (err) {
+          setSaveStatus('تعذّر حفظ المحاولة — ستعمل النتيجة محليًا فقط', 'error');
+        }
+      }
+
+      // رفع إجابات الاستئناف المحلي إلى السيرفر
+      async function replayAnswers() {
+        const payload = [];
+        Object.keys(userAnswers).forEach(function (idx) {
+          const qid = questionIdAt[idx];
+          if (qid) payload.push({ question_id: qid, selected_index: userAnswers[idx] });
+        });
+        if (payload.length === 0) return;
+        try {
+          await fetch('/api/exams/attempt/answer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ attempt_id: attemptId, answers: payload })
+          });
+        } catch (err) { /* غير حرج: التسليم يرسل كل شيء */ }
+      }
+
+      // حفظ إجابة واحدة أثناء الامتحان (sendBeacon — لا يعطّل الواجهة)
+      function saveAnswerBeacon(questionId, selectedIndex, questionIndex) {
+        if (!attemptId || !questionId) return;
+        const seen = questionSeenAt[questionIndex];
+        const body = JSON.stringify({
+          attempt_id: attemptId,
+          question_id: questionId,
+          selected_index: selectedIndex,
+          time_taken: seen ? Math.round((Date.now() - seen) / 1000) : null
+        });
+        try {
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon('/api/exams/attempt/answer', new Blob([body], { type: 'application/json' }));
+          } else {
+            fetch('/api/exams/attempt/answer', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true
+            }).catch(function () {});
+          }
+        } catch (err) { /* غير حرج */ }
+      }
       // Timer Logic
       function startTimer() {
         clearInterval(timerInterval);
@@ -473,6 +646,9 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
         if (!questions[index]) return;
         currentQuestionIndex = index;
         const q = questions[index];
+
+        // نُسجّل أول ظهور للسؤال (لحساب زمن الإجابة لاحقًا)
+        if (questionSeenAt[index] === undefined) questionSeenAt[index] = Date.now();
 
         currentQBadge.textContent = String(index + 1);
         qNumberText.textContent = String(index + 1);
@@ -524,6 +700,8 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
 
           optCard.onclick = () => {
             userAnswers[index] = optIdx;
+            // ★ حفظ فوري على السيرفر (sendBeacon) — لا يعطّل إعادة الرسم
+            saveAnswerBeacon(questionIdAt[index], optIdx, index);
             renderQuestion(index);
             updateNavGrid();
           };
@@ -578,6 +756,18 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
         isSubmitted = true;
         clearProgress();
 
+        // نرسم النتيجة فورًا (محليًا) ثم نجلب التصحيح الرسمي من السيرفر
+        // إن كان الطالب مسجّلًا. الرسم المحلي يبقى نسخة الزائر.
+        renderResults();
+
+        if (IS_SIGNED_IN && attemptId && answerToken) submitToServer();
+        else if (IS_SIGNED_IN) {
+          setSaveStatus('لم يُحفظ التسليم على الخادم', 'error');
+        }
+      }
+
+      // الرسم المحلي (نفس منطق النسخة القديمة بالكامل)
+      function renderResults() {
         // Calculate score
         let correctCount = 0;
         let wrongCount = 0;
@@ -714,6 +904,93 @@ const questionsJson = JSON.stringify(exam.questions).replace(/</g, '\\u003c');
         liveSection.classList.add('hidden');
         resultsSection.classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      // ── التسليم إلى السيرفر (الطالب المسجّل فقط) ─────────────────────────
+      // ★ هذا هو المصدر الرسمي للنتيجة. في هذه الحالة لا نملك
+      //   correct_option_index أصلًا، فنستبدل محتويات questions و userAnswers
+      //   بما يرسله السيرفر ثم نعيد الرسم — فتعمل نفس دالة الرسم بلا تكرار.
+      async function submitToServer() {
+        setSaveStatus('جارٍ تصحيح المحاولة…', 'pending');
+
+        // نرفع كل إجاباتنا أولًا: sendBeacon أثناء الامتحان قد يكون فشل
+        // (تبويب مغلق، انقطاع). الترسل النهائي هو المصدر الأضمن.
+        const answers = [];
+        Object.keys(userAnswers).forEach(function (idx) {
+          const qid = questionIdAt[idx];
+          if (qid) answers.push({ question_id: qid, selected_index: userAnswers[idx] });
+        });
+
+        try {
+          const resp = await fetch('/api/exams/attempt/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              attempt_id: attemptId,
+              answer_token: answerToken,
+              answers: answers,
+              time_spent: timeSpentSeconds
+            })
+          });
+
+          if (!resp.ok) {
+            const err = await resp.json().catch(function () { return {}; });
+            throw new Error(err.error || 'تعذّر التسليم');
+          }
+
+          const result = await resp.json();
+          applyServerResult(result);
+          setSaveStatus('تم حفظ نتيجتك ✓', 'ok');
+        } catch (err) {
+          setSaveStatus('تعذّر حفظ النتيجة على الخادم — النتيجة المعروضة محلية', 'error');
+        }
+      }
+
+      /**
+       * يستبدل البيانات المحلية بنتيجة السيرفر ويعيد الرسم.
+       * نعيد تسمية الحقول إلى أسماء النسخة المحلية حتى تعمل دالة الرسم
+       * (renderResults) بلا أي تفرّع إضافي.
+       */
+      function applyServerResult(result) {
+        const graded = result.answers || [];
+        if (graded.length === 0) return;
+
+        // نعيد الترتيب: نطابق بمعرّف السؤال أولًا ثم بالموقع
+        const gradedById = {};
+        graded.forEach(function (g) { gradedById[g.question_id] = g; });
+
+        const nextQuestions = questions.map(function (q, idx) {
+          const g = gradedById[q.id] || graded[idx];
+          if (!g) return q;
+          return Object.assign({}, q, {
+            id: g.question_id,
+            question_number: g.number,
+            question_text: g.text,
+            options: g.options,
+            image_url: g.image_url,
+            correct_option_index: g.correct_index,
+            explanation: g.explanation
+          });
+        });
+
+        const nextUserAnswers = {};
+        nextQuestions.forEach(function (q, idx) {
+          const g = gradedById[q.id] || graded[idx];
+          if (g && g.selected_index !== null && g.selected_index !== undefined) {
+            nextUserAnswers[idx] = g.selected_index;
+          }
+        });
+
+        questions.length = 0;
+        Array.prototype.push.apply(questions, nextQuestions);
+        userAnswers = nextUserAnswers;
+
+        // إعادة الرسم بالبيانات الرسمية
+        renderResults();
+
+        // شارة "محفوظ" فوق النتائج
+        const badge = document.getElementById('result-saved-badge');
+        if (badge) badge.classList.remove('hidden');
       }
 
       // Event Listeners
