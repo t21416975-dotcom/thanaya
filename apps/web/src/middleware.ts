@@ -1,5 +1,5 @@
 import { defineMiddleware } from 'astro:middleware';
-import { createServerSupabase } from './lib/auth-server';
+import { createServerSupabase, hasSessionCookie } from './lib/auth-server';
 import { isSupabaseConfigured } from './lib/supabase';
 
 /**
@@ -26,7 +26,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     // ================================================================
     let sessionUserId: string | null = null;
 
-    if (isSupabaseConfigured && context.cookies.get('sb-access-token')) {
+    if (isSupabaseConfigured && hasSessionCookie(context)) {
       try {
         const supabase = createServerSupabase(context);
         const {

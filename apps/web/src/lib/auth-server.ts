@@ -27,6 +27,22 @@ function cookieOptions(): CookieOptions {
 }
 
 /**
+ * ★ اسم كوكي الجلسة — مصدر واحد للحقيقة.
+ *
+ *   supabase-js يشتقّ اسم التخزين من النطاق: `sb-<projectRef>-auth-token`.
+ *   الاعتماد على هذا الاشتقاق في مكان آخر (كما كان يحدث مع 'sb-access-token')
+ *   يجعل الفحص عرضة للكسر: تغيير project ref، ترقية SDK، أو اختلاف النطاق
+ *   بين بيئات التطوير والإنتاج. لذلك نُثبّت الاسم هنا ونمرّره صريحًا إلى
+ *   createServerClient، فيصير الفحص في src/middleware.ts والكتابة هنا
+ *   يشيران إلى نفس الثابت.
+ *
+ *   والفحص يجب أن يبدأ بـ startsWith لا بمقارنة مساوية: ‏@supabase/ssr يقسّم
+ *   الكوكي إلى أجزاء تلقائيًا عندما يكبر (…-auth-token.0, .1, …)، فتكسر
+ *   المساواة الصريحة على الجلسات الكبيرة.
+ */
+export const AUTH_COOKIE_NAME = 'sb-thanaya-auth-token';
+
+/**
  * Astro 7 لا يوفّر AstroCookies.getAll()، فنقرأ ترويسة Cookie بأنفسنا.
  * الترويسة بصيغة "a=1; b=2". نتجاهل القيم الفارغة (كوكي محذوف).
  */
@@ -63,6 +79,16 @@ export function createServerSupabase(context: APIContext): SupabaseClient<Databa
   }
 
   return createServerClient<Database>(rawSupabaseUrl, rawSupabaseKey, {
+    auth: {
+      // ★ يثبّت اسم كوكي الجلسة على AUTH_COOKIE_NAME بدل اشتقاقه من النطاق.
+      //   يقرأه src/middleware.ts عبر hasSessionCookie.
+      storageKey: AUTH_COOKIE_NAME,
+    },
+    // ★ نمرّر خيارات الكوكي إلى المكتبة نفسها (لا في setAll فقط)، وإلا سكبها
+    //   SDK فوق خياراتنا: DEFAULT_COOKIE_OPTIONS فيه httpOnly=false، فتصبح
+    //   جلسة الطالب قابلة للقراءة من JavaScript. تمريرها هنا يجعلها الأساس
+    //   الذي تدمجه المكتبة فوقه بدل أن تستبدله.
+    cookieOptions: { ...cookieOptions() },
     cookies: {
       getAll() {
         return parseCookieHeader(context.request);
@@ -74,6 +100,40 @@ export function createServerSupabase(context: APIContext): SupabaseClient<Databa
       },
     },
   });
+}
+
+/**
+ * فحص رخيص: هل يحمل الطلب كوكي جلسة؟ لتفادي نداء getUser() الشبكي على
+ * الطلبات المجهولة (أغلب حركة الموقع).
+ *
+ * يبدأ بـ startsWith لتغطية تقسيم الكوكي إلى أجزاء (…-auth-token.0).
+ */
+export function hasSessionCookie(context: APIContext): boolean {
+  return parseCookieHeader(context.request).some(
+    ({ name }) => name === AUTH_COOKIE_NAME || name.startsWith(`${AUTH_COOKIE_NAME}.`)
+  );
+}
+
+/**
+ * يقصّ returnTo على مسار داخلي آمن — مصدر واحد لقاعدة العودة إلى،
+ * يستخدمه /api/auth/google (قبل التدفق) و /auth/callback (بعده).
+ *
+ * يوقف:
+ *   - موقعًا خارجيًا بالكامل، و protocol-relative (//evil.com)،
+ *   - خدعة الشرطة المائلة العكسية (\\/\\/evil.com) التي تتبعها بعض المتصفحات،
+ *   - ومسارات المصادقة نفسها: returnTo=/auth/login يجعل /auth/login يحوّل
+ *     إلى returnTo… وهو /auth/login، أي حلقة لا نهائية. وهو أيضًا
+ *     معامل قادم من رابط منسوخ يُعاد استخدامه بعد تسجيل الدخول.
+ */
+export function safeReturnTo(value: string | null | undefined, fallback = '/account'): string {
+  if (!value) return fallback;
+  if (!value.startsWith('/')) return fallback;
+  if (value.startsWith('//')) return fallback;
+  if (value.includes('\\')) return fallback;
+  // منع العودة إلى /auth/* — لا قيمة له بعد تسجيل الدخول، وهو مصدر حلقة
+  const path = value.split(/[?#]/, 1)[0];
+  if (path === '/auth' || path.startsWith('/auth/')) return fallback;
+  return value;
 }
 
 // ---------------------------------------------------------------------------

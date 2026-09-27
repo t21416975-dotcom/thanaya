@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { createServerSupabase, json, assertSameOrigin } from '../../../lib/auth-server';
+import { createServerSupabase, json, assertSameOrigin, safeReturnTo } from '../../../lib/auth-server';
 import { isSupabaseConfigured } from '../../../lib/supabase';
 
 export const prerender = false;
@@ -7,10 +7,9 @@ export const prerender = false;
 /**
  * يبدأ تدفق Google OAuth.
  *
- * ★ returnTo يُقصَّى على مسار داخلي فقط:
- *   - يجب أن يبدأ بـ "/" (مسار داخلي)
- *   - لا يبدأ بـ "//" (م protocol-relative → موقع خارجي)
- *   خطأ شائع في تطبيقات OAuth: إعادة توجيه المهاجم إلى موقعه.
+ * ★ returnTo يُقصَّى على مسار داخلي آمن عبر safeReturnTo (المشترك مع
+ *   /auth/callback): يمنع المواقع الخارجية، والمسارات التي تعيدنا إلى
+ *   /auth/* فتصنع حلقة إعادة توجيه. خطأ شائع في تطبيقات OAuth.
  *
  * ★ redirectTo لـ Google يُبنى من أصل الطلب نفسه، لذلك يجب أن يكون
  *   مسجّلًا في Supabase → Authentication → URL Configuration.
@@ -56,14 +55,6 @@ export const POST: APIRoute = async (context) => {
   // 303 (See Other) بعد POST → المتصفح يتبع بـ GET
   return context.redirect('/', 303);
 };
-
-function safeReturnTo(value: string | null): string {
-  if (!value) return '/account';
-  if (!value.startsWith('/')) return '/account';
-  if (value.startsWith('//')) return '/account';
-  if (value.includes('\\')) return '/account';
-  return value;
-}
 
 function redirect(location: string, status = 302): Response {
   return new Response(null, { status, headers: { Location: location } });

@@ -5,19 +5,60 @@ import { getStudentSession } from '../../lib/auth-server';
 // هذه الصفحة تعتمد على الجلسة → يجب أن تكون SSR دائمًا
 export const prerender = false;
 
+/**
+ * نصوص الأخطاء — مصدر واحد للحقيقة.
+ * ترسلها /auth/callback و /api/auth/google كـ ?error=<رمز> فقط.
+ * أي رمز غير معروف يسقط على `unknown` عمدًا: لا نعرض نصًا من الـ URL.
+ */
+const ERROR_MESSAGES: Record<string, string> = {
+  access_denied: 'ألغيت عملية تسجيل الدخول. لم يُنفَّذ شيء.',
+  server_error: 'واجه Google خطأً مؤقتًا. حاول مرة أخرى بعد قليل.',
+  temporarily_unavailable: 'خدمة Google غير متاحة مؤقتًا. حاول بعد قليل.',
+  oauth_failed: 'تعذّر بدء تسجيل الدخول عبر Google. حاول مرة أخرى.',
+  callback_failed: 'لم نتمكن من تأكيد جلستك. حاول تسجيل الدخول من جديد.',
+  code_exchange_failed:
+    'انتهت صلاحية رابط تسجيل الدخول أو استُخدم مرتين. ابدأ تسجيل الدخول من جديد.',
+  bootstrap_failed:
+    'سجّلنا دخولك بنجاح لكن تعذّر تجهيز ملفك. اضغط «إعادة المحاولة» — إن تكرر الخطأ تواصل معنا.',
+  account_disabled: 'حسابك معطّل. يرجى التواصل مع إدارة المنصة.',
+  not_configured: 'تسجيل الدخول غير مُفعّل على هذا الخادم بعد.',
+  unknown: 'حدث خطأ غير متوقع. حاول مرة أخرى.',
+};
+
 const session = await getStudentSession(Astro);
 
-// مسجّل الدخول بالفعل؟ لا داعي لعرض زر
-if (session.isSignedIn) {
-  return Astro.redirect(session.student ? '/account' : '/auth/callback?needs=profile', 302);
-}
+// ★ نقرأ رمز الخطأ قبل أي إعادة توجيه.
+//   الصفحة كانت تتجاهل error و message تمامًا، فكان فشل /auth/callback
+//   صامتًا: لا رسالة ولا سبب — كل ما يراه الطالب هو زر Google مجددًا.
+// ★ لا نعرض قيمة message من الـ URL: نُثبّت النصوص هنا. عرض نص يجيء من
+//   عنوان URL يسمح لأي شخص ببناء رابط يحمل رسالة مزعومة على نطاقنا.
+const errorCode = Astro.url.searchParams.get('error');
+// ★ لا خطأ يُعرض بلا ?error: المفتاح '' غير موجود في الخريطة، فلو تُرك
+//   ??-fallback بلا شرط لظهر «خطأ غير متوقع» على كل زيارة سليمة.
+const errorText = errorCode ? (ERROR_MESSAGES[errorCode] ?? ERROR_MESSAGES.unknown) : '';
 
 // ★ returnTo يُقصَّى على مسار داخلي فقط — منع إعادة التوجيه لموقع خارجي
 const rawReturnTo = Astro.url.searchParams.get('returnTo') || '/';
 const returnTo =
-  rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') ? rawReturnTo : '/';
+  rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//') && !rawReturnTo.includes('\\')
+    ? rawReturnTo
+    : '/';
+
+// مسجّل الدخول بالفعل؟
+//   - عنده صف طالب            → إلى returnTo
+//   - بلا صف ولا خطأ معروض    → محاولة واحدة لإنشاء الملف
+//   - بلا صف ومع خطأ معروض   → لا تعِد التوجيه إطلاقًا.
+//     ★ هذا الشرط هو ما كان ينقص: عند فشل bootstrap_student كانت
+//       /auth/login → /auth/callback → /auth/login → … حلقة إعادة توجيه
+//       لا نهائية (ERR_TOO_MANY_REDIRECTS). الآن أول فشل يُنهي السلسلة
+//       ويعرض السبب، وتجد المستخدم زر إعادة المحاولة.
+if (session.isSignedIn && (session.student || !errorCode)) {
+  return Astro.redirect(session.student ? returnTo : '/auth/callback?needs=profile', 302);
+}
 
 const isConfigured = session.isConfigured;
+// جلسة صالحة لكن بلا صف طالب: نعالجها هنا بدل الطرد إلى callback
+const needsProfile = session.isSignedIn && !session.student;
 ---
 
 <Layout
@@ -33,12 +74,29 @@ const isConfigured = session.isConfigured;
         >
           ث
         </div>
-        <h1 class="text-2xl font-bold text-slate-900">تسجيل دخول الطالب</h1>
+        <h1 class="text-2xl font-bold text-slate-900">
+          {needsProfile ? 'ملفك غير جاهز' : 'تسجيل دخول الطالب'}
+        </h1>
         <p class="mt-2 text-sm leading-relaxed text-slate-600">
-          سجّل دخولك لحفظ نتائج امتحاناتك، ومتابعة الأسئلة التي أخطأت فيها،
-          وإنشاء <strong>امتحان أخطائك</strong> في أي مادة.
+          {
+            needsProfile
+              ? 'سجّلنا دخولك بنجاح، لكن لم نتمكن من تجهيز ملفك بعد. جرّب مرة أخرى.'
+              : 'سجّل دخولك لحفظ نتائج امتحاناتك، ومتابعة الأسئلة التي أخطأت فيها، وإنشاء "امتحان أخطائك" في أي مادة.'
+          }
         </p>
       </div>
+
+      {
+        errorText && (
+          <div
+            class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900"
+            role="alert"
+          >
+            <p class="font-semibold">تعذّر تسجيل الدخول</p>
+            <p class="mt-1 leading-relaxed">{errorText}</p>
+          </div>
+        )
+      }
 
       {
         !isConfigured ? (
@@ -54,6 +112,23 @@ const isConfigured = session.isConfigured;
             <a href="/" class="mt-3 inline-block font-medium text-emerald-700 underline">
               العودة للرئيسية
             </a>
+          </div>
+        ) : needsProfile ? (
+          <div class="space-y-3">
+            <a
+              href={`/auth/callback?needs=profile&returnTo=${encodeURIComponent(returnTo)}`}
+              class="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3.5 font-semibold text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+            >
+              إعادة المحاولة
+            </a>
+            <form method="post" action="/api/auth/google" class="w-full">
+              <button
+                type="submit"
+                class="w-full rounded-xl border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                تسجيل الخروج والمحاولة بحساب آخر
+              </button>
+            </form>
           </div>
         ) : (
           <div>
