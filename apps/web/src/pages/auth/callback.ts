@@ -34,7 +34,15 @@ export const GET: APIRoute = async (context) => {
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code, flowIdOptions(url));
 
     if (exchangeError) {
-      if (import.meta.env.DEV) console.error('auth/callback: code exchange failed', exchangeError);
+      // ★ تسجيل دائم (لا DEV فقط): هذا هو السجل الوحيد الذي يكشف سبب فشل
+      //   التبادل على الإنتاج، ورمز code_exchange_failed وحده لا يفرّق بين
+      //   "verifier مفقود" و"رمز مستهلَك" و"redirect_uri مرفوض".
+      console.error('auth/callback: code exchange failed', {
+        code: exchangeError.code ?? null,
+        status: exchangeError.status ?? null,
+        message: exchangeError.message,
+        flowId: url.searchParams.get('sb_flow_id'),
+      });
       return redirect(loginError('code_exchange_failed', url.searchParams.get('returnTo')));
     }
   }

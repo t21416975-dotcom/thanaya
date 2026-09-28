@@ -134,14 +134,16 @@ const needsProfile = session.isSignedIn && !session.student;
           </div>
         ) : (
           <div>
-            {/* ★ data-astro-reload إجباري: بدونه يعترض ClientRouter الرابط
-               (نفس الأصل) ويجلبه بـ fetch بدل تنقّل حقيقي. النتيجة: المتصفح
-               يطلب شاشات Google عبر XHR فيرجع 403 ERR_BLOCKED_BY_CLIENT +
-               CORS، ويبقى الطالب على صفحة الدخول. data-astro-reload يُخرج
-               الرابط من نطاق الـ router فتصير الرحلة تنقّلًا كاملًا. */}
+            {/* ★ data-astro-reload + prefetch=false معًا:
+               - reload: يخرج الرابط من ClientRouter فتصير رحلة OAuth تنقّلًا
+                 كاملًا بدل fetch 내부ي (403 ERR_BLOCKED_BY_CLIENT + CORS).
+               - prefetch=false: مع prefetchAll في astro.config، تمرير المؤشر
+                 فوق الزر كان يُجري الطلب فعليًا، فيُنشئ تدفق PKCE وكتابة
+                 كوكي verifier بلا فائدة. */}
             <a
               href={`/api/auth/google?returnTo=${encodeURIComponent(returnTo)}`}
               data-astro-reload
+              data-astro-prefetch="false"
               class="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-5 py-3.5 font-semibold text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
             >
               <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0" aria-hidden="true">

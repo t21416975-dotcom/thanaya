@@ -83,6 +83,15 @@ export function createServerSupabase(context: APIContext): SupabaseClient<Databa
       // ★ يثبّت اسم كوكي الجلسة على AUTH_COOKIE_NAME بدل اشتقاقه من النطاق.
       //   يقرأه src/middleware.ts عبر hasSessionCookie.
       storageKey: AUTH_COOKIE_NAME,
+
+      // ★ إلحاق معرّف التدفق (sb_flow_id) برابط العودة — بدونه يقرأ
+      //   استرداد /auth/callback آخر كوكي verifier مخزَّن، لا verifier
+      //   الخاص به. وأي طلب آخر لـ /api/auth/google (تحريك المؤشر مع
+      //   prefetch، نقرة مزدوجة، تبويب آخر) يكتب verifier جديدًا فوقه،
+      //   فيصطدم رمز Google بالـ verifier الخطأ ويفشل التبادل. مع المعرّف
+      //   يصبح لكل تدفق فتحته الخاصة، فلا يطمسه تدفق آخر.
+      //   ‎/auth/callback يمرّره أصلًا عبر flowIdOptions.
+      experimental: { appendPkceFlowIdToRedirects: true },
     },
     // ★ نمرّر خيارات الكوكي إلى المكتبة نفسها (لا في setAll فقط)، وإلا سكبها
     //   SDK فوق خياراتنا: DEFAULT_COOKIE_OPTIONS فيه httpOnly=false، فتصبح
