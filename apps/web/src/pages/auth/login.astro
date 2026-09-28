@@ -115,8 +115,10 @@ const needsProfile = session.isSignedIn && !session.student;
           </div>
         ) : needsProfile ? (
           <div class="space-y-3">
+            {/* تنقّل كامل أيضًا: /auth/callback يضبط كوكي الجلسة ثم يعيد التوجيه */}
             <a
               href={`/auth/callback?needs=profile&returnTo=${encodeURIComponent(returnTo)}`}
+              data-astro-reload
               class="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3.5 font-semibold text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
             >
               إعادة المحاولة
@@ -132,8 +134,14 @@ const needsProfile = session.isSignedIn && !session.student;
           </div>
         ) : (
           <div>
+            {/* ★ data-astro-reload إجباري: بدونه يعترض ClientRouter الرابط
+               (نفس الأصل) ويجلبه بـ fetch بدل تنقّل حقيقي. النتيجة: المتصفح
+               يطلب شاشات Google عبر XHR فيرجع 403 ERR_BLOCKED_BY_CLIENT +
+               CORS، ويبقى الطالب على صفحة الدخول. data-astro-reload يُخرج
+               الرابط من نطاق الـ router فتصير الرحلة تنقّلًا كاملًا. */}
             <a
               href={`/api/auth/google?returnTo=${encodeURIComponent(returnTo)}`}
+              data-astro-reload
               class="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-300 bg-white px-5 py-3.5 font-semibold text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
             >
               <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0" aria-hidden="true">
