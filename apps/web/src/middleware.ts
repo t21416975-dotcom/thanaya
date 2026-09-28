@@ -25,6 +25,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     //      ذلك يحافظ على caching العام للصفحات العامة.
     // ================================================================
     let sessionUserId: string | null = null;
+    let sessionIdentity: { name: string | null; email: string | null; avatarUrl: string | null } | null = null;
 
     if (isSupabaseConfigured && hasSessionCookie(context)) {
       try {
@@ -33,6 +34,23 @@ export const onRequest = defineMiddleware(async (context, next) => {
           data: { user },
         } = await supabase.auth.getUser();
         sessionUserId = user?.id ?? null;
+
+        // ★ الهوية تُشتقّ من user_metadata (أي من getUser الذي استدعيناه أصلًا)
+        //   لا من جدول students: صفر استعلامات إضافية لكل طلب، فلا نكسر
+        //   زمن أول بايت. الحقول موحّدة بين Google (full_name / picture)
+        //   وبريد Supabase (name / avatar_url).
+        if (user) {
+          const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+          const name =
+            (typeof meta.full_name === 'string' && meta.full_name) ||
+            (typeof meta.name === 'string' && meta.name) ||
+            null;
+          const avatarUrl =
+            (typeof meta.picture === 'string' && meta.picture) ||
+            (typeof meta.avatar_url === 'string' && meta.avatar_url) ||
+            null;
+          sessionIdentity = { name, email: user.email ?? null, avatarUrl };
+        }
       } catch (err) {
         if (import.meta.env.DEV) {
           console.error('Middleware: session read failed', err);
@@ -42,6 +60,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     (context.locals as Record<string, unknown>).studentUserId = sessionUserId;
     (context.locals as Record<string, unknown>).isSignedIn = sessionUserId !== null;
+    (context.locals as Record<string, unknown>).studentIdentity = sessionIdentity;
 
     // ================================================================
     // 2) حماية المسارات

@@ -1,0 +1,62 @@
+---
+/**
+ * أيقونة الحساب في الهيدر: صورة الطالب (أو أول حرف من اسمه) داخل رابط
+ * يفتح صفحته /account.
+ *
+ * ★ الهوية تأتي من Astro.locals.studentIdentity (يضبطها src/middleware.ts
+ *   من user_metadata داخل getUser الموجود أصلًا) — لا استعلام إضافي هنا.
+ */
+interface Props {
+  identity: { name: string | null; email: string | null; avatarUrl: string | null } | null;
+  /** المسار المفتوح عند الضغط — افتراضيًا صفحة الحساب. */
+  href?: string;
+  /** تمييز بصري عند كون الصفحة الحالية هي صفحة الحساب. */
+  isActive?: boolean;
+}
+
+const { identity, href = '/account', isActive = false } = Astro.props;
+
+const displayName = identity?.name || identity?.email || 'حسابي';
+const initial = (identity?.name || identity?.email || '؟').trim().charAt(0);
+---
+
+<a
+  href={href}
+  title={displayName}
+  aria-label={`حسابي — ${displayName}`}
+  class:list={[
+    'group inline-flex items-center gap-2 rounded-xl p-0.5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2',
+    isActive ? 'bg-emerald-50' : 'hover:bg-slate-100',
+  ]}
+  aria-current={isActive ? 'page' : undefined}
+>
+  {
+    identity?.avatarUrl ? (
+      <img
+        src={identity.avatarUrl}
+        alt=""
+        width="36"
+        height="36"
+        loading="lazy"
+        decoding="async"
+        referrerpolicy="no-referrer"
+        class="h-9 w-9 rounded-full object-cover border border-slate-200 bg-slate-100 flex-shrink-0"
+      />
+    ) : (
+      <span
+        aria-hidden="true"
+        class="h-9 w-9 rounded-full bg-emerald-600 text-white text-sm font-bold flex items-center justify-center flex-shrink-0"
+      >
+        {initial}
+      </span>
+    )
+  }
+  <span
+    class:list={[
+      'hidden lg:inline text-sm font-semibold transition max-w-[9rem] truncate',
+      isActive ? 'text-emerald-700' : 'text-slate-700 group-hover:text-emerald-700',
+    ]}
+  >
+    {displayName}
+  </span>
+</a>

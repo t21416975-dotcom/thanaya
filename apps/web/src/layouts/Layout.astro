@@ -4,6 +4,7 @@ import AdSlot from '../components/AdSlot.astro';
 import NavigationLoadingIndicator from '../components/NavigationLoadingIndicator.astro';
 import AnnouncementBanner from '../components/AnnouncementBanner.astro';
 import NotificationBell from '../components/NotificationBell.astro';
+import UserAvatar from '../components/UserAvatar.astro';
 import { publicApi } from '../lib/api';
 import { PLATFORM_NAME, buildOrganizationSchema, buildWebSiteSchema } from '../lib/geo';
 import '../styles/global.css';
@@ -44,21 +45,20 @@ const notifications = await publicApi.getActiveNotifications();
 //   يضاعف زمن أول بايت. العرض فقط — التفويض في middleware و RLS.
 const isSignedIn = (Astro.locals as Record<string, unknown>).isSignedIn === true;
 
+// هوية الطالب للعرض فقط (اسم/صورة) — يضبطها middleware من user_metadata.
+const studentIdentity =
+  (Astro.locals as Record<string, unknown>).studentIdentity as {
+    name: string | null;
+    email: string | null;
+    avatarUrl: string | null;
+  } | null;
+
 // Primary navigation with active-state detection
 const currentPath = Astro.url.pathname;
 const navLinks = [
   { href: '/', label: 'الرئيسية', isActive: currentPath === '/' },
   { href: '/subjects', label: 'المواد الدراسية', isActive: currentPath.startsWith('/subjects') },
   { href: '/exams', label: 'الامتحانات التفاعلية', isActive: currentPath.startsWith('/exams') },
-  ...(isSignedIn
-    ? [
-        {
-          href: '/account',
-          label: 'حسابي',
-          isActive: currentPath.startsWith('/account') || currentPath.startsWith('/review'),
-        },
-      ]
-    : []),
 ];
 ---
 
@@ -220,6 +220,15 @@ const navLinks = [
           }
 
           <NotificationBell notifications={notifications} />
+
+          {/* أيقونة الحساب: صورة الطالب، وضغطها يفتح /account */}
+          {isSignedIn && (
+            <UserAvatar
+              identity={studentIdentity}
+              href="/account"
+              isActive={currentPath.startsWith('/account') || currentPath.startsWith('/review')}
+            />
+          )}
 
           <!-- Mobile menu trigger -->
           <button
