@@ -1,0 +1,73 @@
+---
+import Icon from './../Icon.astro';
+
+type Props = {
+  correct: number;
+  wrong: number;
+  blank?: number;
+};
+
+const { correct = 0, wrong = 0, blank = 0 } = Astro.props;
+
+const total = correct + wrong + blank;
+const safe = (n: number) => (total > 0 ? (n / total) * 100 : 0);
+
+const segments = [
+  { key: 'correct', label: 'إجابات صحيحة', value: correct, pct: safe(correct), class: 'bg-emerald-500' },
+  { key: 'wrong', label: 'إجابات خاطئة', value: wrong, pct: safe(wrong), class: 'bg-rose-400' },
+  { key: 'blank', label: 'بلا إجابة', value: blank, pct: safe(blank), class: 'bg-slate-300' },
+].filter((s) => s.value > 0);
+---
+
+<div class="space-y-3" data-reveal>
+  <div class="flex h-3 w-full gap-1 overflow-hidden rounded-full bg-slate-100" role="img" aria-label="توزيع الإجابات">
+    {
+      segments.map((s, i) => (
+        <div
+          class={`acct-seg h-full rounded-full ${s.class}`}
+          style={`--w:${s.pct.toFixed(2)}%;animation-delay:${i * 120}ms`}
+        />
+      ))
+    }
+  </div>
+
+  <ul class="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs" role="list">
+    {
+      segments.map((s) => (
+        <li class="flex items-center gap-1.5 text-slate-600">
+          <span class={`h-2.5 w-2.5 rounded-sm ${s.class}`} />
+          {s.label}
+          <span class="font-bold text-slate-900 tabular-nums">
+            <span data-count={s.value}>{s.value}</span>
+            <span class="text-slate-400"> · {Math.round(s.pct)}%</span>
+          </span>
+        </li>
+      ))
+    }
+  </ul>
+
+  {
+    total === 0 && (
+      <p class="flex items-center gap-1.5 text-xs text-slate-400">
+        <Icon name="layers" size={14} />
+        لم تُسجَّل إجابات بعد.
+      </p>
+    )
+  }
+</div>
+
+<style>
+  .acct-seg {
+    width: 0;
+    animation: acct-seg-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes acct-seg-in {
+    from {
+      width: 0;
+    }
+    to {
+      width: var(--w);
+    }
+  }
+</style>

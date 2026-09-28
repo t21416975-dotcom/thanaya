@@ -1,0 +1,91 @@
+---
+import Icon from './../Icon.astro';
+
+type Item = {
+  label: string;
+  value: number;
+  meta?: string;
+};
+
+type Props = {
+  items: Item[];
+  unit?: string;
+  emptyHint?: string;
+};
+
+const { items, unit = '%', emptyHint = '' } = Astro.props;
+
+const rows = (items ?? []).map((it) => ({
+  ...it,
+  value: Math.max(0, Math.min(100, it.value ?? 0)),
+}));
+
+const avg = rows.length ? rows.reduce((s, r) => s + r.value, 0) / rows.length : 0;
+const tone = (v: number) =>
+  v >= 70 ? 'from-emerald-500 to-emerald-400' : v >= 50 ? 'from-amber-500 to-amber-400' : 'from-rose-500 to-rose-400';
+const toneText = (v: number) => (v >= 70 ? 'text-emerald-700' : v >= 50 ? 'text-amber-600' : 'text-rose-600');
+---
+
+{
+  rows.length === 0 ? (
+    <p class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-6 py-8 text-center text-sm text-slate-500">
+      {emptyHint || 'لا توجد بيانات مواد بعد.'}
+    </p>
+  ) : (
+    <ul class="space-y-5" role="list">
+      {rows.map((r, i) => (
+        <li
+          class="group"
+          data-reveal
+          data-reveal-delay={String(i * 70)}
+        >
+          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+            <span class="truncate text-sm font-semibold text-slate-800">{r.label}</span>
+            <span class={`shrink-0 text-sm font-bold tabular-nums ${toneText(r.value)}`}>
+              <span data-count={r.value} data-count-suffix={unit} data-count-duration="1000">
+                {r.value}{unit}
+              </span>
+            </span>
+          </div>
+
+          <div class="h-2.5 overflow-hidden rounded-full bg-slate-100">
+            <div
+              class={`acct-bar h-full rounded-full bg-gradient-to-l ${tone(r.value)}`}
+              style={`--w:${r.value}%;animation-delay:${i * 70}ms`}
+            />
+          </div>
+
+          {r.meta && <p class="mt-1.5 text-[11px] text-slate-500">{r.meta}</p>}
+        </li>
+      ))}
+
+      {rows.length > 1 && (
+        <li class="flex items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
+          <Icon name="percent" size={14} class="text-slate-400" />
+          متوسط المواد
+          <span class="font-bold text-slate-800 tabular-nums">
+            <span data-count={Math.round(avg)} data-count-suffix={unit}>
+              {Math.round(avg)}{unit}
+            </span>
+          </span>
+        </li>
+      )}
+    </ul>
+  )
+}
+
+<style>
+  .acct-bar {
+    width: 0;
+    animation: acct-bar-in 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes acct-bar-in {
+    from {
+      width: 0;
+    }
+    to {
+      width: var(--w);
+    }
+  }
+</style>

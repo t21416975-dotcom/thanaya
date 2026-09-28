@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import AdSlot from '../../components/AdSlot.astro';
+import Icon from '../../components/Icon.astro';
 import { getStudentSession, createServerSupabase } from '../../lib/auth-server';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import type { MyWrongQuestionsResult } from '@thanaya/types';
@@ -144,18 +145,21 @@ const buildUrl = (subjectId: string | null, pageNum: number) => {
 
     {
       total === 0 ? (
-        <div class="rounded-3xl border border-emerald-200 bg-emerald-50 p-8 sm:p-10 text-center space-y-4">
-          <div class="text-5xl" aria-hidden="true">✨</div>
-          <h2 class="text-xl font-bold text-emerald-900">لا توجد أسئلة خاطئة</h2>
-          <p class="text-emerald-900/80 text-sm leading-relaxed max-w-md mx-auto">
+        <div class="rounded-3xl border border-emerald-200 bg-emerald-50 p-8 text-center sm:p-10">
+          <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm">
+            <Icon name="award" size={26} />
+          </span>
+          <h2 class="mt-4 text-xl font-bold text-emerald-900">لا توجد أسئلة خاطئة</h2>
+          <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-emerald-900/80">
             {subjectParam
               ? 'لا توجد أسئلة خطأ في هذه المادة تحديدًا. جرّب مادة أخرى.'
               : 'لم تسجّل أي إجابة خاطئة. أتقنت كل ما حاولته حتى الآن.'}
           </p>
           <a
             href="/exams"
-            class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            class="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
           >
+            <Icon name="book-open" size={16} />
             خُذ امتحانًا جديدًا
           </a>
         </div>
@@ -270,7 +274,8 @@ const buildUrl = (subjectId: string | null, pageNum: number) => {
               href="/review"
               class="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700"
             >
-              🎯 ابنِ امتحانًا من هذه الأسئلة
+              <Icon name="target" size={17} />
+              ابنِ امتحانًا من هذه الأسئلة
             </a>
           </div>
         </>

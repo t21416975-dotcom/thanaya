@@ -1,0 +1,102 @@
+---
+import Icon from '../Icon.astro';
+
+type Props = {
+  value: number;
+  label: string;
+  size?: number;
+  stroke?: number;
+  caption?: string;
+  delay?: number;
+};
+
+let ringSeq = 0;
+
+const { value, label, size = 148, stroke = 12, caption = '', delay = 0 } = Astro.props;
+
+const uid = `acct-ring-${++ringSeq}`;
+
+const pct = Math.max(0, Math.min(100, value ?? 0));
+const r = (size - stroke) / 2;
+const c = 2 * Math.PI * r;
+const offset = c - (c * pct) / 100;
+
+const tone =
+  pct >= 70
+    ? { from: '#34d399', to: '#059669', text: 'text-emerald-700' }
+    : pct >= 50
+      ? { from: '#fcd34d', to: '#d97706', text: 'text-amber-600' }
+      : { from: '#fda4af', to: '#e11d48', text: 'text-rose-600' };
+---
+
+<div
+  class="flex flex-col items-center gap-3"
+  data-reveal
+  data-reveal-delay={String(delay)}
+  role="img"
+  aria-label={`${label}: ${pct}%`}
+>
+  <div class="relative" style={`width:${size}px;height:${size}px`}>
+    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} class="-rotate-90">
+      <defs>
+        <linearGradient id={uid} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color={tone.from}></stop>
+          <stop offset="100%" stop-color={tone.to}></stop>
+        </linearGradient>
+      </defs>
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke="#e2e8f0"
+        stroke-width={stroke}
+      ></circle>
+      <circle
+        class="acct-ring"
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke={`url(#${uid})`}
+        stroke-width={stroke}
+        stroke-linecap="round"
+        stroke-dasharray={c.toFixed(2)}
+        style={`--ring-c:${c.toFixed(2)};--ring-off:${offset.toFixed(2)};stroke-dashoffset:${offset.toFixed(2)}`}
+      ></circle>
+    </svg>
+
+    <div class="absolute inset-0 flex flex-col items-center justify-center">
+      <div class="flex items-start leading-none">
+        <span class={`text-3xl font-bold tabular-nums ${tone.text}`} data-count={pct} data-count-suffix="%"
+          >{pct}%</span
+        >
+      </div>
+      <span class="mt-1 text-[11px] font-medium text-slate-500">{label}</span>
+    </div>
+  </div>
+
+  {
+    caption && (
+      <p class="flex items-center gap-1.5 text-xs text-slate-500">
+        <Icon name="sparkle" size={14} class="text-emerald-600" />
+        {caption}
+      </p>
+    )
+  }
+</div>
+
+<style>
+  .acct-ring {
+    animation: acct-ring-draw 1.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes acct-ring-draw {
+    from {
+      stroke-dashoffset: var(--ring-c);
+    }
+    to {
+      stroke-dashoffset: var(--ring-off);
+    }
+  }
+</style>

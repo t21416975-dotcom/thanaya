@@ -1,0 +1,306 @@
+---
+import Icon from './../Icon.astro';
+
+let chartSeq = 0;
+
+type Point = { label: string; value: number };
+
+type Props = {
+  points: Point[];
+  unit?: string;
+  emptyHint?: string;
+};
+
+const { points, unit = '%', emptyHint = '' } = Astro.props;
+
+const uid = `acct-trend-${++chartSeq}`;
+
+const VB_W = 640;
+const VB_H = 262;
+const PAD_T = 22;
+const PAD_B = 72;
+const PAD_L = 40;
+const PAD_R = 58;
+const PLOT_W = VB_W - PAD_L - PAD_R;
+const PLOT_H = VB_H - PAD_T - PAD_B;
+
+const clampPct = (n: number) => Math.max(0, Math.min(100, n ?? 0));
+const series = (points ?? []).map((p) => ({ label: p.label, value: clampPct(p.value) }));
+
+const yFor = (v: number) => PAD_T + PLOT_H - (v / 100) * PLOT_H;
+const xFor = (i: number) => PAD_L + PLOT_W * (1 - (series.length > 1 ? i / (series.length - 1) : 0.5));
+
+const coords = series.map((p, i) => ({ ...p, x: +xFor(i).toFixed(2), y: +yFor(p.value).toFixed(2) }));
+
+const TENSION = 0.18;
+const linePath = coords.reduce((acc, c, i) => {
+  if (i === 0) return `M ${c.x} ${c.y}`;
+  const p0 = coords[i - 2] ?? coords[i - 1];
+  const p1 = coords[i - 1];
+  const p2 = c;
+  const p3 = coords[i + 1] ?? p2;
+  const c1x = p1.x + (p2.x - p0.x) * TENSION;
+  const c1y = p1.y + (p2.y - p0.y) * TENSION;
+  const c2x = p2.x - (p3.x - p1.x) * TENSION;
+  const c2y = p2.y - (p3.y - p1.y) * TENSION;
+  return `${acc} C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x} ${p2.y}`;
+}, '');
+
+const baseY = PAD_T + PLOT_H;
+const areaPath = coords.length
+  ? `${linePath} L ${coords[coords.length - 1].x} ${baseY} L ${coords[0].x} ${baseY} Z`
+  : '';
+
+const gridValues = [0, 25, 50, 75, 100];
+const maxLabel = Math.max(...series.map((s) => s.value), 0);
+const minLabel = Math.min(...series.map((s) => s.value), 100);
+const delta = series.length > 1 ? +(series[series.length - 1].value - series[0].value).toFixed(1) : 0;
+
+const firstX = coords[0]?.x ?? PAD_L;
+const lastX = coords[coords.length - 1]?.x ?? PAD_L;
+const newestIndex = coords.length - 1;
+
+/* تسميات المحور الأفقي: أوّل وآخر تسمية تُثبَّت للداخل حتى لا تُقصّ عند الحافة */
+const maxTicks = 5;
+const step = Math.max(1, Math.ceil(coords.length / maxTicks));
+const ticks = Array.from({ length: coords.length }, (_, i) => i).filter(
+  (i) => i % step === 0 || i === newestIndex
+);
+const anchorFor = (i: number) => (i === 0 ? 'end' : i === newestIndex ? 'start' : 'middle');
+
+const tooltipPoints = coords.map((c) => ({
+  x: c.x,
+  y: c.y,
+  label: c.label,
+  value: `${c.value}${unit}`,
+  raw: c.value,
+}));
+---
+
+{
+  series.length < 2 ? (
+    <div class="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-6 py-10 text-center">
+      <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm">
+        <Icon name="chart-line" size={22} />
+      </span>
+      <p class="text-sm text-slate-500">{emptyHint || 'نحتاج امتحانَين على الأقل لرسم تطوّرك.'}</p>
+    </div>
+  ) : (
+    <div
+      class="relative"
+      data-trend
+      data-points={JSON.stringify(tooltipPoints)}
+      data-vb-w={VB_W}
+      data-pad-l={PAD_L}
+      data-pad-r={PAD_R}
+      data-reveal
+    >
+      <div
+        data-trend-guide
+        class="pointer-events-none absolute inset-y-2 w-px bg-emerald-400/70 opacity-0 transition-opacity duration-150"
+        style="inset-inline-start:auto;left:0"
+        aria-hidden="true"
+      />
+
+      <svg
+        viewBox={`0 0 ${VB_W} ${VB_H}`}
+        class="block h-auto w-full touch-pan-y select-none overflow-visible"
+        role="img"
+        aria-label={`تطوّر نسبة الإتقان عبر ${series.length} امتحانًا`}
+        tabindex="0"
+      >
+        <defs>
+          <linearGradient id={`${uid}-stroke`} x1="1" y1="0" x2="0" y2="0">
+            <stop offset="0%" stop-color="#059669" />
+            <stop offset="100%" stop-color="#34d399" />
+          </linearGradient>
+          <linearGradient id={`${uid}-area`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#10b981" stop-opacity="0.26" />
+            <stop offset="100%" stop-color="#10b981" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+
+        {gridValues.map((g) => (
+          <g>
+            <line
+              x1={PAD_L}
+              x2={PAD_L + PLOT_W}
+              y1={yFor(g)}
+              y2={yFor(g)}
+              stroke={g === 0 ? '#cbd5e1' : '#e2e8f0'}
+              stroke-width="1"
+              stroke-dasharray={g === 0 ? '0' : '4 6'}
+            />
+            <text x={VB_W - 2} y={yFor(g) + 4} class="acct-axis" fill="#94a3b8" text-anchor="end">
+              {g}
+            </text>
+          </g>
+        ))}
+
+        {areaPath && <path d={areaPath} fill={`url(#${uid}-area)`} class="trend-area" />}
+        {linePath && (
+          <path
+            d={linePath}
+            fill="none"
+            stroke={`url(#${uid}-stroke)`}
+            stroke-width="3"
+            stroke-linecap="round"
+            pathLength="1"
+            class="trend-line"
+          />
+        )}
+
+        {coords.map((c, i) => (
+          <g class="trend-dot" style={`--i:${i}`}>
+            <circle cx={c.x} cy={c.y} r="9" fill="#10b981" opacity="0.12" />
+            <circle
+              cx={c.x}
+              cy={c.y}
+              r="4"
+              fill="#ffffff"
+              stroke={i === newestIndex ? '#047857' : '#10b981'}
+              stroke-width={i === newestIndex ? '3' : '2'}
+            />
+          </g>
+        ))}
+
+        {ticks.map((i) => (
+          <text
+            x={coords[i].x}
+            y={baseY + 26}
+            class="acct-axis"
+            fill="#94a3b8"
+            text-anchor={anchorFor(i)}
+          >
+            {coords[i].label}
+          </text>
+        ))}
+
+        <text x={lastX} y={baseY + 58} class="acct-axis acct-axis--muted" fill="#94a3b8" text-anchor="start">
+          الأحدث
+        </text>
+        <text x={firstX} y={baseY + 58} class="acct-axis acct-axis--muted" fill="#94a3b8" text-anchor="end">
+          الأقدم
+        </text>
+      </svg>
+
+      <div
+        data-trend-tip
+        class="pointer-events-none absolute top-2 z-10 -translate-x-1/2 rounded-xl border border-slate-200 bg-white/95 px-3 py-1.5 text-center shadow-lg opacity-0 backdrop-blur transition-opacity duration-150"
+        style="left:0"
+        aria-hidden="true"
+      />
+
+      <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs">
+        <span class="flex items-center gap-1.5 text-slate-500">
+          <span class="h-2 w-2 rounded-full bg-emerald-500" />
+          أعلى نتيجة
+          <span class="font-bold tabular-nums text-slate-900">
+            {maxLabel}
+            {unit}
+          </span>
+        </span>
+        <span class="flex items-center gap-1.5 text-slate-500">
+          <span class="h-2 w-2 rounded-full bg-slate-300" />
+          أدنى نتيجة
+          <span class="font-bold tabular-nums text-slate-900">
+            {minLabel}
+            {unit}
+          </span>
+        </span>
+        {
+          series.length > 1 && (
+            <span
+              class={`flex items-center gap-1.5 font-semibold tabular-nums ${
+                delta > 0 ? 'text-emerald-600' : delta < 0 ? 'text-rose-600' : 'text-slate-500'
+              }`}
+            >
+              <Icon name="trending-up" size={14} class={delta < 0 ? 'rotate-180' : ''} />
+              <span dir="ltr">
+                {delta > 0 ? '+' : ''}
+                {delta}
+                {unit}
+              </span>
+              عن أول امتحان
+            </span>
+          )
+        }
+      </div>
+    </div>
+  )
+}
+
+<style>
+  /* نصوص المخطط بوحدات viewBox، فنكبّرها على الشاشات الصغيرة
+     حتى تبقى مقروءة بعد تصغير الرسم. */
+  .acct-axis {
+    font-size: 11px;
+  }
+
+  .acct-axis--muted {
+    font-size: 10px;
+  }
+
+  @media (max-width: 1024px) {
+    .acct-axis {
+      font-size: 15px;
+    }
+    .acct-axis--muted {
+      font-size: 13px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .acct-axis {
+      font-size: 19px;
+    }
+    .acct-axis--muted {
+      font-size: 16px;
+    }
+  }
+
+  .trend-line {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: trend-draw 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+  }
+
+  .trend-area {
+    opacity: 0;
+    transform: translateY(10px);
+    transform-origin: center bottom;
+    animation: trend-area-in 0.9s ease-out 0.45s both;
+  }
+
+  .trend-dot {
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: trend-dot-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation-delay: calc(0.5s + var(--i) * 0.08s);
+  }
+
+  @keyframes trend-draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes trend-area-in {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes trend-dot-in {
+    from {
+      opacity: 0;
+      transform: scale(0);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+</style>
