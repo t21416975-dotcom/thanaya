@@ -126,8 +126,10 @@ const searchIndexJson = JSON.stringify(searchIndex).replace(/</g, '\\u003c');
     </section>
   </div>
 
-  {/* Fuzzy instant search: typo-tolerant Arabic matching with ranked results */}
-  <script is:inline>
+  {/* Fuzzy instant search: typo-tolerant Arabic matching with ranked results.
+      ★ data-astro-rerun إجباري: بدونه يتوقف البحث بعد الرجوع للرئيسية بالتنقّل
+        الداخلي (ClientRouter) لأن Astro ينفّذ السكربت مرة واحدة فقط لكل مستند. */}
+  <script is:inline data-astro-rerun>
     (function () {
       const dataEl = document.getElementById('home-search-data');
       const input = document.getElementById('home-search-input');
